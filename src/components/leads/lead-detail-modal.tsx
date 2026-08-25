@@ -68,6 +68,7 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
   const [editEmail, setEditEmail] = useState("");
   const [editWebsite, setEditWebsite] = useState("");
   const [editInstagram, setEditInstagram] = useState("");
+  const [editTreatwellUrl, setEditTreatwellUrl] = useState("");
   const [editContactPerson, setEditContactPerson] = useState("");
   const [editGoogleMapsUrl, setEditGoogleMapsUrl] = useState("");
   const [savingDetails, setSavingDetails] = useState(false);
@@ -107,6 +108,7 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
           setEditEmail(data.lead.email || "");
           setEditWebsite(data.lead.website || "");
           setEditInstagram(data.lead.instagram || "");
+          setEditTreatwellUrl(data.lead.treatwellUrl || "");
           setEditContactPerson(data.lead.contactPerson || "");
           setEditGoogleMapsUrl(data.lead.googleMapsUrl || "");
         }
@@ -172,6 +174,7 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
           email: editEmail,
           website: editWebsite,
           instagram: editInstagram,
+          treatwellUrl: editTreatwellUrl,
           contactPerson: editContactPerson,
           googleMapsUrl: editGoogleMapsUrl,
         }),
@@ -438,7 +441,33 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                     <span className="font-semibold" style={{ color: "var(--text-3)" }}>Instagram:</span>
                     <div className="flex items-center gap-1.5">
                       <Camera className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--text-3)" }} />
-                      <span style={{ color: "var(--text)" }}>{lead.instagram}</span>
+                      <a
+                        href={`https://instagram.com/${lead.instagram.replace(/^@/, "")}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="hover:underline truncate"
+                        style={{ color: "var(--accent)" }}
+                      >
+                        {lead.instagram.startsWith("@") ? lead.instagram : `@${lead.instagram}`}
+                      </a>
+                    </div>
+                  </div>
+                )}
+
+                {lead.treatwellUrl && (
+                  <div className="flex flex-col gap-0.5">
+                    <span className="font-semibold" style={{ color: "var(--text-3)" }}>Treatwell:</span>
+                    <div className="flex items-center gap-1.5">
+                      <Globe className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--text-3)" }} />
+                      <a
+                        href={lead.treatwellUrl.startsWith("http") ? lead.treatwellUrl : `https://${lead.treatwellUrl}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="hover:underline truncate"
+                        style={{ color: "var(--accent)" }}
+                      >
+                        Treatwell Profil
+                      </a>
                     </div>
                   </div>
                 )}
@@ -575,6 +604,18 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                       style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
                       value={editInstagram}
                       onChange={(e) => setEditInstagram(e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-semibold mb-1" style={{ color: "var(--text-3)" }}>Treatwell Link</label>
+                    <input
+                      type="text"
+                      placeholder="https://www.treatwell.at/ort/..."
+                      className="w-full rounded px-2.5 py-1.5 text-xs border outline-none"
+                      style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
+                      value={editTreatwellUrl}
+                      onChange={(e) => setEditTreatwellUrl(e.target.value)}
                     />
                   </div>
 
