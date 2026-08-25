@@ -1,0 +1,32 @@
+export type AuditResult = {
+  url: string;
+  reachable: boolean;
+  statusCode: number | null;
+  https: boolean;
+  responseTimeMs: number | null;
+  hasViewport: boolean;
+  hasTitle: boolean;
+  hasMetaDescription: boolean;
+  hasImprint: boolean;
+  hasPrivacy: boolean;
+  hasConsent: boolean;
+  hasContact: boolean;
+  hasPhone: boolean;
+  hasEmail: boolean;
+  hasSocials: boolean;
+  hasCta: boolean;
+  hasBooking: boolean;
+  hasMenu: boolean;
+  menuUrl: string | null;
+  menuIsPdf: boolean;
+  findings: string[];
+  error: string | null;
+  extracted: {
+    companyName?: string;
+    phone?: string;
+    email?: string;
+    address?: string;
+    instagram?: string;
+    industry?: string;
+  };
+};

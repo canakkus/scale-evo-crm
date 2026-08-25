@@ -1,0 +1,445 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ============================================================
+// Enums
+// ============================================================
+
+enum LeadStatus {
+  NEW
+  RESEARCHED
+  TO_CONTACT
+  CONTACTED
+  REPLIED
+  INTERESTED
+  APPOINTMENT
+  OFFER_SENT
+  FOLLOW_UP
+  WON
+  LOST
+  NOT_RELEVANT
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum WebPresence {
+  WEBSITE
+  TREATWELL_ONLY
+  NONE
+}
+
+enum PreferredContactMethod {
+  INSTAGRAM_DM
+  WHATSAPP
+  PHONE
+  EMAIL
+  CONTACT_FORM
+  FACEBOOK_MESSENGER
+  IN_PERSON
+  NOT_CONTACTABLE
+}
+
+enum InteractionType {
+  PHONE
+  IN_PERSON
+  EMAIL
+  INSTAGRAM
+  WHATSAPP
+  MEETING
+  OFFER
+  NOTE
+  CALL_RECORDING
+}
+
+enum ColdCallStatus {
+  OPEN
+  REACHED
+  INTERESTED
+  APPOINTMENT
+  NO_INTEREST
+}
+
+enum TaskStatus {
+  OPEN
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
+enum TaskCategory {
+  SALES
+  ADMIN
+  FOLLOW_UP
+  COLD_OUTREACH
+  OTHER
+}
+
+enum CallRecordingStatus {
+  PENDING
+  TRANSCRIBING
+  DONE
+  FAILED
+}
+
+// ============================================================
+// Core Models
+// ============================================================
+
+model Lead {
+  id                     String                  @id @default(cuid())
+  companyName            String
+  industry               String?
+  address                String?
+  city                   String?
+  webPresence            WebPresence             @default(WEBSITE)
+  website                String?
+  treatwellUrl           String?
+  phone                  String?
+  email                  String?
+  instagram              String?
+  googleMapsUrl          String?
+  googleRating           Float?
+  googleReviewCount      Int?
+  contactPerson          String?
+  preferredContactMethod PreferredContactMethod?
+  contactNote            String?
+  notes                  String?
+  richNotes              Json?                   // Rich-text notes (Tiptap JSON)
+  source                 String?
+  lastContactAt          DateTime?
+  nextFollowUpAt         DateTime?
+  status                 LeadStatus              @default(NEW)
+  priority               Priority                @default(MEDIUM)
+  score                  Int                     @default(0)
+  scoreReasons           Json?
+  opportunityTags        Json?
+  interestingReason      String?
+  enrichmentStatus       String                  @default("idle")
+  addedAt                DateTime                @default(now())
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  createdById            String                  @db.Uuid
+  assignedToId           String?                 @db.Uuid
+
+  createdBy    User           @relation("LeadCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  assignedTo   User?          @relation("LeadAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  interactions Interaction[]
+  audits       WebsiteAudit[]
+  tasks        Task[]
+  callRecordings CallRecording[]
+  scoutResults ScoutResult[]
+
+  @@index([status])
+  @@index([nextFollowUpAt])
+  @@index([score])
+  @@index([companyName])
+  @@index([webPresence])
+  @@index([createdById])
+  @@index([assignedToId])
+}
+
+model User {
+  id                 String             @id @db.Uuid
+  email              String             @unique
+  displayName        String
+  active             Boolean            @default(true)
+  workClockStartedAt DateTime?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  createdLeads   Lead[]             @relation("LeadCreator")
+  assignedLeads  Lead[]             @relation("LeadAssignee")
+  journalEntries WorkJournalEntry[]
+  journalTodos   JournalTodo[]
+  interactions   Interaction[]
+  audits         WebsiteAudit[]
+  coldCalls      ColdCall[]
+  coldCallsSeen  ColdCallSeen[]
+  tasks          Task[]
+  scoutSessions  ScoutSession[]
+  callRecordings CallRecording[]
+  aiChats        AiChatMessage[]
+}
+
+model Interaction {
+  id              String          @id @default(cuid())
+  leadId          String
+  type            InteractionType
+  note            String
+  createdAt       DateTime        @default(now())
+  createdById     String          @db.Uuid
+  callRecordingId String?
+
+  lead           Lead           @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  createdBy      User           @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  callRecording  CallRecording? @relation(fields: [callRecordingId], references: [id], onDelete: SetNull)
+
+  @@index([leadId, createdAt])
+  @@index([createdById, createdAt])
+}
+
+model WebsiteAudit {
+  id                  String   @id @default(cuid())
+  leadId              String
+  url                 String
+  reachable           Boolean
+  statusCode          Int?
+  https               Boolean
+  responseTimeMs      Int?
+  hasViewport         Boolean
+  hasTitle            Boolean
+  hasMetaDescription  Boolean
+  hasImprint          Boolean
+  hasPrivacy          Boolean
+  hasConsent          Boolean
+  hasContact          Boolean
+  hasPhone            Boolean
+  hasEmail            Boolean
+  hasSocials          Boolean
+  hasCta              Boolean
+  hasBooking          Boolean
+  findings            Json?
+  error               String?
+  createdAt           DateTime @default(now())
+  createdById         String   @db.Uuid
+
+  lead      Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  createdBy User @relation(fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([leadId, createdAt])
+}
+
+model ScoringWeight {
+  key         String   @id
+  label       String
+  points      Int
+  enabled     Boolean  @default(true)
+  description String?
+  updatedAt   DateTime @updatedAt
+}
+
+model AISettings {
+  id                   Int      @id @default(1)
+  enabled              Boolean  @default(true)
+  geminiEnabled        Boolean  @default(true)
+  groqEnabled          Boolean  @default(false)
+  maxAutomaticAttempts Int      @default(3)
+  cooldownSeconds      Int      @default(60)
+  updatedAt            DateTime @updatedAt
+}
+
+// ============================================================
+// Journal
+// ============================================================
+
+model WorkJournalEntry {
+  id            String   @id @default(cuid())
+  date          DateTime
+  userId        String   @db.Uuid
+  workedMinutes Int      @default(0)
+  notes         String?
+  moneyAmount   Float    @default(0)
+  contactsCount Int      @default(0)
+  updatesCount  Int      @default(0)
+  rating        Int      @default(5)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([date])
+}
+
+model JournalTodo {
+  id        String   @id @default(cuid())
+  userId    String   @db.Uuid
+  date      DateTime
+  title     String
+  completed Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+  @@index([date])
+}
+
+// ============================================================
+// Cold Calls
+// ============================================================
+
+model ColdCall {
+  id            String         @id @default(cuid())
+  companyName   String
+  phone         String?
+  email         String?
+  address       String?
+  city          String?
+  industry      String?
+  googleMapsUrl String?
+  rating        Float?
+  reviewCount   Int?
+  notes         String?
+  status        ColdCallStatus @default(OPEN)
+  source        String?
+  createdById   String         @db.Uuid
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  createdBy User @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([createdById])
+  @@index([companyName])
+}
+
+/** Gesehene Scout-Kandidaten — verhindert Duplikate in Suchergebnissen */
+model ColdCallSeen {
+  id            String   @id @default(cuid())
+  companyName   String
+  phone         String?
+  googleMapsUrl String?  @unique
+  city          String?
+  createdById   String   @db.Uuid
+  createdAt     DateTime @default(now())
+
+  createdBy User @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([phone])
+  @@index([createdById])
+  @@index([companyName])
+}
+
+// ============================================================
+// Call Recordings (NEU)
+// ============================================================
+
+model CallRecording {
+  id               String              @id @default(cuid())
+  leadId           String?
+  createdById      String              @db.Uuid
+  fileName         String
+  fileSize         Int?
+  durationSeconds  Int?
+  storageUrl       String?             // Supabase Storage URL (optional)
+  transcription    String?             @db.Text
+  aiSummary        String?             @db.Text
+  aiNextSteps      Json?               // Array of strings
+  aiSentiment      String?             // POSITIVE / NEUTRAL / NEGATIVE / MIXED
+  aiExtractedData  Json?               // { name, appointment, objections, ... }
+  status           CallRecordingStatus @default(PENDING)
+  error            String?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  lead         Lead?         @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  createdBy    User          @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  interactions Interaction[]
+
+  @@index([leadId])
+  @@index([createdById, createdAt])
+}
+
+// ============================================================
+// Lead Scout Sessions (NEU)
+// ============================================================
+
+model ScoutSession {
+  id            String   @id @default(cuid())
+  name          String?
+  searchQuery   String
+  city          String?
+  radiusKm      Int?
+  filters       Json     // { minRating, hasWebsite, hasTreatwell, hasPhone, category, ... }
+  resultCount   Int      @default(0)
+  createdById   String   @db.Uuid
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  createdBy User          @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  results   ScoutResult[]
+
+  @@index([createdById, createdAt])
+}
+
+model ScoutResult {
+  id            String   @id @default(cuid())
+  sessionId     String
+  leadId        String?
+  companyName   String
+  address       String?
+  city          String?
+  phone         String?
+  website       String?
+  googleMapsUrl String?
+  googleRating  Float?
+  reviewCount   Int?
+  industry      String?
+  hasTreatwell  Boolean  @default(false)
+  importedAt    DateTime?
+  rawData       Json?
+  createdAt     DateTime @default(now())
+
+  session ScoutSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  lead    Lead?        @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
+  @@index([sessionId])
+  @@index([leadId])
+}
+
+// ============================================================
+// Productivity Center — Tasks (NEU)
+// ============================================================
+
+model Task {
+  id          String       @id @default(cuid())
+  title       String
+  description String?      @db.Text
+  status      TaskStatus   @default(OPEN)
+  priority    Priority     @default(MEDIUM)
+  category    TaskCategory @default(OTHER)
+  dueAt       DateTime?
+  completedAt DateTime?
+  leadId      String?
+  userId      String       @db.Uuid
+  aiGenerated Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  lead Lead? @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([userId, dueAt])
+  @@index([leadId])
+}
+
+// ============================================================
+// AI Assistant Chat (NEU)
+// ============================================================
+
+model AiChatMessage {
+  id        String   @id @default(cuid())
+  userId    String   @db.Uuid
+  role      String   // "user" | "assistant"
+  content   String   @db.Text
+  metadata  Json?    // quick actions, referenced leads, etc.
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}

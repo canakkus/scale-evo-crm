@@ -1,23 +1,23 @@
 import { requireAuth } from "@/lib/auth";
-import { DashboardComponent } from "@/components/dashboard/dashboard-component";
+import { TasksComponent } from "@/components/tasks/tasks-component";
 
-export const metadata = { title: "Dashboard | Scale Evo CRM" };
+export const metadata = { title: "Productivity Center | Scale Evo CRM" };
 
-export default async function DashboardPage() {
+export default async function TasksPage() {
   await requireAuth();
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
       <div>
         <h1 className="font-heading text-2xl font-bold tracking-tight" style={{ color: "var(--text)" }}>
-          Dashboard
+          Productivity Center
         </h1>
         <p className="mt-1 text-xs" style={{ color: "var(--text-2)" }}>
-          Willkommen zurück in Scale Evo CRM 3.0 — Übersicht deiner Vertriebs-Pipeline und KI-Aktivitäten.
+          Erfasse Aufgaben, priorisiere deine täglichen Vertriebsaktivitäten und erstelle KI-Tagespläne mit Gemini.
         </p>
       </div>
 
-      <DashboardComponent />
+      <TasksComponent />
     </div>
   );
 }

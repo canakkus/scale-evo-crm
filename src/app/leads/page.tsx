@@ -1,23 +1,25 @@
 import { requireAuth } from "@/lib/auth";
-import { DashboardComponent } from "@/components/dashboard/dashboard-component";
+import { LeadsTable } from "@/components/leads/leads-table";
 
-export const metadata = { title: "Dashboard | Scale Evo CRM" };
+export const metadata = { title: "Leads | Scale Evo CRM" };
 
-export default async function DashboardPage() {
+export default async function LeadsPage() {
   await requireAuth();
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
+      {/* Header */}
       <div>
         <h1 className="font-heading text-2xl font-bold tracking-tight" style={{ color: "var(--text)" }}>
-          Dashboard
+          Lead-Verwaltung
         </h1>
         <p className="mt-1 text-xs" style={{ color: "var(--text-2)" }}>
-          Willkommen zurück in Scale Evo CRM 3.0 — Übersicht deiner Vertriebs-Pipeline und KI-Aktivitäten.
+          Verwalte deine Akquise-Leads, ändere Pipeline-Zustände und nutze Google Places Autofill.
         </p>
       </div>
 
-      <DashboardComponent />
+      {/* Table */}
+      <LeadsTable />
     </div>
   );
 }
