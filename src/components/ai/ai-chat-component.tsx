@@ -11,6 +11,73 @@ const QUICK_PROMPTS = [
   "Wie reagiere ich auf den Einwand 'Ich habe bereits Stammkunden'?",
 ];
 
+function parseInlineMarkdown(text: string) {
+  // Simple bold parsing: **bold**
+  const parts = text.split(/\*\*([^*]+)\*\*/g);
+  return parts.map((part, i) => {
+    if (i % 2 === 1) {
+      return <strong key={i} className="font-bold text-[var(--text)]">{part}</strong>;
+    }
+
+    // Also parse inline code or highlights `code`
+    const codeParts = part.split(/`([^`]+)`/g);
+    return codeParts.map((codePart, j) => {
+      if (j % 2 === 1) {
+        return (
+          <code key={j} className="px-1.5 py-0.5 rounded text-[10px] font-mono" style={{ background: "var(--surface-3)", color: "var(--accent)" }}>
+            {codePart}
+          </code>
+        );
+      }
+      return codePart;
+    });
+  });
+}
+
+function renderMarkdown(text: string) {
+  if (!text) return null;
+
+  // Split text by lines
+  const lines = text.split("\n");
+
+  return lines.map((line, index) => {
+    let content = line;
+
+    // Check if line is a header
+    const isHeader = content.startsWith("###") || content.startsWith("##") || content.startsWith("#");
+    if (isHeader) {
+      const headerText = content.replace(/^#+\s*/, "");
+      return (
+        <h4 key={index} className="font-bold text-xs mt-3 mb-1.5 text-[var(--text)]">
+          {parseInlineMarkdown(headerText)}
+        </h4>
+      );
+    }
+
+    // Check if it's a bullet point
+    const isBullet = content.trim().startsWith("*") || content.trim().startsWith("-");
+    if (isBullet) {
+      const bulletText = content.trim().replace(/^[\*\-]\s*/, "");
+      return (
+        <li key={index} className="ml-4 list-disc pl-1 text-xs text-[var(--text-2)]">
+          {parseInlineMarkdown(bulletText)}
+        </li>
+      );
+    }
+
+    // Otherwise, normal paragraph line
+    if (content.trim() === "") {
+      return <div key={index} className="h-2" />;
+    }
+
+    return (
+      <p key={index} className="text-xs text-[var(--text-2)] leading-relaxed">
+        {parseInlineMarkdown(content)}
+      </p>
+    );
+  });
+}
+
 export function AiChatComponent() {
   const [messages, setMessages] = useState<any[]>([]);
   const [input, setInput] = useState("");
@@ -168,7 +235,7 @@ export function AiChatComponent() {
                     color: "var(--text)",
                   }}
                 >
-                  <p className="whitespace-pre-wrap">{msg.content}</p>
+                  <div className="space-y-1.5">{renderMarkdown(msg.content)}</div>
                 </div>
               </div>
             );
