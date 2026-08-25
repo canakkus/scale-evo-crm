@@ -16,13 +16,11 @@ import {
   Clock,
   Sparkles,
   Upload,
-  FileAudio,
   Eye,
   Brain,
   CheckCircle,
   FileText,
   Activity,
-  AlertTriangle,
   Loader2,
 } from "lucide-react";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -184,7 +182,6 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
         throw new Error(data.error || "Transkription fehlgeschlagen.");
       }
 
-      // Refresh recordings feed & Lead interactions timeline
       await fetchRecordings();
       const updatedLeadRes = await fetch(`/api/leads/${lead.id}`);
       const updatedLeadData = await updatedLeadRes.json();
@@ -358,11 +355,11 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
             {/* Tab Content Box */}
             <div className="flex-1 overflow-y-auto p-6">
               {activeTab === "timeline" ? (
-                <div className="space-y-6 max-w-4xl">
-                  {/* Notes Box */}
-                  <div className="space-y-2">
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 items-start">
+                  {/* Left sub-column: Notes */}
+                  <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <label className="text-xs font-semibold" style={{ color: "var(--text)" }}>
+                      <label className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--text-2)" }}>
                         Notizen & Besonderheiten
                       </label>
                       <button
@@ -375,8 +372,8 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                       </button>
                     </div>
                     <textarea
-                      rows={5}
-                      className="w-full rounded-md p-3 text-xs border outline-none resize-none"
+                      rows={14}
+                      className="w-full rounded-md p-4 text-xs border outline-none resize-none leading-relaxed"
                       style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
                       value={notesText}
                       onChange={(e) => setNotesText(e.target.value)}
@@ -384,8 +381,8 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                     />
                   </div>
 
-                  {/* Interactions Timeline */}
-                  <div className="space-y-4 pt-4 border-t" style={{ borderColor: "var(--border)" }}>
+                  {/* Right sub-column: Timeline */}
+                  <div className="space-y-4 xl:border-l xl:pl-8" style={{ borderColor: "var(--border)" }}>
                     <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--text-2)" }}>
                       Kontakt-Timeline ({lead.interactions?.length || 0})
                     </h3>
@@ -452,48 +449,50 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                 </div>
               ) : (
                 // Gemini Transcripts Tab Content
-                <div className="space-y-6 max-w-4xl">
-                  {/* Inline Audio Upload Widget */}
-                  <div className="rounded-xl border p-5 space-y-4" style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}>
-                    <div className="flex items-center gap-2">
-                      <Brain className="w-4 h-4" style={{ color: "var(--status-warm-tx)" }} />
-                      <h4 className="text-xs font-bold" style={{ color: "var(--text)" }}>Audiodatei direkt hier hochladen & transkribieren</h4>
+                <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
+                  {/* Left sub-column: Upload Audio (4 cols of 12) */}
+                  <div className="xl:col-span-4 space-y-4">
+                    <div className="rounded-xl border p-5 space-y-4" style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}>
+                      <div className="flex items-center gap-2">
+                        <Brain className="w-4 h-4" style={{ color: "var(--status-warm-tx)" }} />
+                        <h4 className="text-xs font-bold" style={{ color: "var(--text)" }}>Audiodatei hochladen & transkribieren</h4>
+                      </div>
+
+                      <label
+                        className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-5 cursor-pointer transition-colors hover:bg-[var(--surface-3)]"
+                        style={{ borderColor: "var(--border-2)" }}
+                      >
+                        <Upload className="w-6 h-6 mb-2" style={{ color: "var(--text-3)" }} />
+                        <div className="text-center">
+                          <p className="text-xs font-semibold" style={{ color: "var(--text)" }}>Audiodatei (MP3, WAV, M4A) hochladen</p>
+                          <p className="text-[10px]" style={{ color: "var(--text-3)" }}>Transkript wird automatisch erstellt und an den Lead angehängt</p>
+                        </div>
+                        <input
+                          type="file"
+                          accept="audio/*"
+                          onChange={handleAudioUpload}
+                          disabled={uploadingCall}
+                          className="hidden"
+                        />
+                      </label>
+
+                      {uploadingCall && (
+                        <div className="flex items-center gap-2 justify-center text-xs font-semibold" style={{ color: "var(--accent)" }}>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Gemini transkribiert & analysiert Audiodatei…
+                        </div>
+                      )}
+
+                      {uploadError && (
+                        <div className="p-3 rounded text-xs font-medium border" style={{ background: "var(--status-lost-bg)", color: "var(--status-lost-tx)", borderColor: "rgba(224,104,104,0.2)" }}>
+                          {uploadError}
+                        </div>
+                      )}
                     </div>
-
-                    <label
-                      className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-5 cursor-pointer transition-colors hover:bg-[var(--surface-3)]"
-                      style={{ borderColor: "var(--border-2)" }}
-                    >
-                      <Upload className="w-6 h-6 mb-2" style={{ color: "var(--text-3)" }} />
-                      <div className="text-center">
-                        <p className="text-xs font-semibold" style={{ color: "var(--text)" }}>Audiodatei (MP3, WAV, M4A) hochladen</p>
-                        <p className="text-[10px]" style={{ color: "var(--text-3)" }}>Transkript wird automatisch erstellt und an den Lead angehängt</p>
-                      </div>
-                      <input
-                        type="file"
-                        accept="audio/*"
-                        onChange={handleAudioUpload}
-                        disabled={uploadingCall}
-                        className="hidden"
-                      />
-                    </label>
-
-                    {uploadingCall && (
-                      <div className="flex items-center gap-2 justify-center text-xs font-semibold" style={{ color: "var(--accent)" }}>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Gemini transkribiert & analysiert Audiodatei…
-                      </div>
-                    )}
-
-                    {uploadError && (
-                      <div className="p-3 rounded text-xs font-medium border" style={{ background: "var(--status-lost-bg)", color: "var(--status-lost-tx)", borderColor: "rgba(224,104,104,0.2)" }}>
-                        {uploadError}
-                      </div>
-                    )}
                   </div>
 
-                  {/* Recordings Feed */}
-                  <div className="space-y-4">
+                  {/* Right sub-column: Recordings List (8 cols of 12) */}
+                  <div className="xl:col-span-8 space-y-4 xl:border-l xl:pl-8" style={{ borderColor: "var(--border)" }}>
                     <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--text-2)" }}>
                       Gespeicherte Gemini Transkripte ({recordings.length})
                     </h3>
@@ -573,7 +572,7 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                                       <FileText className="w-3.5 h-3.5" /> Vollständiges Transkript
                                     </h5>
                                     <div
-                                      className="p-3 rounded border text-[11px] font-mono leading-relaxed max-h-40 overflow-y-auto whitespace-pre-wrap"
+                                      className="p-3 rounded border text-[11px] font-mono leading-relaxed max-h-60 overflow-y-auto whitespace-pre-wrap"
                                       style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text-3)" }}
                                     >
                                       {rec.transcription}
