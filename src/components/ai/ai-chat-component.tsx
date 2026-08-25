@@ -249,7 +249,7 @@ export function AiChatComponent() {
             </div>
             <div className="rounded-2xl px-4 py-3 text-xs border flex items-center gap-2" style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text-2)" }}>
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              Gemini denkt nach…
+              Gemini analysiert Daten & führt Aktionen aus…
             </div>
           </div>
         )}

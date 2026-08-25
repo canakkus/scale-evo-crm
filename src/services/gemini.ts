@@ -1,4 +1,6 @@
-import { GoogleGenerativeAI, type GenerativeModel } from "@google/generative-ai";
+import { GoogleGenerativeAI, type GenerativeModel, SchemaType } from "@google/generative-ai";
+import { prisma } from "@/lib/prisma";
+import { runLeadScout } from "./lead-scout";
 
 // Singleton Gemini client
 let _client: GoogleGenerativeAI | null = null;
@@ -103,15 +105,252 @@ export interface CrmContext {
   recentInteractions: Array<{ leadName: string; type: string; note: string }>;
 }
 
+export async function executeAssistantTool(name: string, args: any, userId: string): Promise<any> {
+  console.log(`[Assistant Tool] Executing ${name} with args:`, args);
+  try {
+    switch (name) {
+      case "searchLeads": {
+        const { query } = args;
+        const leads = await prisma.lead.findMany({
+          where: {
+            OR: [
+              { companyName: { contains: query, mode: "insensitive" } },
+              { city: { contains: query, mode: "insensitive" } },
+              { phone: { contains: query, mode: "insensitive" } },
+              { industry: { contains: query, mode: "insensitive" } },
+            ],
+          },
+          take: 10,
+          select: { id: true, companyName: true, status: true, score: true, city: true, phone: true, industry: true },
+        });
+        return { success: true, count: leads.length, leads };
+      }
+
+      case "getLeadDetails": {
+        const { leadId } = args;
+        const lead = await prisma.lead.findUnique({
+          where: { id: leadId },
+          include: {
+            interactions: { take: 5, orderBy: { createdAt: "desc" }, select: { type: true, note: true, createdAt: true } },
+            tasks: { take: 5, orderBy: { createdAt: "desc" }, select: { title: true, status: true, priority: true } },
+          },
+        });
+        return { success: !!lead, lead };
+      }
+
+      case "updateLeadStatus": {
+        const { leadId, status } = args;
+        const updated = await prisma.lead.update({
+          where: { id: leadId },
+          data: { status: status as any },
+        });
+        return { success: true, leadId: updated.id, status: updated.status };
+      }
+
+      case "createTask": {
+        const { leadId, title, category, priority, dueAt } = args;
+        const task = await prisma.task.create({
+          data: {
+            leadId: leadId || null,
+            title,
+            category: category as any,
+            priority: priority as any,
+            dueAt: dueAt ? new Date(dueAt) : null,
+            userId,
+          },
+        });
+        return { success: true, taskId: task.id, title: task.title };
+      }
+
+      case "addLeadInteraction": {
+        const { leadId, type, note } = args;
+        const interaction = await prisma.interaction.create({
+          data: {
+            leadId,
+            type: type as any,
+            note,
+            createdById: userId,
+          },
+        });
+        return { success: true, interactionId: interaction.id };
+      }
+
+      case "runScoutSession": {
+        const { category, city, maxResults } = args;
+        const results = await runLeadScout(
+          {
+            category,
+            city,
+            maxResults: maxResults || 5,
+            minRating: 0,
+            minReviews: 0,
+            hasTreatwellFilter: "all",
+            hasWebsiteFilter: "all",
+            hasPhoneFilter: "all",
+            source: "places",
+          },
+          userId
+        );
+        return {
+          success: true,
+          sessionId: results.sessionId,
+          totalFound: results.totalFound,
+          importedCount: results.results.length,
+          leads: results.results.map((r) => ({
+            companyName: r.venue.name,
+            address: r.leadDraft.address,
+            phone: r.contacts.phone,
+          })),
+        };
+      }
+
+      default:
+        return { error: `Unbekanntes Tool: ${name}` };
+    }
+  } catch (err: any) {
+    console.error(`[Assistant Tool] Error executing ${name}:`, err);
+    return { error: err.message || "Fehler bei der Tool-Ausführung." };
+  }
+}
+
 /**
- * Sendet eine Chat-Nachricht an Gemini mit CRM-Kontext.
+ * Sendet eine Chat-Nachricht an Gemini mit CRM-Kontext und Tool-Calling-Support.
  */
 export async function chatWithAssistant(
   message: string,
   history: Array<{ role: "user" | "model"; parts: Array<{ text: string }> }>,
-  context: CrmContext
+  context: CrmContext,
+  userId: string
 ): Promise<string> {
-  const model = getFlashModel();
+  const model = getClient().getGenerativeModel({
+    model: "gemini-3.6-flash",
+    tools: [
+      {
+        functionDeclarations: [
+          {
+            name: "searchLeads",
+            description: "Suche nach Leads in der Datenbank anhand eines Suchbegriffs (Name, Stadt, Telefon, Branche). Gibt bis zu 10 Übereinstimmungen zurück.",
+            parameters: {
+              type: SchemaType.OBJECT,
+              properties: {
+                query: {
+                  type: SchemaType.STRING,
+                  description: "Der Suchbegriff für Name, Stadt, Branche oder Telefonnummer."
+                }
+              },
+              required: ["query"]
+            }
+          },
+          {
+            name: "getLeadDetails",
+            description: "Ruft alle Details, die letzten 5 Interaktionen und die letzten 5 Tasks für einen Lead anhand seiner ID ab.",
+            parameters: {
+              type: SchemaType.OBJECT,
+              properties: {
+                leadId: {
+                  type: SchemaType.STRING,
+                  description: "Die ID des Leads."
+                }
+              },
+              required: ["leadId"]
+            }
+          },
+          {
+            name: "updateLeadStatus",
+            description: "Aktualisiert den Status eines Leads. Gültige Status-Werte: NEW, RESEARCHED, TO_CONTACT, CONTACTED, REPLIED, INTERESTED, APPOINTMENT, OFFER_SENT, FOLLOW_UP, WON, LOST, NOT_RELEVANT.",
+            parameters: {
+              type: SchemaType.OBJECT,
+              properties: {
+                leadId: {
+                  type: SchemaType.STRING,
+                  description: "Die ID des Leads."
+                },
+                status: {
+                  type: SchemaType.STRING,
+                  description: "Der neue Status (z.B. WON, FOLLOW_UP)."
+                }
+              },
+              required: ["leadId", "status"]
+            }
+          },
+          {
+            name: "createTask",
+            description: "Erstellt eine neue Aufgabe für einen Lead oder allgemein. Kategorien: SALES, ADMIN, FOLLOW_UP, COLD_OUTREACH, OTHER. Priorität: LOW, MEDIUM, HIGH.",
+            parameters: {
+              type: SchemaType.OBJECT,
+              properties: {
+                leadId: {
+                  type: SchemaType.STRING,
+                  description: "Die ID des verknüpften Leads (optional)."
+                },
+                title: {
+                  type: SchemaType.STRING,
+                  description: "Der Titel der Aufgabe."
+                },
+                category: {
+                  type: SchemaType.STRING,
+                  description: "Die Kategorie (SALES, ADMIN, FOLLOW_UP, COLD_OUTREACH, OTHER)."
+                },
+                priority: {
+                  type: SchemaType.STRING,
+                  description: "Die Priorität (LOW, MEDIUM, HIGH)."
+                },
+                dueAt: {
+                  type: SchemaType.STRING,
+                  description: "Optionales Fälligkeitsdatum als ISO-String (z.B. '2026-08-26T12:00:00Z')."
+                }
+              },
+              required: ["title", "category", "priority"]
+            }
+          },
+          {
+            name: "addLeadInteraction",
+            description: "Fügt ein neues Interaktionsprotokoll (Notiz, Telefonat, Mail etc.) zu einem Lead hinzu. Typen: PHONE, IN_PERSON, EMAIL, INSTAGRAM, WHATSAPP, MEETING, OFFER, NOTE.",
+            parameters: {
+              type: SchemaType.OBJECT,
+              properties: {
+                leadId: {
+                  type: SchemaType.STRING,
+                  description: "Die ID des Leads."
+                },
+                type: {
+                  type: SchemaType.STRING,
+                  description: "Der Interaktionstyp (PHONE, IN_PERSON, EMAIL, INSTAGRAM, WHATSAPP, MEETING, OFFER, NOTE)."
+                },
+                note: {
+                  type: SchemaType.STRING,
+                  description: "Der Inhalt des Protokolls bzw. die Notiz."
+                }
+              },
+              required: ["leadId", "type", "note"]
+            }
+          },
+          {
+            name: "runScoutSession",
+            description: "Startet eine Lead-Scout-Suche über Google Places und importiert die gefundenen Leads direkt in die Datenbank.",
+            parameters: {
+              type: SchemaType.OBJECT,
+              properties: {
+                category: {
+                  type: SchemaType.STRING,
+                  description: "Die Suchkategorie (z.B. 'Friseur', 'Barber', 'Kosmetik')."
+                },
+                city: {
+                  type: SchemaType.STRING,
+                  description: "Die Stadt (z.B. 'Wien', 'Graz')."
+                },
+                maxResults: {
+                  type: SchemaType.INTEGER,
+                  description: "Die maximale Anzahl der zu importierenden Ergebnisse (Standard ist 5)."
+                }
+              },
+              required: ["category", "city"]
+            }
+          }
+        ]
+      }
+    ]
+  });
 
   const systemPrompt = `Du bist ein intelligenter CRM-Assistent für Scale Evo CRM. Du hilfst beim Lead-Management und der Vertriebsarbeit.
 
@@ -122,18 +361,35 @@ Aktueller CRM-Snapshot:
 - Top-Leads: ${JSON.stringify(context.topLeads)}
 - Letzte Interaktionen: ${JSON.stringify(context.recentInteractions)}
 
-Antworte auf Deutsch, kurz und hilfreich. Bei Aktionen (Status ändern, Task erstellen etc.) 
-erkläre was getan werden soll, da du selbst keine Datenbankoperationen ausführen kannst.`;
+Du kannst direkt Aktionen ausführen wie Suchen, Status ändern, Interaktionen hinzufügen, Aufgaben erstellen und den Lead Scout ausführen unter Verwendung deiner Tools. 
+Antworte auf Deutsch, kurz, freundlich und hilfreich.`;
 
   const chat = model.startChat({
     history: [
       { role: "user", parts: [{ text: systemPrompt }] },
-      { role: "model", parts: [{ text: "Verstanden! Ich bin bereit dir bei deinem CRM zu helfen." }] },
+      { role: "model", parts: [{ text: "Verstanden! Ich bin bereit dir bei deinem CRM zu helfen und Aktionen für dich auszuführen." }] },
       ...history,
     ],
   });
 
-  const result = await chat.sendMessage(message);
+  let result = await chat.sendMessage(message);
+  let calls = result.response.functionCalls();
+
+  while (calls && calls.length > 0) {
+    const responses: any[] = [];
+    for (const call of calls) {
+      const responseData = await executeAssistantTool(call.name, call.args, userId);
+      responses.push({
+        functionResponse: {
+          name: call.name,
+          response: { result: responseData }
+        }
+      });
+    }
+    result = await chat.sendMessage(responses);
+    calls = result.response.functionCalls();
+  }
+
   return result.response.text();
 }
 

@@ -84,7 +84,7 @@ export async function POST(request: Request) {
     }));
 
     // Call Gemini API
-    const replyText = await chatWithAssistant(message.trim(), history, context);
+    const replyText = await chatWithAssistant(message.trim(), history, context, dbUser.id);
 
     // Save User message and AI reply in database
     const [userMsg, aiMsg] = await prisma.$transaction([
