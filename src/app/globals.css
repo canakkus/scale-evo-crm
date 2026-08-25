@@ -87,7 +87,7 @@
   --font-mono:    ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 }
 
-@theme inline {
+@theme {
   --color-bg:        var(--bg);
   --color-surface:   var(--surface);
   --color-surface-2: var(--surface-2);

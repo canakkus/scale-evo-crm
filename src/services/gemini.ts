@@ -14,12 +14,12 @@ function getClient(): GoogleGenerativeAI {
 
 /** Gibt ein Gemini Flash-Modell zurück (günstig + schnell für die meisten Tasks) */
 export function getFlashModel(): GenerativeModel {
-  return getClient().getGenerativeModel({ model: "gemini-2.0-flash" });
+  return getClient().getGenerativeModel({ model: "gemini-3.6-flash" });
 }
 
 /** Gibt ein Gemini Pro-Modell zurück (für komplexere Aufgaben) */
 export function getProModel(): GenerativeModel {
-  return getClient().getGenerativeModel({ model: "gemini-2.0-flash" });
+  return getClient().getGenerativeModel({ model: "gemini-3.6-flash" });
 }
 
 // ============================================================
