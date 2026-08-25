@@ -57,6 +57,20 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
   const [newInteractionNote, setNewInteractionNote] = useState("");
   const [addingInteraction, setAddingInteraction] = useState(false);
 
+  // Lead Editing State
+  const [isEditing, setIsEditing] = useState(false);
+  const [editCompanyName, setEditCompanyName] = useState("");
+  const [editIndustry, setEditIndustry] = useState("");
+  const [editAddress, setEditAddress] = useState("");
+  const [editCity, setEditCity] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editWebsite, setEditWebsite] = useState("");
+  const [editInstagram, setEditInstagram] = useState("");
+  const [editContactPerson, setEditContactPerson] = useState("");
+  const [editGoogleMapsUrl, setEditGoogleMapsUrl] = useState("");
+  const [savingDetails, setSavingDetails] = useState(false);
+
   const fetchRecordings = useCallback(async () => {
     if (!leadId) return;
     setLoadingRecordings(true);
@@ -82,6 +96,18 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
         if (data.lead) {
           setLead(data.lead);
           setNotesText(data.lead.notes || "");
+
+          // Initialize edit values
+          setEditCompanyName(data.lead.companyName || "");
+          setEditIndustry(data.lead.industry || "");
+          setEditAddress(data.lead.address || "");
+          setEditCity(data.lead.city || "");
+          setEditPhone(data.lead.phone || "");
+          setEditEmail(data.lead.email || "");
+          setEditWebsite(data.lead.website || "");
+          setEditInstagram(data.lead.instagram || "");
+          setEditContactPerson(data.lead.contactPerson || "");
+          setEditGoogleMapsUrl(data.lead.googleMapsUrl || "");
         }
       })
       .catch((err) => console.error(err))
@@ -126,6 +152,40 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
       console.error(err);
     } finally {
       setSavingNotes(false);
+    }
+  }
+
+  async function handleSaveLeadDetails() {
+    if (!lead) return;
+    setSavingDetails(true);
+    try {
+      const res = await fetch(`/api/leads/${lead.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          companyName: editCompanyName,
+          industry: editIndustry,
+          address: editAddress,
+          city: editCity,
+          phone: editPhone,
+          email: editEmail,
+          website: editWebsite,
+          instagram: editInstagram,
+          contactPerson: editContactPerson,
+          googleMapsUrl: editGoogleMapsUrl,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setLead(data.lead);
+        setIsEditing(false);
+        onUpdate();
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSavingDetails(false);
     }
   }
 
@@ -248,80 +308,270 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
               </select>
             </div>
 
-            {/* Details List */}
-            <div className="space-y-4 text-xs">
-              <h3 className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--text-3)" }}>
-                Lead-Informationen
-              </h3>
-
-              {lead.industry && (
-                <div className="flex items-center gap-2" style={{ color: "var(--text-2)" }}>
-                  <span className="font-semibold" style={{ color: "var(--text-3)" }}>Branche:</span>
-                  <span style={{ color: "var(--text)" }}>{lead.industry}</span>
+            {/* Details List / Edit Form */}
+            {!isEditing ? (
+              <div className="space-y-4 text-xs">
+                <div className="flex items-center justify-between border-b pb-2 mb-2" style={{ borderColor: "var(--border)" }}>
+                  <h3 className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--text-3)" }}>
+                    Lead-Informationen
+                  </h3>
+                  <button
+                    onClick={() => setIsEditing(true)}
+                    className="text-[10px] font-bold uppercase px-2 py-1 rounded transition-colors hover:bg-[var(--surface-3)]"
+                    style={{ background: "var(--surface-2)", color: "var(--accent)" }}
+                  >
+                    Bearbeiten
+                  </button>
                 </div>
-              )}
 
-              {lead.city && (
-                <div className="flex items-start gap-2" style={{ color: "var(--text-2)" }}>
-                  <MapPin className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "var(--text-3)" }} />
-                  <span style={{ color: "var(--text)" }}>{lead.address ? `${lead.address}, ${lead.city}` : lead.city}</span>
-                </div>
-              )}
+                {lead.companyName && (
+                  <div className="flex flex-col gap-0.5">
+                    <span className="font-semibold" style={{ color: "var(--text-3)" }}>Firma:</span>
+                    <span className="font-medium" style={{ color: "var(--text)" }}>{lead.companyName}</span>
+                  </div>
+                )}
 
-              {lead.phone && (
-                <div className="flex items-center gap-2">
-                  <Phone className="w-4 h-4 shrink-0" style={{ color: "var(--text-3)" }} />
-                  <a href={`tel:${lead.phone}`} className="hover:underline font-mono" style={{ color: "var(--accent)" }}>
-                    {lead.phone}
-                  </a>
-                </div>
-              )}
+                {lead.industry && (
+                  <div className="flex flex-col gap-0.5">
+                    <span className="font-semibold" style={{ color: "var(--text-3)" }}>Branche:</span>
+                    <span style={{ color: "var(--text)" }}>{lead.industry}</span>
+                  </div>
+                )}
 
-              {lead.email && (
-                <div className="flex items-center gap-2">
-                  <Mail className="w-4 h-4 shrink-0" style={{ color: "var(--text-3)" }} />
-                  <a href={`mailto:${lead.email}`} className="hover:underline truncate" style={{ color: "var(--accent)" }}>
-                    {lead.email}
-                  </a>
-                </div>
-              )}
+                {(lead.address || lead.city) && (
+                  <div className="flex flex-col gap-0.5">
+                    <span className="font-semibold" style={{ color: "var(--text-3)" }}>Adresse:</span>
+                    <div className="flex items-start gap-1.5" style={{ color: "var(--text)" }}>
+                      <MapPin className="w-3.5 h-3.5 shrink-0 mt-0.5" style={{ color: "var(--text-3)" }} />
+                      <span>{lead.address ? `${lead.address}, ${lead.city}` : lead.city}</span>
+                    </div>
+                  </div>
+                )}
 
-              {lead.website && (
-                <div className="flex items-center gap-2">
-                  <Globe className="w-4 h-4 shrink-0" style={{ color: "var(--text-3)" }} />
-                  <a href={lead.website.startsWith("http") ? lead.website : `https://${lead.website}`} target="_blank" rel="noreferrer" className="hover:underline truncate" style={{ color: "var(--accent)" }}>
-                    {lead.website.replace(/^https?:\/\//, "")}
-                  </a>
-                </div>
-              )}
+                {lead.googleMapsUrl && (
+                  <div className="flex flex-col gap-0.5">
+                    <span className="font-semibold" style={{ color: "var(--text-3)" }}>Google Maps:</span>
+                    <div className="flex items-center gap-1.5">
+                      <Globe className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--text-3)" }} />
+                      <a href={lead.googleMapsUrl} target="_blank" rel="noreferrer" className="hover:underline truncate" style={{ color: "var(--accent)" }}>
+                        Auf Google Maps öffnen
+                      </a>
+                    </div>
+                  </div>
+                )}
 
-              {lead.instagram && (
-                <div className="flex items-center gap-2">
-                  <Camera className="w-4 h-4 shrink-0" style={{ color: "var(--text-3)" }} />
-                  <span style={{ color: "var(--text)" }}>{lead.instagram}</span>
-                </div>
-              )}
+                {lead.phone && (
+                  <div className="flex flex-col gap-0.5">
+                    <span className="font-semibold" style={{ color: "var(--text-3)" }}>Telefon:</span>
+                    <div className="flex items-center gap-1.5">
+                      <Phone className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--text-3)" }} />
+                      <a href={`tel:${lead.phone}`} className="hover:underline font-mono" style={{ color: "var(--accent)" }}>
+                        {lead.phone}
+                      </a>
+                    </div>
+                  </div>
+                )}
 
-              {lead.googleRating != null && (
-                <div className="flex items-center gap-2">
-                  <Star className="w-4 h-4 shrink-0 fill-amber-400 text-amber-400" />
-                  <span className="font-semibold" style={{ color: "var(--text)" }}>
-                    {lead.googleRating.toFixed(1)}
-                  </span>
-                  {lead.googleReviewCount != null && (
-                    <span style={{ color: "var(--text-3)" }}>({lead.googleReviewCount} Bewertungen)</span>
-                  )}
-                </div>
-              )}
+                {lead.email && (
+                  <div className="flex flex-col gap-0.5">
+                    <span className="font-semibold" style={{ color: "var(--text-3)" }}>E-Mail:</span>
+                    <div className="flex items-center gap-1.5">
+                      <Mail className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--text-3)" }} />
+                      <a href={`mailto:${lead.email}`} className="hover:underline truncate" style={{ color: "var(--accent)" }}>
+                        {lead.email}
+                      </a>
+                    </div>
+                  </div>
+                )}
 
-              {lead.contactPerson && (
-                <div className="flex items-center gap-2 pt-3 border-t" style={{ borderColor: "var(--border)" }}>
-                  <User className="w-4 h-4 shrink-0" style={{ color: "var(--text-3)" }} />
-                  <span style={{ color: "var(--text-2)" }}>Ansprechpartner:</span>
-                  <span className="font-medium" style={{ color: "var(--text)" }}>{lead.contactPerson}</span>
+                {lead.website && (
+                  <div className="flex flex-col gap-0.5">
+                    <span className="font-semibold" style={{ color: "var(--text-3)" }}>Webseite:</span>
+                    <div className="flex items-center gap-1.5">
+                      <Globe className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--text-3)" }} />
+                      <a href={lead.website.startsWith("http") ? lead.website : `https://${lead.website}`} target="_blank" rel="noreferrer" className="hover:underline truncate" style={{ color: "var(--accent)" }}>
+                        {lead.website.replace(/^https?:\/\//, "")}
+                      </a>
+                    </div>
+                  </div>
+                )}
+
+                {lead.instagram && (
+                  <div className="flex flex-col gap-0.5">
+                    <span className="font-semibold" style={{ color: "var(--text-3)" }}>Instagram:</span>
+                    <div className="flex items-center gap-1.5">
+                      <Camera className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--text-3)" }} />
+                      <span style={{ color: "var(--text)" }}>{lead.instagram}</span>
+                    </div>
+                  </div>
+                )}
+
+                {lead.googleRating != null && (
+                  <div className="flex flex-col gap-0.5">
+                    <span className="font-semibold" style={{ color: "var(--text-3)" }}>Google-Bewertung:</span>
+                    <div className="flex items-center gap-1.5">
+                      <Star className="w-3.5 h-3.5 shrink-0 fill-amber-400 text-amber-400" />
+                      <span className="font-semibold" style={{ color: "var(--text)" }}>
+                        {lead.googleRating.toFixed(1)}
+                      </span>
+                      {lead.googleReviewCount != null && (
+                        <span style={{ color: "var(--text-3)" }}>({lead.googleReviewCount} Bewertungen)</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {lead.contactPerson && (
+                  <div className="flex flex-col gap-0.5 pt-2 border-t" style={{ borderColor: "var(--border)" }}>
+                    <span className="font-semibold" style={{ color: "var(--text-3)" }}>Ansprechpartner:</span>
+                    <div className="flex items-center gap-1.5">
+                      <User className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--text-3)" }} />
+                      <span className="font-medium" style={{ color: "var(--text)" }}>{lead.contactPerson}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              // Edit Form
+              <div className="space-y-4 text-xs">
+                <div className="flex items-center justify-between border-b pb-2 mb-2" style={{ borderColor: "var(--border)" }}>
+                  <h3 className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--text-3)" }}>
+                    Lead bearbeiten
+                  </h3>
                 </div>
-              )}
-            </div>
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-[10px] font-semibold mb-1" style={{ color: "var(--text-3)" }}>Firma</label>
+                    <input
+                      type="text"
+                      className="w-full rounded px-2.5 py-1.5 text-xs border outline-none"
+                      style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
+                      value={editCompanyName}
+                      onChange={(e) => setEditCompanyName(e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-semibold mb-1" style={{ color: "var(--text-3)" }}>Branche</label>
+                    <input
+                      type="text"
+                      className="w-full rounded px-2.5 py-1.5 text-xs border outline-none"
+                      style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
+                      value={editIndustry}
+                      onChange={(e) => setEditIndustry(e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-semibold mb-1" style={{ color: "var(--text-3)" }}>Adresse</label>
+                    <input
+                      type="text"
+                      className="w-full rounded px-2.5 py-1.5 text-xs border outline-none"
+                      style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
+                      value={editAddress}
+                      onChange={(e) => setEditAddress(e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-semibold mb-1" style={{ color: "var(--text-3)" }}>Stadt</label>
+                    <input
+                      type="text"
+                      className="w-full rounded px-2.5 py-1.5 text-xs border outline-none"
+                      style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
+                      value={editCity}
+                      onChange={(e) => setEditCity(e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-semibold mb-1" style={{ color: "var(--text-3)" }}>Google Maps Link</label>
+                    <input
+                      type="text"
+                      placeholder="https://google.com/maps/..."
+                      className="w-full rounded px-2.5 py-1.5 text-xs border outline-none font-mono"
+                      style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
+                      value={editGoogleMapsUrl}
+                      onChange={(e) => setEditGoogleMapsUrl(e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-semibold mb-1" style={{ color: "var(--text-3)" }}>Telefon</label>
+                    <input
+                      type="text"
+                      className="w-full rounded px-2.5 py-1.5 text-xs border outline-none font-mono"
+                      style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
+                      value={editPhone}
+                      onChange={(e) => setEditPhone(e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-semibold mb-1" style={{ color: "var(--text-3)" }}>E-Mail</label>
+                    <input
+                      type="email"
+                      className="w-full rounded px-2.5 py-1.5 text-xs border outline-none"
+                      style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
+                      value={editEmail}
+                      onChange={(e) => setEditEmail(e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-semibold mb-1" style={{ color: "var(--text-3)" }}>Webseite</label>
+                    <input
+                      type="text"
+                      className="w-full rounded px-2.5 py-1.5 text-xs border outline-none"
+                      style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
+                      value={editWebsite}
+                      onChange={(e) => setEditWebsite(e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-semibold mb-1" style={{ color: "var(--text-3)" }}>Instagram</label>
+                    <input
+                      type="text"
+                      className="w-full rounded px-2.5 py-1.5 text-xs border outline-none"
+                      style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
+                      value={editInstagram}
+                      onChange={(e) => setEditInstagram(e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-semibold mb-1" style={{ color: "var(--text-3)" }}>Ansprechpartner</label>
+                    <input
+                      type="text"
+                      className="w-full rounded px-2.5 py-1.5 text-xs border outline-none"
+                      style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
+                      value={editContactPerson}
+                      onChange={(e) => setEditContactPerson(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 pt-3 border-t animate-fade-in" style={{ borderColor: "var(--border)" }}>
+                  <button
+                    onClick={handleSaveLeadDetails}
+                    disabled={savingDetails}
+                    className="flex-1 text-center font-bold px-3 py-2 rounded text-[11px] hover:opacity-90"
+                    style={{ background: "var(--accent)", color: "var(--bg)" }}
+                  >
+                    {savingDetails ? "Speichert…" : "Speichern"}
+                  </button>
+                  <button
+                    onClick={() => setIsEditing(false)}
+                    className="flex-1 text-center font-bold px-3 py-2 rounded text-[11px] hover:bg-[var(--surface-4)]"
+                    style={{ background: "var(--surface-3)", color: "var(--text)" }}
+                  >
+                    Abbrechen
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Right Area: Tabs Header & Tab Content */}
