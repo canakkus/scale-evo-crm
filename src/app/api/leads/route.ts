@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getOptionalUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import type { LeadStatus, Priority, WebPresence } from "@prisma/client";
+import { INDUSTRIES } from "@/lib/constants";
 
 export async function GET(request: Request) {
   try {
@@ -15,7 +16,7 @@ export async function GET(request: Request) {
     const status = searchParams.get("status") as LeadStatus | null;
     const priority = searchParams.get("priority") as Priority | null;
     const webPresence = searchParams.get("webPresence") as WebPresence | null;
-    const industry = searchParams.get("industry")?.trim();
+    const industryParam = searchParams.get("industry")?.trim();
     const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
     const limit = Math.min(100, Math.max(10, parseInt(searchParams.get("limit") || "25", 10)));
 
@@ -33,9 +34,24 @@ export async function GET(request: Request) {
     if (status) where.status = status;
     if (priority) where.priority = priority;
     if (webPresence) where.webPresence = webPresence;
-    if (industry) where.industry = industry;
 
-    const [leads, total] = await Promise.all([
+    if (industryParam) {
+      const industries = industryParam.split(",").map(i => i.trim()).filter(Boolean);
+      if (industries.length > 0) {
+        const hasNull = industries.some(i => i.toLowerCase() === "null" || i.toLowerCase() === "keine angabe" || i === "—");
+        if (hasNull) {
+          where.OR = [
+            { industry: { in: industries } },
+            { industry: null },
+            { industry: "" }
+          ];
+        } else {
+          where.industry = { in: industries };
+        }
+      }
+    }
+
+    const [leads, total, distinctIndustries] = await Promise.all([
       prisma.lead.findMany({
         where,
         orderBy: { updatedAt: "desc" },
@@ -48,10 +64,19 @@ export async function GET(request: Request) {
         },
       }),
       prisma.lead.count({ where }),
+      prisma.lead.findMany({
+        where: { industry: { not: null } },
+        distinct: ["industry"],
+        select: { industry: true },
+      }),
     ]);
+
+    const dbIndustries = distinctIndustries.map((d) => d.industry).filter(Boolean) as string[];
+    const allIndustries = Array.from(new Set([...INDUSTRIES, ...dbIndustries])).sort();
 
     return NextResponse.json({
       leads,
+      allIndustries,
       pagination: {
         page,
         limit,

@@ -31,7 +31,10 @@ export function LeadsTable() {
   // Filters & Search
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-  const [industryFilter, setIndustryFilter] = useState("");
+  const [industryFilters, setIndustryFilters] = useState<string[]>([]);
+  const [availableIndustries, setAvailableIndustries] = useState<string[]>([]);
+  const [isIndustryDropdownOpen, setIsIndustryDropdownOpen] = useState(false);
+  const [industrySearch, setIndustrySearch] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalLeads, setTotalLeads] = useState(0);
@@ -46,7 +49,7 @@ export function LeadsTable() {
       const params = new URLSearchParams();
       if (search.trim()) params.set("search", search.trim());
       if (statusFilter) params.set("status", statusFilter);
-      if (industryFilter) params.set("industry", industryFilter);
+      if (industryFilters.length > 0) params.set("industry", industryFilters.join(","));
       params.set("page", String(page));
       params.set("limit", "20");
 
@@ -55,6 +58,7 @@ export function LeadsTable() {
       const data = await res.json();
 
       setLeads(data.leads || []);
+      setAvailableIndustries(data.allIndustries || INDUSTRIES);
       setTotalPages(data.pagination?.totalPages || 1);
       setTotalLeads(data.pagination?.total || 0);
     } catch (err) {
@@ -62,7 +66,7 @@ export function LeadsTable() {
     } finally {
       setLoading(false);
     }
-  }, [search, statusFilter, industryFilter, page]);
+  }, [search, statusFilter, industryFilters, page]);
 
   useEffect(() => {
     fetchLeads();
@@ -118,21 +122,109 @@ export function LeadsTable() {
             ))}
           </select>
 
-          {/* Industry Filter */}
-          <select
-            value={industryFilter}
-            onChange={(e) => {
-              setIndustryFilter(e.target.value);
-              setPage(1);
-            }}
-            className="rounded-md px-3 py-2 text-xs font-medium border outline-none cursor-pointer hidden md:block"
-            style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-2)" }}
-          >
-            <option value="">Alle Branchen</option>
-            {INDUSTRIES.map((ind) => (
-              <option key={ind} value={ind}>{ind}</option>
-            ))}
-          </select>
+          {/* Multi-Select Industry Filter */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setIsIndustryDropdownOpen(!isIndustryDropdownOpen)}
+              className="rounded-md px-3 py-2 text-xs font-medium border outline-none cursor-pointer flex items-center gap-1.5 transition-colors hidden md:flex"
+              style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-2)" }}
+            >
+              <Filter className="w-3.5 h-3.5" />
+              <span>
+                {industryFilters.length === 0
+                  ? "Alle Branchen"
+                  : industryFilters.length === 1
+                  ? industryFilters[0]
+                  : `${industryFilters.length} Branchen`}
+              </span>
+            </button>
+
+            {isIndustryDropdownOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setIsIndustryDropdownOpen(false)}
+                />
+                <div
+                  className="absolute right-0 mt-1 w-64 rounded-md border shadow-lg p-3 space-y-2.5 z-20 animate-fade-in"
+                  style={{ background: "var(--surface)", borderColor: "var(--border)" }}
+                >
+                  <input
+                    type="text"
+                    placeholder="Branche suchen..."
+                    value={industrySearch}
+                    onChange={(e) => setIndustrySearch(e.target.value)}
+                    className="w-full rounded px-2.5 py-1 text-xs border outline-none"
+                    style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
+                  />
+
+                  <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
+                    {/* Option: Keine Angabe */}
+                    <label className="flex items-center gap-2 cursor-pointer text-xs p-1 rounded hover:bg-[var(--surface-2)]">
+                      <input
+                        type="checkbox"
+                        checked={industryFilters.includes("Keine Angabe")}
+                        onChange={() => {
+                          setIndustryFilters((prev) =>
+                            prev.includes("Keine Angabe")
+                              ? prev.filter((item) => item !== "Keine Angabe")
+                              : [...prev, "Keine Angabe"]
+                          );
+                          setPage(1);
+                        }}
+                        className="rounded border-[var(--border)] text-[var(--accent)] accent-[var(--accent)]"
+                      />
+                      <span style={{ color: "var(--text)" }}>— Keine Angabe —</span>
+                    </label>
+
+                    {availableIndustries
+                      .filter((ind) => ind.toLowerCase().includes(industrySearch.toLowerCase()))
+                      .map((ind) => (
+                        <label key={ind} className="flex items-center gap-2 cursor-pointer text-xs p-1 rounded hover:bg-[var(--surface-2)]">
+                          <input
+                            type="checkbox"
+                            checked={industryFilters.includes(ind)}
+                            onChange={() => {
+                              setIndustryFilters((prev) =>
+                                prev.includes(ind)
+                                  ? prev.filter((item) => item !== ind)
+                                  : [...prev, ind]
+                              );
+                              setPage(1);
+                            }}
+                            className="rounded border-[var(--border)] text-[var(--accent)] accent-[var(--accent)]"
+                          />
+                          <span style={{ color: "var(--text)" }}>{ind}</span>
+                        </label>
+                      ))}
+                  </div>
+
+                  <div className="flex items-center justify-between border-t pt-2" style={{ borderColor: "var(--border)" }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIndustryFilters([]);
+                        setPage(1);
+                      }}
+                      className="text-[10px] font-bold uppercase transition-colors hover:text-[var(--accent)]"
+                      style={{ color: "var(--text-3)" }}
+                    >
+                      Filter zurücksetzen
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsIndustryDropdownOpen(false)}
+                      className="text-[10px] font-bold uppercase rounded px-2.5 py-1"
+                      style={{ background: "var(--accent)", color: "var(--bg)" }}
+                    >
+                      Fertig
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
 
           {/* New Lead Button */}
           <button
