@@ -51,6 +51,7 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
   // Upload Call State
   const [uploadingCall, setUploadingCall] = useState(false);
   const [uploadError, setUploadError] = useState("");
+  const [isDragging, setIsDragging] = useState(false);
 
   // New Interaction Form
   const [newInteractionType, setNewInteractionType] = useState<InteractionType>("PHONE");
@@ -220,10 +221,8 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
     }
   }
 
-  async function handleAudioUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    if (!e.target.files || !e.target.files[0] || !lead) return;
-    const file = e.target.files[0];
-
+  const processAudioUpload = async (file: File) => {
+    if (!lead) return;
     setUploadingCall(true);
     setUploadError("");
 
@@ -254,7 +253,45 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
     } finally {
       setUploadingCall(false);
     }
-  }
+  };
+
+  const handleAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      await processAudioUpload(e.target.files[0]);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (!uploadingCall) {
+      setIsDragging(true);
+    }
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (uploadingCall || !lead) return;
+
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const file = e.dataTransfer.files[0];
+      if (
+        file.type.startsWith("audio/") ||
+        file.name.endsWith(".m4a") ||
+        file.name.endsWith(".mp3") ||
+        file.name.endsWith(".wav") ||
+        file.name.endsWith(".ogg")
+      ) {
+        await processAudioUpload(file);
+      } else {
+        setUploadError("Bitte lade eine gültige Audiodatei (MP3, WAV, M4A, OGG) hoch.");
+      }
+    }
+  };
 
   const sentimentBadge: Record<string, { bg: string; tx: string; label: string }> = {
     POSITIVE: { bg: "var(--status-warm-bg)", tx: "var(--status-warm-tx)", label: "Positiv" },
@@ -709,13 +746,19 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                       </div>
 
                       <label
-                        className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-5 cursor-pointer transition-colors hover:bg-[var(--surface-3)]"
-                        style={{ borderColor: "var(--border-2)" }}
+                        onDragOver={handleDragOver}
+                        onDragLeave={handleDragLeave}
+                        onDrop={handleDrop}
+                        className={`flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-5 cursor-pointer transition-all ${
+                          isDragging
+                            ? "border-[var(--accent)] bg-[var(--surface-3)] scale-[1.02]"
+                            : "border-[var(--border-2)] hover:bg-[var(--surface-3)]"
+                        }`}
                       >
                         <Upload className="w-6 h-6 mb-2" style={{ color: "var(--text-3)" }} />
                         <div className="text-center">
                           <p className="text-xs font-semibold" style={{ color: "var(--text)" }}>Audiodatei (MP3, WAV, M4A) hochladen</p>
-                          <p className="text-[10px]" style={{ color: "var(--text-3)" }}>Transkript wird automatisch erstellt und an den Lead angehängt</p>
+                          <p className="text-[10px]" style={{ color: "var(--text-3)" }}>Oder hierher ziehen (Drag & Drop)</p>
                         </div>
                         <input
                           type="file"

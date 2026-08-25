@@ -28,11 +28,47 @@ export function AudioUploadModal({ isOpen, onClose, onSuccess }: AudioUploadModa
 
   if (!isOpen) return null;
 
+  const [isDragging, setIsDragging] = useState(false);
+
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0]);
+      setError("");
     }
   }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (!loading) {
+      setIsDragging(true);
+    }
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (loading) return;
+
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const droppedFile = e.dataTransfer.files[0];
+      if (
+        droppedFile.type.startsWith("audio/") ||
+        droppedFile.name.endsWith(".m4a") ||
+        droppedFile.name.endsWith(".mp3") ||
+        droppedFile.name.endsWith(".wav") ||
+        droppedFile.name.endsWith(".ogg")
+      ) {
+        setFile(droppedFile);
+        setError("");
+      } else {
+        setError("Bitte wähle eine gültige Audiodatei (MP3, WAV, M4A, OGG) aus.");
+      }
+    }
+  };
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -98,8 +134,16 @@ export function AudioUploadModal({ isOpen, onClose, onSuccess }: AudioUploadModa
               Audiodatei (MP3, WAV, M4A, OGG)
             </label>
             <label
-              className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 cursor-pointer transition-colors hover:bg-[var(--surface-2)]"
-              style={{ borderColor: file ? "var(--accent)" : "var(--border-2)" }}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              className={`flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 cursor-pointer transition-all ${
+                isDragging
+                  ? "border-[var(--accent)] bg-[var(--surface-2)] scale-[1.02]"
+                  : file
+                  ? "border-[var(--accent)] hover:bg-[var(--surface-2)]"
+                  : "border-[var(--border-2)] hover:bg-[var(--surface-2)]"
+              }`}
             >
               <FileAudio className="w-8 h-8 mb-2" style={{ color: file ? "var(--accent)" : "var(--text-3)" }} />
               {file ? (
