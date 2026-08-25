@@ -21,6 +21,7 @@ export async function GET(request: Request) {
       include: {
         lead: { select: { id: true, companyName: true, status: true, phone: true } },
         createdBy: { select: { displayName: true } },
+        audioFile: { select: { id: true } },
       },
     });
 

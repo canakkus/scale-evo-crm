@@ -57,6 +57,12 @@ export async function POST(request: Request) {
         aiSentiment: analysis.sentiment,
         aiExtractedData: JSON.parse(JSON.stringify(analysis.extractedData)),
         status: "DONE",
+        audioFile: {
+          create: {
+            data: buffer,
+            mimeType: mimeType,
+          }
+        }
       },
     });
 

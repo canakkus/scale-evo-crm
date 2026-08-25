@@ -22,6 +22,7 @@ import {
   FileText,
   Activity,
   Loader2,
+  FileAudio,
 } from "lucide-react";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { STATUS_LABELS, INTERACTION_LABELS } from "@/lib/constants";
@@ -869,6 +870,24 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                               {/* Expanded Content Details */}
                               {isExpanded && (
                                 <div className="p-4 border-t space-y-4 text-xs" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+                                  {/* Audio Player */}
+                                  {rec.audioFile ? (
+                                    <div className="p-3.5 rounded border space-y-2" style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}>
+                                      <h5 className="font-semibold text-[11px] flex items-center gap-1.5" style={{ color: "var(--accent)" }}>
+                                        <FileAudio className="w-3.5 h-3.5" /> Aufnahme abspielen
+                                      </h5>
+                                      <audio 
+                                        controls 
+                                        className="w-full h-10 outline-none rounded bg-[var(--surface-3)]" 
+                                        src={`/api/cold-calls/recordings/${rec.id}/audio`}
+                                      />
+                                    </div>
+                                  ) : (
+                                    <div className="p-3.5 rounded border text-[10px] italic" style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text-3)" }}>
+                                      Keine abspielbare Audiodatei vorhanden (vor Einführung der Player-Funktion hochgeladen).
+                                    </div>
+                                  )}
+
                                   {/* AI Summary */}
                                   <div className="p-3.5 rounded border space-y-1.5" style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}>
                                     <h5 className="font-semibold text-[11px] flex items-center gap-1" style={{ color: "var(--status-warm-tx)" }}>

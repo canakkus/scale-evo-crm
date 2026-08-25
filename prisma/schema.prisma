@@ -348,9 +348,20 @@ model CallRecording {
   lead         Lead?         @relation(fields: [leadId], references: [id], onDelete: SetNull)
   createdBy    User          @relation(fields: [createdById], references: [id], onDelete: Cascade)
   interactions Interaction[]
+  audioFile    AudioFile?
 
   @@index([leadId])
   @@index([createdById, createdAt])
+}
+
+model AudioFile {
+  id          String        @id @default(cuid())
+  recordingId String        @unique
+  data        Bytes
+  mimeType    String
+  createdAt   DateTime      @default(now())
+
+  recording   CallRecording @relation(fields: [recordingId], references: [id], onDelete: Cascade)
 }
 
 // ============================================================
