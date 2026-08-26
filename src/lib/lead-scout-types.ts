@@ -92,6 +92,7 @@ export type LeadScoutOptions = {
   hasWebsiteFilter?: "all" | "yes" | "no";
   hasTreatwellFilter?: "all" | "yes" | "no";
   hasPhoneFilter?: "all" | "yes" | "no";
+  hasInstagramFilter?: "all" | "yes" | "no";
 };
 
 export type LeadScoutResponse = {

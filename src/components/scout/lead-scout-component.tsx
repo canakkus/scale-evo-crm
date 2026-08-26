@@ -24,6 +24,7 @@ import { cn, timeAgo } from "@/lib/utils";
 import { RESTAURANT_CATEGORIES, type LeadScoutResponse, type ScoutResult, type ScoutStepStatus } from "@/lib/lead-scout-types";
 
 const CATEGORIES = [
+  { label: "Alle Kategorien (Beauty & Gastro)", slug: "Alle" },
   { label: "Barber", slug: "Barber" },
   { label: "Friseur", slug: "Friseur" },
   { label: "Spa & Wellness", slug: "Spa & Wellness" },
@@ -227,7 +228,7 @@ function ResultCard({
 export function LeadScoutComponent() {
   const [category, setCategory] = useState("Barber");
   const [city, setCity] = useState("Wien");
-  const isRestaurant = RESTAURANT_CATEGORIES.includes(category);
+  const isRestaurant = RESTAURANT_CATEGORIES.includes(category) || category === "Alle";
   const source = isRestaurant ? "places" : "treatwell";
 
   // Filter options
@@ -237,6 +238,7 @@ export function LeadScoutComponent() {
   const [hasWebsiteFilter, setHasWebsiteFilter] = useState<"all" | "yes" | "no">("all");
   const [hasTreatwellFilter, setHasTreatwellFilter] = useState<"all" | "yes" | "no">("all");
   const [hasPhoneFilter, setHasPhoneFilter] = useState<"all" | "yes" | "no">("all");
+  const [hasInstagramFilter, setHasInstagramFilter] = useState<"all" | "yes" | "no">("all");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -314,6 +316,7 @@ export function LeadScoutComponent() {
           hasWebsiteFilter,
           hasTreatwellFilter,
           hasPhoneFilter,
+          hasInstagramFilter,
         }),
       });
 
@@ -326,7 +329,7 @@ export function LeadScoutComponent() {
     } finally {
       setLoading(false);
     }
-  }, [category, city, minRating, minReviews, maxResults, source, hasWebsiteFilter, hasTreatwellFilter, hasPhoneFilter, fetchSessions]);
+  }, [category, city, minRating, minReviews, maxResults, source, hasWebsiteFilter, hasTreatwellFilter, hasPhoneFilter, hasInstagramFilter, fetchSessions]);
 
   const addLead = async (result: ScoutResult) => {
     setAddingId(result.venue.key);
@@ -430,7 +433,7 @@ export function LeadScoutComponent() {
         </div>
 
         {/* Extended Filter Controls */}
-        <div className="pt-4 border-t grid grid-cols-1 sm:grid-cols-3 gap-4" style={{ borderColor: "var(--border)" }}>
+        <div className="pt-4 border-t grid grid-cols-1 sm:grid-cols-4 gap-4" style={{ borderColor: "var(--border)" }}>
           <div>
             <label className="block text-[11px] font-semibold mb-1" style={{ color: "var(--text-3)" }}>Website-Filter</label>
             <select
@@ -470,6 +473,20 @@ export function LeadScoutComponent() {
               <option value="all">Alle</option>
               <option value="yes">Nur mit Telefonnummer</option>
               <option value="no">Ohne Telefonnummer</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-semibold mb-1" style={{ color: "var(--text-3)" }}>Instagram-Kontakt</label>
+            <select
+              className="w-full rounded-md px-2.5 py-1.5 text-xs border outline-none cursor-pointer"
+              style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
+              value={hasInstagramFilter}
+              onChange={(e) => setHasInstagramFilter(e.target.value as any)}
+            >
+              <option value="all">Alle</option>
+              <option value="yes">Nur mit Instagram</option>
+              <option value="no">Ohne Instagram</option>
             </select>
           </div>
         </div>

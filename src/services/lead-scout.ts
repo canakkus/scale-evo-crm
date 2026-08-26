@@ -22,7 +22,8 @@ const FIELD_MASK =
   "places.rating,places.userRatingCount,places.googleMapsUri,places.types,places.primaryTypeDisplayName";
 
 function mapsSearchUrl(category: string, city: string) {
-  return `https://www.google.com/maps/search/${encodeURIComponent(`${category} in ${city}`)}`;
+  const query = category === "Alle" ? `Beauty Salon, Friseur, Restaurant, Cafe in ${city}` : `${category} in ${city}`;
+  return `https://www.google.com/maps/search/${encodeURIComponent(query)}`;
 }
 
 function norm(value: string) {
@@ -90,7 +91,9 @@ async function searchRestaurantsViaPlaces(
         "X-Goog-FieldMask": FIELD_MASK,
       },
       body: JSON.stringify({
-        textQuery: `${category} in ${city}`,
+        textQuery: category === "Alle" 
+          ? `Beauty Salon, Friseur, Restaurant, Cafe in ${city}` 
+          : `${category} in ${city}`,
         languageCode: "de",
         regionCode: process.env.GOOGLE_PLACES_REGION?.trim() || "AT",
         maxResultCount: Math.min(20, Math.max(1, maxResults)),
@@ -366,6 +369,8 @@ export async function runLeadScout(options: LeadScoutOptions, userId: string): P
   if (options.hasWebsiteFilter === "yes") finalResults = finalResults.filter((r) => Boolean(r.website.url));
   if (options.hasPhoneFilter === "yes") finalResults = finalResults.filter((r) => Boolean(r.contacts.phone));
   if (options.hasPhoneFilter === "no") finalResults = finalResults.filter((r) => !r.contacts.phone);
+  if (options.hasInstagramFilter === "yes") finalResults = finalResults.filter((r) => Boolean(r.contacts.instagram));
+  if (options.hasInstagramFilter === "no") finalResults = finalResults.filter((r) => !r.contacts.instagram);
 
   finalResults.sort((a, b) => {
     const aHasSite = a.website.url ? 1 : 0;

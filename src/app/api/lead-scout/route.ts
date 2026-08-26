@@ -26,6 +26,7 @@ export async function POST(request: Request) {
       hasWebsiteFilter: body.hasWebsiteFilter || "all",
       hasTreatwellFilter: body.hasTreatwellFilter || "all",
       hasPhoneFilter: body.hasPhoneFilter || "all",
+      hasInstagramFilter: body.hasInstagramFilter || "all",
     };
 
     const response = await runLeadScout(options, user.id);
