@@ -33,8 +33,10 @@ This file contains the guidelines, build commands, recent changes, and troublesh
 1. **Imports:** Use absolute path aliases starting with `@/` (e.g. `@/components/leads/...` or `@/lib/prisma`).
 2. **Styles:** Use Tailwind v4 along with custom theme CSS variables (`var(--bg)`, `var(--surface)`, `var(--border)`, `var(--text)`, `var(--accent)`) to ensure consistency across views.
 3. **Database Changes:** Always check `prisma/schema.prisma` and sync with `npx prisma db push` to keep the database aligned.
-4. **Vercel Deployments:** To avoid flooding chat outputs, run Vercel builds using the quiet deployment script:
-   `python3 "/Users/can/.gemini/antigravity/brain/<conv-id>/scratch/deploy_quietly.py"`
+4. **Vercel Deployments & Branching Workflow:**
+   * **`main` branch** → automatically triggers a production deployment to `https://scale-evo-crm.vercel.app` on every push/merge.
+   * **Feature/Fix Branches** → generate preview URLs only (never production). This is intended and should remain this way.
+   * **Rule of Thumb:** Always develop and test on dedicated feature/fix branches before merging into `main`.
 
 ---
 
@@ -42,6 +44,15 @@ This file contains the guidelines, build commands, recent changes, and troublesh
 
 ### August 2026
 
+* **Google Places API & Region Code Trimming Fix:**
+  * Added `GOOGLE_PLACES_API_KEY` and `GOOGLE_PLACES_REGION` environment variables to Vercel production & development.
+  * Added defensive `.trim()` for `GOOGLE_PLACES_REGION` across `/api/places`, `lead-scout.ts`, and `/api/leads/[id]` to prevent `Invalid region code 'AT '` Unicode CLDR errors caused by trailing whitespaces.
+  * Enhanced error handling and timeout propagation with `AbortSignal.timeout(8000)` in `/api/places` to surface actionable Google Places API error messages.
+* **Lead Scout Engine & Treatwell Fallback:**
+  * Updated Treatwell scraping endpoints and added automatic Google Places fallback when Treatwell returns 0 results.
+* **Gemini Function Calling (Role 'function' 400 Fix):**
+  * Fixed 400 Bad Request error `Role 'function' is not supported` during tool execution (`runScoutSession`, etc.) in `chatWithAssistant`.
+  * Replaced `startChat` / `sendMessage` pattern with direct `model.generateContent({ contents })` to manually manage history turns, sending function response parts under role `"user"` as required by the Gemini API.
 * **Rhetorik- & Sprechstil-Coaching für Calls:**
   * Added `aiFeedback` Json field to `CallRecording` schema and synced database.
   * Configured Gemini Prompt in `transcribeAndAnalyzeCall` to evaluate pace (speed), stuttering/filler words, and emotional tone (calmness), giving concrete coaching tips.
@@ -67,9 +78,16 @@ This file contains the guidelines, build commands, recent changes, and troublesh
 
 ## ⚠️ Troubleshooting & Error History
 
+* **Gemini SDK Function Response 400 Bad Request (`Role 'function' is not supported`):**
+  * *Error:* ChatSession in `@google/generative-ai` sends function response parts with role `'function'` or `'tool'`, which the API rejects with 400.
+  * *Fix:* Call `model.generateContent({ contents })` directly and append function response parts as a turn with `role: "user"`.
+* **Google Places Invalid Region Code (`Invalid region code 'AT '`):**
+  * *Error:* Trailing whitespace in `GOOGLE_PLACES_REGION` env var caused CLDR validation failure in Google Places API.
+  * *Fix:* Applied `.trim()` in code and re-saved the environment variable without whitespace.
 * **TypeScript Compilation Failures (`LeadScoutOptions` match):**
   * *Error:* `"any"` is not assignable to type `"all" | "no" | "yes" | undefined` on filter parameters in `gemini.ts`.
   * *Fix:* Changed the default filter arguments in `gemini.ts` from `"any"` to `"all"`.
 * **Zsh Glob matching errors during Git commits:**
   * *Error:* `no matches found: src/app/api/leads/[id]/route.ts` when adding files to Git.
   * *Fix:* Escaped or wrapped bracket paths in double quotes: `git add "src/app/api/leads/[id]/route.ts"`.
+
