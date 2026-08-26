@@ -119,6 +119,63 @@ export function RecordingDetailModal({ recording, onClose }: RecordingDetailModa
             </div>
           </div>
 
+          {/* Audio Player */}
+          {recording.audioFile ? (
+            <div className="p-4 rounded-xl border space-y-2" style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}>
+              <h4 className="text-xs font-semibold flex items-center gap-1.5" style={{ color: "var(--accent)" }}>
+                <FileText className="w-4 h-4" />
+                Call-Aufnahme abspielen
+              </h4>
+              <audio
+                controls
+                className="w-full h-10 outline-none rounded bg-[var(--surface-3)]"
+                src={`/api/cold-calls/recordings/${recording.id}/audio`}
+              />
+            </div>
+          ) : (
+            <div className="p-3.5 rounded-xl border text-xs italic" style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text-3)" }}>
+              Keine abspielbare Audiodatei vorhanden (vor Einführung des Players hochgeladen).
+            </div>
+          )}
+
+          {/* Rhetoric Feedback */}
+          {recording.aiFeedback && (
+            <div className="p-4 rounded-xl border space-y-3" style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}>
+              <h4 className="text-xs font-semibold flex items-center gap-1.5" style={{ color: "var(--status-warm-tx)" }}>
+                <Sparkles className="w-4 h-4" />
+                Rhetorik- & Sprechstil-Analyse
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+                <div className="space-y-0.5">
+                  <span className="font-semibold text-[11px]" style={{ color: "var(--text-3)" }}>Redegeschwindigkeit:</span>
+                  <p style={{ color: "var(--text)" }}>{recording.aiFeedback.pace || "—"}</p>
+                </div>
+                <div className="space-y-0.5">
+                  <span className="font-semibold text-[11px]" style={{ color: "var(--text-3)" }}>Füllwörter & Stottern:</span>
+                  <p style={{ color: "var(--text)" }}>{recording.aiFeedback.stuttering || "—"}</p>
+                </div>
+                <div className="space-y-0.5">
+                  <span className="font-semibold text-[11px]" style={{ color: "var(--text-3)" }}>Gelassenheit & Tonfall:</span>
+                  <p style={{ color: "var(--text)" }}>{recording.aiFeedback.tone || "—"}</p>
+                </div>
+              </div>
+
+              {recording.aiFeedback.tips && recording.aiFeedback.tips.length > 0 && (
+                <div className="border-t pt-2.5 mt-2 space-y-1.5" style={{ borderColor: "var(--border)" }}>
+                  <span className="font-semibold text-[11px]" style={{ color: "var(--text-3)" }}>Rhetorik-Tipps zur Verbesserung:</span>
+                  <ul className="space-y-1 mt-1">
+                    {recording.aiFeedback.tips.map((tip: string, idx: number) => (
+                      <li key={idx} className="flex items-start gap-1.5" style={{ color: "var(--text-2)" }}>
+                        <span style={{ color: "var(--accent)" }}>•</span>
+                        {tip}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Full Transcription */}
           <div className="space-y-2">
             <h3 className="text-xs font-semibold flex items-center gap-1.5" style={{ color: "var(--text-2)" }}>
