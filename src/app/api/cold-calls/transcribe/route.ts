@@ -56,6 +56,7 @@ export async function POST(request: Request) {
         aiNextSteps: analysis.nextSteps,
         aiSentiment: analysis.sentiment,
         aiExtractedData: JSON.parse(JSON.stringify(analysis.extractedData)),
+        aiFeedback: analysis.aiFeedback ? JSON.parse(JSON.stringify(analysis.aiFeedback)) : null,
         status: "DONE",
         audioFile: {
           create: {

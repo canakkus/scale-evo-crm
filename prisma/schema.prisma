@@ -340,6 +340,7 @@ model CallRecording {
   aiNextSteps      Json?               // Array of strings
   aiSentiment      String?             // POSITIVE / NEUTRAL / NEGATIVE / MIXED
   aiExtractedData  Json?               // { name, appointment, objections, ... }
+  aiFeedback       Json?               // { pace, stuttering, tone, tips }
   status           CallRecordingStatus @default(PENDING)
   error            String?
   createdAt        DateTime            @default(now())

@@ -42,6 +42,10 @@ This file contains the guidelines, build commands, recent changes, and troublesh
 
 ### August 2026
 
+* **Rhetorik- & Sprechstil-Coaching für Calls:**
+  * Added `aiFeedback` Json field to `CallRecording` schema and synced database.
+  * Configured Gemini Prompt in `transcribeAndAnalyzeCall` to evaluate pace (speed), stuttering/filler words, and emotional tone (calmness), giving concrete coaching tips.
+  * Added a dedicated visual card showing speaking style feedback in the expanded Call Recording UI.
 * **KI-Assistent Supercharged (Function Calling):**
   * Configured Gemini Function Calling (Tool Use) on `/api/ai/chat`.
   * Gemini can now dynamically execute backend functions: `searchLeads`, `getLeadDetails`, `updateLeadStatus`, `createTask`, `addLeadInteraction`, and `runScoutSession`.

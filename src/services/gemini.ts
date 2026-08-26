@@ -39,6 +39,12 @@ export interface CallAnalysis {
     objections?: string[];
     interestLevel?: "HIGH" | "MEDIUM" | "LOW" | "NONE";
   };
+  aiFeedback?: {
+    pace?: string;
+    stuttering?: string;
+    tone?: string;
+    tips?: string[];
+  };
 }
 
 /**
@@ -55,7 +61,7 @@ export async function transcribeAndAnalyzeCall(
   const model = getFlashModel();
   const context = companyName ? `Der Call war mit ${companyName}.` : "";
 
-  const prompt = `Du bist ein Vertriebsassistent. ${context}
+  const prompt = `Du bist ein Vertriebsassistent und Rhetorik-Coach. ${context}
 
 Analysiere diesen Verkaufscall und antworte NUR mit gültigem JSON ohne Markdown-Blöcke:
 
@@ -69,6 +75,12 @@ Analysiere diesen Verkaufscall und antworte NUR mit gültigem JSON ohne Markdown
     "appointmentDate": "Termin wenn vereinbart",
     "objections": ["Einwände als Array"],
     "interestLevel": "HIGH|MEDIUM|LOW|NONE"
+  },
+  "aiFeedback": {
+    "pace": "Redegeschwindigkeit und Rhythmus des Anrufers (z.B. 'Ruhig und kontrolliert', 'Etwas zu schnell')",
+    "stuttering": "Verwendung von Füllwörtern wie 'äh', 'öhm' oder Stottern (z.B. 'Flüssig, kaum Füllwörter', 'Häufiges Äh-Sagen')",
+    "tone": "Tonfall und Gelassenheit des Anrufers (z.B. 'Sehr gelassen und selbstbewusst', 'Etwas nervös/unsicher')",
+    "tips": ["Konkrete Rhetorik-Tipps zur Verbesserung als Array (z.B. 'Mehr Sprechpausen einbauen')"]
   }
 }`;
 

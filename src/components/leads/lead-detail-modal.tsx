@@ -919,6 +919,40 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                                     </div>
                                   </div>
 
+                                  {/* Rhetoric Feedback */}
+                                  {rec.aiFeedback && (
+                                    <div className="p-3.5 rounded border space-y-3" style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}>
+                                      <h5 className="font-semibold text-[11px] flex items-center gap-1.5" style={{ color: "var(--status-warm-tx)" }}>
+                                        <Sparkles className="w-3.5 h-3.5" /> Rhetorik- & Sprechstil-Analyse
+                                      </h5>
+                                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-[11px]">
+                                        <div className="space-y-0.5">
+                                          <span className="font-semibold text-[10px]" style={{ color: "var(--text-3)" }}>Redegeschwindigkeit:</span>
+                                          <p style={{ color: "var(--text-2)" }}>{rec.aiFeedback.pace || "—"}</p>
+                                        </div>
+                                        <div className="space-y-0.5">
+                                          <span className="font-semibold text-[10px]" style={{ color: "var(--text-3)" }}>Füllwörter & Stottern:</span>
+                                          <p style={{ color: "var(--text-2)" }}>{rec.aiFeedback.stuttering || "—"}</p>
+                                        </div>
+                                        <div className="space-y-0.5">
+                                          <span className="font-semibold text-[10px]" style={{ color: "var(--text-3)" }}>Gelassenheit & Tonfall:</span>
+                                          <p style={{ color: "var(--text-2)" }}>{rec.aiFeedback.tone || "—"}</p>
+                                        </div>
+                                      </div>
+
+                                      {rec.aiFeedback.tips && rec.aiFeedback.tips.length > 0 && (
+                                        <div className="border-t pt-2 mt-2 space-y-1" style={{ borderColor: "var(--border)" }}>
+                                          <span className="font-semibold text-[10px]" style={{ color: "var(--text-3)" }}>Rhetorik-Tipps zur Verbesserung:</span>
+                                          <ul className="space-y-1 mt-1">
+                                            {rec.aiFeedback.tips.map((tip: string, idx: number) => (
+                                              <li key={idx} style={{ color: "var(--text-2)" }}>• {tip}</li>
+                                            ))}
+                                          </ul>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+
                                   {/* Transcript block */}
                                   <div className="space-y-1">
                                     <h5 className="font-semibold text-[11px] flex items-center gap-1" style={{ color: "var(--text-3)" }}>
