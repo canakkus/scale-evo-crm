@@ -16,12 +16,12 @@ function getClient(): GoogleGenerativeAI {
 
 /** Gibt ein Gemini Flash-Modell zurück (günstig + schnell für die meisten Tasks) */
 export function getFlashModel(): GenerativeModel {
-  return getClient().getGenerativeModel({ model: "gemini-3.6-flash" });
+  return getClient().getGenerativeModel({ model: "gemini-2.0-flash" });
 }
 
 /** Gibt ein Gemini Pro-Modell zurück (für komplexere Aufgaben) */
 export function getProModel(): GenerativeModel {
-  return getClient().getGenerativeModel({ model: "gemini-3.6-flash" });
+  return getClient().getGenerativeModel({ model: "gemini-2.0-flash" });
 }
 
 // ============================================================
@@ -235,7 +235,7 @@ export async function chatWithAssistant(
   userId: string
 ): Promise<string> {
   const model = getClient().getGenerativeModel({
-    model: "gemini-3.6-flash",
+    model: "gemini-2.0-flash",
     tools: [
       {
         functionDeclarations: [
@@ -388,17 +388,20 @@ Antworte auf Deutsch, kurz, freundlich und hilfreich.`;
   let calls = result.response.functionCalls();
 
   while (calls && calls.length > 0) {
-    const responses: any[] = [];
-    for (const call of calls) {
-      const responseData = await executeAssistantTool(call.name, call.args, userId);
-      responses.push({
-        functionResponse: {
-          name: call.name,
-          response: { result: responseData }
-        }
-      });
-    }
-    result = await chat.sendMessage(responses);
+    // Each function response must be sent as a Part with a `functionResponse` key.
+    // Sending raw objects causes the SDK to emit role "function" which the API rejects.
+    const responseParts = await Promise.all(
+      calls.map(async (call) => {
+        const responseData = await executeAssistantTool(call.name, call.args, userId);
+        return {
+          functionResponse: {
+            name: call.name,
+            response: { result: responseData },
+          },
+        };
+      })
+    );
+    result = await chat.sendMessage(responseParts);
     calls = result.response.functionCalls();
   }
 
