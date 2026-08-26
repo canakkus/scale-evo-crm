@@ -26,7 +26,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ configured: true, suggestions: [] });
     }
 
-    const region = process.env.GOOGLE_PLACES_REGION ?? "AT";
+    const region = process.env.GOOGLE_PLACES_REGION?.trim() || "AT";
     const response = await fetch(PLACES_URL, {
       method: "POST",
       headers: {

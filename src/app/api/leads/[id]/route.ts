@@ -41,7 +41,7 @@ async function getPlaceDetailsFromUrl(url: string, defaultName: string): Promise
       body: JSON.stringify({
         textQuery: query,
         languageCode: "de",
-        regionCode: process.env.GOOGLE_PLACES_REGION ?? "AT",
+        regionCode: process.env.GOOGLE_PLACES_REGION?.trim() || "AT",
         maxResultCount: 1,
       }),
     });

@@ -60,7 +60,7 @@ async function searchPlaces(query: string): Promise<PlaceSuggestion[] | null> {
       body: JSON.stringify({
         textQuery: query,
         languageCode: "de",
-        regionCode: process.env.GOOGLE_PLACES_REGION ?? "AT",
+        regionCode: process.env.GOOGLE_PLACES_REGION?.trim() || "AT",
         maxResultCount: 5,
       }),
       cache: "no-store",
@@ -92,7 +92,7 @@ async function searchRestaurantsViaPlaces(
       body: JSON.stringify({
         textQuery: `${category} in ${city}`,
         languageCode: "de",
-        regionCode: process.env.GOOGLE_PLACES_REGION ?? "AT",
+        regionCode: process.env.GOOGLE_PLACES_REGION?.trim() || "AT",
         maxResultCount: Math.min(20, Math.max(1, maxResults)),
       }),
       cache: "no-store",
