@@ -3,14 +3,17 @@ import type { TreatwellVenue } from "@/lib/lead-scout-types";
 
 export type { TreatwellVenue };
 
-export const TREATWELL_CATEGORIES: Record<string, string> = {
-  Barber: "barber-shop",
-  Friseur: "friseur",
-  "Spa & Wellness": "spa",
-  Nagelstudio: "behandlung-gruppe-nagel/angebot-typ-lokal",
-  Kosmetik: "kosmetik",
-  Massage: "massage",
-  Wimpern: "behandlung-gruppe-wimpern/angebot-typ-lokal",
+// Map from category name to { slug, useBeiPrefix }
+// Treatwell uses "bei-{slug}" for some categories, but not all.
+// Test: https://www.treatwell.at/orte/{bei-?slug}/in-{city}-at/
+export const TREATWELL_CATEGORIES: Record<string, { slug: string; prefix: boolean }> = {
+  Barber:         { slug: "barber-shop",                              prefix: true  },
+  Friseur:        { slug: "friseur",                                  prefix: true  },
+  "Spa & Wellness": { slug: "spa",                                    prefix: true  },
+  Nagelstudio:    { slug: "behandlung-gruppe-nagel/angebot-typ-lokal", prefix: false },
+  Kosmetik:       { slug: "kosmetik",                                 prefix: false },
+  Massage:        { slug: "massage",                                  prefix: false },
+  Wimpern:        { slug: "wimpernverlaengerung",                     prefix: false },
 };
 
 const USER_AGENT =
@@ -41,8 +44,11 @@ export async function searchTreatwell(
   city: string,
   options: { timeoutMs?: number } = {},
 ): Promise<TreatwellSearchResult> {
-  const slug = TREATWELL_CATEGORIES[category] ?? slugify(category);
-  const url = `https://www.treatwell.at/orte/bei-${slug}/in-${slugify(city)}-at/`;
+  const entry = TREATWELL_CATEGORIES[category];
+  const slug = entry ? entry.slug : slugify(category);
+  const useBei = entry ? entry.prefix : true;
+  const prefix = useBei ? "bei-" : "";
+  const url = `https://www.treatwell.at/orte/${prefix}${slug}/in-${slugify(city)}-at/`;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), options.timeoutMs ?? 15000);
 

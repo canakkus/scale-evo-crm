@@ -329,6 +329,18 @@ export async function runLeadScout(options: LeadScoutOptions, userId: string): P
     venues = result.venues;
     url = result.url;
     error = result.error;
+
+    // ── Google Places Fallback ──────────────────────────────────────────────
+    // If Treatwell returns 0 results (blocked, wrong URL, or no listings),
+    // automatically fall back to Google Places so the scout still finds leads.
+    if (venues.length === 0) {
+      const places = await searchRestaurantsViaPlaces(options.category, options.city, options.maxResults * 3);
+      if (places && places.length > 0) {
+        venues = placesToVenues(places, options.city);
+        url = mapsSearchUrl(options.category, options.city);
+        error = undefined; // Clear Treatwell error since Places succeeded
+      }
+    }
   }
 
   let filtered = venues.filter(
