@@ -15,6 +15,7 @@ export async function GET(request: Request) {
     }
 
     const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+    console.log(`[places] API key present: ${!!apiKey}, length: ${apiKey?.length ?? 0}`);
     if (!apiKey) {
       return NextResponse.json({ configured: false, suggestions: [] });
     }
@@ -40,13 +41,20 @@ export async function GET(request: Request) {
         maxResultCount: 5,
       }),
       cache: "no-store",
+      signal: AbortSignal.timeout(8000),
     });
 
     if (!response.ok) {
       const body = await response.text().catch(() => "");
       console.error(`[places] Google-Places-Fehler ${response.status}: ${body.slice(0, 500)}`);
+      // Surface the real error so we can debug
+      let detail = "Google-Places-Suche fehlgeschlagen.";
+      try {
+        const errJson = JSON.parse(body);
+        if (errJson?.error?.message) detail = errJson.error.message;
+      } catch { /* use default */ }
       return NextResponse.json(
-        { configured: true, suggestions: [], error: "Google-Places-Suche fehlgeschlagen." },
+        { configured: true, suggestions: [], error: detail },
         { status: 502 }
       );
     }
@@ -54,9 +62,11 @@ export async function GET(request: Request) {
     const payload: { places?: RawPlace[] } = await response.json();
     const suggestions: PlaceSuggestion[] = (payload.places ?? []).map(mapPlaceToSuggestion);
     return NextResponse.json({ configured: true, suggestions });
-  } catch {
+  } catch (err: any) {
+    console.error("[places] Catch-Block Error:", err?.message ?? err);
+    const isTimeout = err?.name === "TimeoutError" || err?.name === "AbortError";
     return NextResponse.json(
-      { configured: true, suggestions: [], error: "Fehler beim Abrufen der Orte." },
+      { configured: true, suggestions: [], error: isTimeout ? "Google-Suche Timeout — bitte erneut versuchen." : `Fehler: ${err?.message ?? "Unbekannt"}` },
       { status: 500 }
     );
   }
