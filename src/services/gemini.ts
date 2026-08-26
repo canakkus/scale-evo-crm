@@ -376,29 +376,43 @@ Aktueller CRM-Snapshot:
 Du kannst direkt Aktionen ausführen wie Suchen, Status ändern, Interaktionen hinzufügen, Aufgaben erstellen und den Lead Scout ausführen unter Verwendung deiner Tools. 
 Antworte auf Deutsch, kurz, freundlich und hilfreich.`;
 
-  const chat = model.startChat({
-    history: [
-      { role: "user", parts: [{ text: systemPrompt }] },
-      { role: "model", parts: [{ text: "Verstanden! Ich bin bereit dir bei deinem CRM zu helfen und Aktionen für dich auszuführen." }] },
-      ...history,
-    ],
-  });
+  // Build the full conversation history manually.
+  // We use model.generateContent() directly instead of startChat()+sendMessage()
+  // because ChatSession wraps functionResponse parts with role "function" — a role
+  // the new Gemini API no longer accepts (400 Bad Request).
+  // By managing the contents array ourselves we control the exact role for every turn.
+  const contents: any[] = [
+    { role: "user", parts: [{ text: systemPrompt }] },
+    { role: "model", parts: [{ text: "Verstanden! Ich bin bereit dir bei deinem CRM zu helfen und Aktionen für dich auszuführen." }] },
+    ...history.map((h) => ({ role: h.role, parts: h.parts })),
+    { role: "user", parts: [{ text: message }] },
+  ];
 
-  let result = await chat.sendMessage(message);
+  let result = await model.generateContent({ contents });
   let calls = result.response.functionCalls();
 
   while (calls && calls.length > 0) {
-    const responses: any[] = [];
-    for (const call of calls) {
-      const responseData = await executeAssistantTool(call.name, call.args, userId);
-      responses.push({
-        functionResponse: {
-          name: call.name,
-          response: { result: responseData }
-        }
-      });
-    }
-    result = await chat.sendMessage(responses);
+    // Append the model's tool-call turn to history
+    contents.push({ role: "model", parts: result.response.candidates![0].content.parts });
+
+    // Execute all tool calls in parallel and build the response turn
+    const toolResponseParts = await Promise.all(
+      calls.map(async (call) => {
+        const responseData = await executeAssistantTool(call.name, call.args, userId);
+        return {
+          functionResponse: {
+            name: call.name,
+            response: { result: responseData },
+          },
+        };
+      })
+    );
+
+    // Append the tool responses as a "user" role turn (Gemini API requirement:
+    // functionResponse parts must be sent with role "user", not "tool" or "function")
+    contents.push({ role: "user", parts: toolResponseParts });
+
+    result = await model.generateContent({ contents });
     calls = result.response.functionCalls();
   }
 
