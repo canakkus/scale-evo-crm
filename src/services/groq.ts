@@ -17,18 +17,11 @@
 import Groq from "groq-sdk";
 import { prisma } from "@/lib/prisma";
 import { runLeadScout } from "./lead-scout";
+import { withGroqClient } from "@/lib/groq-key-manager";
 
-// Singleton Groq client
-let _client: Groq | null = null;
-
-function getClient(): Groq {
-  if (!_client) {
-    const key = process.env.GROQ_API_KEY;
-    if (!key) throw new Error("GROQ_API_KEY ist nicht konfiguriert.");
-    _client = new Groq({ apiKey: key });
-  }
-  return _client;
-}
+// Re-export für bequemen Import in anderen Modulen
+export { getKeyManager } from "@/lib/groq-key-manager";
+export type { KeyInfo, KeyStatus } from "@/lib/groq-key-manager";
 
 // ============================================================
 // Call Transcription & Analysis
@@ -66,22 +59,21 @@ export async function transcribeAndAnalyzeCall(
   fileName: string,
   companyName?: string
 ): Promise<CallAnalysis> {
-  const client = getClient();
   const context = companyName ? `Der Call war mit ${companyName}.` : "";
 
-  // Step 1: Transkription via Whisper large-v3 (Groq)
-  const file = new File([new Uint8Array(audioBuffer)], fileName, { type: mimeType });
-
-  const transcriptionResult = await client.audio.transcriptions.create({
-    file,
-    model: "whisper-large-v3",
-    language: "de",
-    response_format: "text",
+  // Step 1: Transkription via Whisper large-v3 (Groq) — mit automatischer Key-Rotation
+  const transcription = await withGroqClient(async (client) => {
+    const file = new File([new Uint8Array(audioBuffer)], fileName, { type: mimeType });
+    const result = await client.audio.transcriptions.create({
+      file,
+      model: "whisper-large-v3",
+      language: "de",
+      response_format: "text",
+    });
+    return String(result).trim();
   });
 
-  const transcription = String(transcriptionResult).trim();
-
-  // Step 2: Analyse via Llama 3.3 70B
+  // Step 2: Analyse via Llama 3.3 70B — mit automatischer Key-Rotation
   const analysisPrompt = `Du bist ein Vertriebsassistent und Rhetorik-Coach. ${context}
 
 Analysiere diese Transkription eines Verkaufscalls und antworte NUR mit gültigem JSON ohne Markdown-Blöcke:
@@ -110,23 +102,21 @@ Antworte mit exakt diesem JSON-Format:
   }
 }`;
 
-  const analysisResponse = await client.chat.completions.create({
-    model: "llama-3.3-70b-versatile",
-    messages: [{ role: "user", content: analysisPrompt }],
-    temperature: 0.3,
+  const analysisText = await withGroqClient(async (client) => {
+    const response = await client.chat.completions.create({
+      model: "llama-3.3-70b-versatile",
+      messages: [{ role: "user", content: analysisPrompt }],
+      temperature: 0.3,
+    });
+    return (response.choices[0]?.message?.content || "").trim();
   });
 
-  const analysisText = (analysisResponse.choices[0]?.message?.content || "").trim();
   const jsonStr = analysisText.replace(/^```(?:json)?\n?/m, "").replace(/\n?```$/m, "");
 
   try {
     const parsed = JSON.parse(jsonStr);
-    return {
-      transcription,
-      ...parsed,
-    } as CallAnalysis;
+    return { transcription, ...parsed } as CallAnalysis;
   } catch {
-    // Fallback wenn JSON-Parsing fehlschlägt
     return {
       transcription,
       summary: "Zusammenfassung konnte nicht automatisch erstellt werden.",
@@ -374,8 +364,6 @@ export async function chatWithAssistant(
   context: CrmContext,
   userId: string
 ): Promise<string> {
-  const client = getClient();
-
   const systemPrompt = `Du bist ein intelligenter CRM-Assistent für Scale Evo CRM. Du hilfst beim Lead-Management und der Vertriebsarbeit.
 
 Aktueller CRM-Snapshot:
@@ -398,42 +386,44 @@ Antworte auf Deutsch, kurz, freundlich und hilfreich.`;
     { role: "user", content: message },
   ];
 
-  // Tool-Calling Loop
-  let response = await client.chat.completions.create({
-    model: "llama-3.3-70b-versatile",
-    messages,
-    tools: ASSISTANT_TOOLS,
-    tool_choice: "auto",
-    temperature: 0.5,
-  });
-
-  while (response.choices[0]?.finish_reason === "tool_calls") {
-    const assistantMessage = response.choices[0].message;
-    messages.push(assistantMessage);
-
-    const toolCalls = assistantMessage.tool_calls || [];
-    for (const toolCall of toolCalls) {
-      const toolName = toolCall.function.name;
-      const toolArgs = JSON.parse(toolCall.function.arguments || "{}");
-      const toolResult = await executeAssistantTool(toolName, toolArgs, userId);
-
-      messages.push({
-        role: "tool",
-        tool_call_id: toolCall.id,
-        content: JSON.stringify(toolResult),
-      });
-    }
-
-    response = await client.chat.completions.create({
+  // Tool-Calling Loop mit automatischer Key-Rotation
+  return await withGroqClient(async (client) => {
+    let response = await client.chat.completions.create({
       model: "llama-3.3-70b-versatile",
       messages,
       tools: ASSISTANT_TOOLS,
       tool_choice: "auto",
       temperature: 0.5,
     });
-  }
 
-  return response.choices[0]?.message?.content || "";
+    while (response.choices[0]?.finish_reason === "tool_calls") {
+      const assistantMessage = response.choices[0].message;
+      messages.push(assistantMessage);
+
+      const toolCalls = assistantMessage.tool_calls || [];
+      for (const toolCall of toolCalls) {
+        const toolName = toolCall.function.name;
+        const toolArgs = JSON.parse(toolCall.function.arguments || "{}");
+        const toolResult = await executeAssistantTool(toolName, toolArgs, userId);
+
+        messages.push({
+          role: "tool",
+          tool_call_id: toolCall.id,
+          content: JSON.stringify(toolResult),
+        });
+      }
+
+      response = await client.chat.completions.create({
+        model: "llama-3.3-70b-versatile",
+        messages,
+        tools: ASSISTANT_TOOLS,
+        tool_choice: "auto",
+        temperature: 0.5,
+      });
+    }
+
+    return response.choices[0]?.message?.content || "";
+  });
 }
 
 // ============================================================
@@ -447,8 +437,6 @@ export async function prioritizeTasks(
   tasks: Array<{ title: string; category: string; dueAt?: string | null; priority: string }>,
   followUps: Array<{ leadName: string; dueAt: string }>
 ): Promise<{ prioritized: string[]; reasoning: string }> {
-  const client = getClient();
-
   const prompt = `Du bist ein Produktivitätsassistent. Priorisiere diese Tasks für heute.
 
 Tasks: ${JSON.stringify(tasks)}
@@ -460,16 +448,17 @@ Antworte NUR mit gültigem JSON:
   "reasoning": "kurze Begründung der Priorisierung"
 }`;
 
-  const response = await client.chat.completions.create({
-    model: "llama-3.3-70b-versatile",
-    messages: [{ role: "user", content: prompt }],
-    temperature: 0.3,
-  });
-
-  const text = (response.choices[0]?.message?.content || "").trim();
-  const jsonStr = text.replace(/^```(?:json)?\n?/m, "").replace(/\n?```$/m, "");
-
   try {
+    const text = await withGroqClient(async (client) => {
+      const response = await client.chat.completions.create({
+        model: "llama-3.3-70b-versatile",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.3,
+      });
+      return (response.choices[0]?.message?.content || "").trim();
+    });
+
+    const jsonStr = text.replace(/^```(?:json)?\n?/m, "").replace(/\n?```$/m, "");
     return JSON.parse(jsonStr);
   } catch {
     return {
