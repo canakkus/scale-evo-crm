@@ -61,6 +61,7 @@ This file contains the guidelines, build commands, recent changes, and troublesh
   * Configured Gemini Function Calling (Tool Use) on `/api/ai/chat`.
   * Gemini can now dynamically execute backend functions: `searchLeads`, `getLeadDetails`, `updateLeadStatus`, `createTask`, `addLeadInteraction`, and `runScoutSession`.
   * Implemented an inline Markdown parser in the chat bubble UI to render headings, bolding, lists, and code snippets correctly.
+  * **Bugfix:** When Gemini calls `createTask` with category `FOLLOW_UP` and a `leadId`, it now automatically updates the lead's `status` to `FOLLOW_UP` and sets `nextFollowUpAt` to the task's due date, ensuring the lead appears in the filtered pipeline/table correctly.
 * **Multi-Select Branchen-Filter:**
   * Replaced the standard industry select dropdown in `LeadsTable` with a custom React popover containing checkboxes, filter search, and reset capabilities.
   * Added query logic to dynamically fetch all distinct custom industries currently present in the database.

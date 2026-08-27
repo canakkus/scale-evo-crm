@@ -171,6 +171,17 @@ export async function executeAssistantTool(name: string, args: any, userId: stri
             userId,
           },
         });
+
+        if (leadId && category === "FOLLOW_UP") {
+          await prisma.lead.update({
+            where: { id: leadId },
+            data: {
+              status: "FOLLOW_UP",
+              ...(dueAt && { nextFollowUpAt: new Date(dueAt) }),
+            },
+          });
+        }
+
         return { success: true, taskId: task.id, title: task.title };
       }
 

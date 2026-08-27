@@ -77,6 +77,7 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
   const [editTreatwellUrl, setEditTreatwellUrl] = useState("");
   const [editContactPerson, setEditContactPerson] = useState("");
   const [editGoogleMapsUrl, setEditGoogleMapsUrl] = useState("");
+  const [editNextFollowUpAt, setEditNextFollowUpAt] = useState("");
   const [savingDetails, setSavingDetails] = useState(false);
 
   const fetchRecordings = useCallback(async () => {
@@ -117,6 +118,13 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
           setEditTreatwellUrl(data.lead.treatwellUrl || "");
           setEditContactPerson(data.lead.contactPerson || "");
           setEditGoogleMapsUrl(data.lead.googleMapsUrl || "");
+          setEditNextFollowUpAt(
+            data.lead.nextFollowUpAt
+              ? new Date(new Date(data.lead.nextFollowUpAt).getTime() - new Date().getTimezoneOffset() * 60000)
+                  .toISOString()
+                  .slice(0, 16)
+              : ""
+          );
         }
       })
       .catch((err) => console.error(err))
@@ -183,6 +191,7 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
           treatwellUrl: editTreatwellUrl,
           contactPerson: editContactPerson,
           googleMapsUrl: editGoogleMapsUrl,
+          nextFollowUpAt: editNextFollowUpAt ? new Date(editNextFollowUpAt).toISOString() : null,
         }),
       });
 
@@ -529,6 +538,18 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                     </div>
                   </div>
                 )}
+
+                {lead.nextFollowUpAt && (
+                  <div className="flex flex-col gap-0.5 pt-2 border-t" style={{ borderColor: "var(--border)" }}>
+                    <span className="font-semibold" style={{ color: "var(--text-3)" }}>Follow-Up am:</span>
+                    <div className="flex items-center gap-1.5" style={{ color: "var(--text)" }}>
+                      <Calendar className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--text-3)" }} />
+                      <span className="font-medium" style={{ color: "var(--text)" }}>
+                        {new Intl.DateTimeFormat("de-AT", { dateStyle: "medium", timeStyle: "short" }).format(new Date(lead.nextFollowUpAt))} Uhr
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               // Edit Form
@@ -660,6 +681,17 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                       style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
                       value={editContactPerson}
                       onChange={(e) => setEditContactPerson(e.target.value)}
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-[10px] font-semibold mb-1" style={{ color: "var(--text-3)" }}>Follow-Up Datum & Uhrzeit</label>
+                    <input
+                      type="datetime-local"
+                      className="w-full rounded px-2.5 py-1.5 text-xs border outline-none"
+                      style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
+                      value={editNextFollowUpAt}
+                      onChange={(e) => setEditNextFollowUpAt(e.target.value)}
                     />
                   </div>
                 </div>

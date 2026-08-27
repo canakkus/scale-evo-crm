@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getOptionalUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { prioritizeTasks } from "@/services/gemini";
+import { prioritizeTasks } from "@/services/groq";
 
 export async function POST(request: Request) {
   try {

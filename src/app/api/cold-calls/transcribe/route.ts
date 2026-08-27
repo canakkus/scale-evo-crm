@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getOptionalUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { transcribeAndAnalyzeCall } from "@/services/gemini";
+import { transcribeAndAnalyzeCall } from "@/services/groq";
 
 export async function POST(request: Request) {
   try {
@@ -35,14 +35,13 @@ export async function POST(request: Request) {
 
     const targetCompanyName = lead?.companyName || companyNameInput || file.name;
 
-    // Convert file to Base64
+    // Convert file to Buffer
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
-    const base64Audio = buffer.toString("base64");
     const mimeType = file.type || "audio/mp3";
 
-    // Transcribe & Analyze with Gemini API
-    const analysis = await transcribeAndAnalyzeCall(base64Audio, mimeType, targetCompanyName);
+    // Transcribe & Analyze with Groq (Whisper large-v3 + Llama 3.3 70B)
+    const analysis = await transcribeAndAnalyzeCall(buffer, mimeType, file.name, targetCompanyName);
 
     // Save CallRecording in database
     const recording = await prisma.callRecording.create({
@@ -69,7 +68,7 @@ export async function POST(request: Request) {
 
     // If lead is linked, create an Interaction automatically!
     if (lead) {
-      const summaryText = `📞 **Gemini Call-Transkription**: ${analysis.summary}\n\n**Nächste Schritte:** ${analysis.nextSteps.join(", ")}`;
+      const summaryText = `📞 **Groq Call-Transkription**: ${analysis.summary}\n\n**Nächste Schritte:** ${analysis.nextSteps.join(", ")}`;
       await prisma.interaction.create({
         data: {
           leadId: lead.id,

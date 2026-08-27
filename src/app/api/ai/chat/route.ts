@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getOptionalUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { chatWithAssistant, type CrmContext } from "@/services/gemini";
+import { chatWithAssistant, type CrmContext } from "@/services/groq";
 
 export async function GET() {
   try {
@@ -77,13 +77,13 @@ export async function POST(request: Request) {
       })),
     };
 
-    // Format past history for Gemini
+    // Format past history for Groq
     const history = chatHistory.map((m) => ({
       role: (m.role === "USER" ? "user" : "model") as "user" | "model",
       parts: [{ text: m.content }],
     }));
 
-    // Call Gemini API
+    // Call Groq API
     const replyText = await chatWithAssistant(message.trim(), history, context, dbUser.id);
 
     // Save User message and AI reply in database
