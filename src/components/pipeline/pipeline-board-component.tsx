@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { PIPELINE_STATUSES, STATUS_LABELS, NEXT_STATUS } from "@/lib/constants";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { LeadDetailModal } from "@/components/leads/lead-detail-modal";
 import { Phone, Globe, ChevronRight, Plus, MapPin, Star } from "lucide-react";
 import type { LeadStatus } from "@prisma/client";
 
@@ -11,6 +12,7 @@ export function PipelineBoardComponent() {
   const [loading, setLoading] = useState(true);
   const [draggedLead, setDraggedLead] = useState<string | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
 
   const fetchLeads = useCallback(async () => {
     setLoading(true);
@@ -157,7 +159,8 @@ export function PipelineBoardComponent() {
                       draggable
                       onDragStart={(e) => onDragStart(e, lead.id)}
                       onDragEnd={() => setDraggedLead(null)}
-                      className={`p-3.5 rounded-lg border space-y-2.5 transition cursor-grab active:cursor-grabbing hover:shadow-md hover:border-[var(--border-2)] ${
+                      onClick={() => setSelectedLeadId(lead.id)}
+                      className={`p-3.5 rounded-lg border space-y-2.5 transition cursor-pointer hover:shadow-md hover:border-[var(--border-2)] ${
                         draggedLead === lead.id ? "opacity-50 scale-95" : "opacity-100"
                       }`}
                       style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}
@@ -189,6 +192,7 @@ export function PipelineBoardComponent() {
                       {/* Dropdown status switcher or advance button */}
                       <div className="pt-2 border-t flex items-center justify-between gap-2" style={{ borderColor: "var(--border)" }}>
                         <select
+                          onClick={(e) => e.stopPropagation()}
                           className="text-[10px] rounded px-1.5 py-1 border outline-none bg-[var(--surface)] text-[var(--text-2)] cursor-pointer"
                           style={{ borderColor: "var(--border)" }}
                           value={lead.status}
@@ -201,7 +205,10 @@ export function PipelineBoardComponent() {
 
                         {nextStatus && (
                           <button
-                            onClick={() => handleAdvanceStatus(lead.id, lead.status)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAdvanceStatus(lead.id, lead.status);
+                            }}
                             className="p-1 rounded text-[10px] font-semibold flex items-center gap-0.5 hover:bg-[var(--surface-3)] transition-colors"
                             style={{ color: "var(--accent)" }}
                             title={`Weiter zu ${STATUS_LABELS[nextStatus]}`}
@@ -218,6 +225,14 @@ export function PipelineBoardComponent() {
           </div>
         );
       })}
+
+      {selectedLeadId && (
+        <LeadDetailModal
+          leadId={selectedLeadId}
+          onClose={() => setSelectedLeadId(null)}
+          onUpdate={fetchLeads}
+        />
+      )}
     </div>
   );
 }
