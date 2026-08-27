@@ -59,6 +59,11 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
   const [newInteractionNote, setNewInteractionNote] = useState("");
   const [addingInteraction, setAddingInteraction] = useState(false);
 
+  // Edit Interaction State
+  const [editingInteractionId, setEditingInteractionId] = useState<string | null>(null);
+  const [editInteractionNote, setEditInteractionNote] = useState("");
+  const [savingInteractionId, setSavingInteractionId] = useState<string | null>(null);
+
   // Lead Editing State
   const [isEditing, setIsEditing] = useState(false);
   const [editCompanyName, setEditCompanyName] = useState("");
@@ -222,6 +227,33 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
       console.error(err);
     } finally {
       setAddingInteraction(false);
+    }
+  }
+
+  async function handleUpdateInteraction(interactionId: string) {
+    if (!editInteractionNote.trim() || !lead) return;
+    setSavingInteractionId(interactionId);
+    
+    try {
+      const res = await fetch(`/api/interactions/${interactionId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ note: editInteractionNote }),
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        setLead({
+          ...lead,
+          interactions: lead.interactions.map((i: any) => i.id === interactionId ? data.interaction : i)
+        });
+        setEditingInteractionId(null);
+        onUpdate();
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSavingInteractionId(null);
     }
   }
 
@@ -740,11 +772,20 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                       <button
                         type="submit"
                         disabled={addingInteraction}
-                        className="px-4 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1"
+                        className="px-4 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1 transition-all active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed disabled:active:scale-100"
                         style={{ background: "var(--accent)", color: "var(--bg)" }}
                       >
-                        <Send className="w-3.5 h-3.5" />
-                        Hinzufügen
+                        {addingInteraction ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            Speichert...
+                          </>
+                        ) : (
+                          <>
+                            <Send className="w-3.5 h-3.5" />
+                            Hinzufügen
+                          </>
+                        )}
                       </button>
                     </form>
 
@@ -765,11 +806,55 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                               <span className="font-bold text-[11px]" style={{ color: "var(--accent)" }}>
                                 {INTERACTION_LABELS[item.type as InteractionType] || item.type}
                               </span>
-                              <span className="text-[10px]" style={{ color: "var(--text-3)" }}>
-                                {timeAgo(item.createdAt)}
-                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px]" style={{ color: "var(--text-3)" }}>
+                                  {timeAgo(item.createdAt)}
+                                </span>
+                                {editingInteractionId !== item.id && (
+                                  <button
+                                    onClick={() => {
+                                      setEditingInteractionId(item.id);
+                                      setEditInteractionNote(item.note);
+                                    }}
+                                    className="text-[10px] hover:underline"
+                                    style={{ color: "var(--accent)" }}
+                                  >
+                                    Bearbeiten
+                                  </button>
+                                )}
+                              </div>
                             </div>
-                            <p style={{ color: "var(--text-2)" }}>{item.note}</p>
+                            
+                            {editingInteractionId === item.id ? (
+                              <div className="mt-2 space-y-2">
+                                <textarea
+                                  className="w-full rounded px-2.5 py-1.5 text-xs border outline-none resize-none"
+                                  style={{ background: "var(--surface-3)", borderColor: "var(--border)", color: "var(--text)" }}
+                                  rows={3}
+                                  value={editInteractionNote}
+                                  onChange={(e) => setEditInteractionNote(e.target.value)}
+                                />
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={() => handleUpdateInteraction(item.id)}
+                                    disabled={savingInteractionId === item.id}
+                                    className="px-2 py-1 rounded text-[10px] font-semibold"
+                                    style={{ background: "var(--accent)", color: "var(--bg)" }}
+                                  >
+                                    {savingInteractionId === item.id ? "Speichert..." : "Speichern"}
+                                  </button>
+                                  <button
+                                    onClick={() => setEditingInteractionId(null)}
+                                    className="px-2 py-1 rounded text-[10px] font-semibold hover:opacity-80 transition-opacity"
+                                    style={{ background: "var(--surface-3)", color: "var(--text)" }}
+                                  >
+                                    Abbrechen
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <p style={{ color: "var(--text-2)" }} className="whitespace-pre-wrap">{item.note}</p>
+                            )}
                           </div>
                         ))
                       )}

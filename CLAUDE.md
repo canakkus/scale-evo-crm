@@ -74,6 +74,10 @@ This file contains the guidelines, build commands, recent changes, and troublesh
   * Programmed automatic Places API enrichment in the lead PATCH route. Pasting a Google Maps link (including `maps.app.goo.gl` redirects) parses the location name and retrieves missing details (phone, website, address, stars rating, and reviews counts).
   * Automatically overwrites outdated fields unless the user manually inputs a override in the form.
 
+* **Interactions & Timeline Improvements:**
+  * Added inline editing capabilities for past interactions directly inside the `LeadDetailModal` timeline, backed by a new `PATCH /api/interactions/[id]` API route.
+  * Added visual feedback (loading spinners and state changes) for adding new interactions to prevent duplicate submissions and clarify network delays.
+
 ---
 
 ## ⚠️ Troubleshooting & Error History
