@@ -17,10 +17,11 @@ export async function GET(request: Request) {
     const priority = searchParams.get("priority") as Priority | null;
     const webPresence = searchParams.get("webPresence") as WebPresence | null;
     const industryParam = searchParams.get("industry")?.trim();
+    const updatedDate = searchParams.get("updatedDate")?.trim(); // e.g. "today", "yesterday", "thisWeek", or "2026-08-27"
     const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
     const limit = Math.min(100, Math.max(10, parseInt(searchParams.get("limit") || "25", 10)));
 
-    const where: Record<string, unknown> = {};
+    const where: Record<string, any> = {};
 
     if (search) {
       where.OR = [
@@ -34,6 +35,49 @@ export async function GET(request: Request) {
     if (status) where.status = status;
     if (priority) where.priority = priority;
     if (webPresence) where.webPresence = webPresence;
+
+    if (updatedDate) {
+      const now = new Date();
+      const startOfDay = (d: Date) => {
+        const copy = new Date(d);
+        copy.setHours(0, 0, 0, 0);
+        return copy;
+      };
+      const endOfDay = (d: Date) => {
+        const copy = new Date(d);
+        copy.setHours(23, 59, 59, 999);
+        return copy;
+      };
+
+      if (updatedDate === "today") {
+        where.updatedAt = {
+          gte: startOfDay(now),
+        };
+      } else if (updatedDate === "yesterday") {
+        const yesterday = new Date(now);
+        yesterday.setDate(now.getDate() - 1);
+        where.updatedAt = {
+          gte: startOfDay(yesterday),
+          lte: endOfDay(yesterday),
+        };
+      } else if (updatedDate === "thisWeek") {
+        const monday = new Date(now);
+        const day = monday.getDay();
+        const diff = monday.getDate() - day + (day === 0 ? -6 : 1);
+        monday.setDate(diff);
+        where.updatedAt = {
+          gte: startOfDay(monday),
+        };
+      } else {
+        const parsedDate = new Date(updatedDate);
+        if (!isNaN(parsedDate.getTime())) {
+          where.updatedAt = {
+            gte: startOfDay(parsedDate),
+            lte: endOfDay(parsedDate),
+          };
+        }
+      }
+    }
 
     if (industryParam) {
       const industries = industryParam.split(",").map(i => i.trim()).filter(Boolean);

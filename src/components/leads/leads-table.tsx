@@ -35,6 +35,8 @@ export function LeadsTable() {
   const [availableIndustries, setAvailableIndustries] = useState<string[]>([]);
   const [isIndustryDropdownOpen, setIsIndustryDropdownOpen] = useState(false);
   const [industrySearch, setIndustrySearch] = useState("");
+  const [updatedDateFilter, setUpdatedDateFilter] = useState("");
+  const [customDate, setCustomDate] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalLeads, setTotalLeads] = useState(0);
@@ -50,6 +52,13 @@ export function LeadsTable() {
       if (search.trim()) params.set("search", search.trim());
       if (statusFilter) params.set("status", statusFilter);
       if (industryFilters.length > 0) params.set("industry", industryFilters.join(","));
+      if (updatedDateFilter) {
+        if (updatedDateFilter === "custom") {
+          if (customDate) params.set("updatedDate", customDate);
+        } else {
+          params.set("updatedDate", updatedDateFilter);
+        }
+      }
       params.set("page", String(page));
       params.set("limit", "20");
 
@@ -66,7 +75,7 @@ export function LeadsTable() {
     } finally {
       setLoading(false);
     }
-  }, [search, statusFilter, industryFilters, page]);
+  }, [search, statusFilter, industryFilters, updatedDateFilter, customDate, page]);
 
   useEffect(() => {
     fetchLeads();
@@ -105,7 +114,42 @@ export function LeadsTable() {
         </div>
 
         {/* Filters & Add Button */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+          {/* Update Date Filter */}
+          <div className="flex items-center gap-1.5">
+            <select
+              value={updatedDateFilter}
+              onChange={(e) => {
+                setUpdatedDateFilter(e.target.value);
+                setPage(1);
+                if (e.target.value !== "custom") {
+                  setCustomDate("");
+                }
+              }}
+              className="rounded-md px-3 py-2 text-xs font-medium border outline-none cursor-pointer"
+              style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-2)" }}
+            >
+              <option value="">Zuletzt geändert: Jederzeit</option>
+              <option value="today">Heute</option>
+              <option value="yesterday">Gestern</option>
+              <option value="thisWeek">Diese Woche</option>
+              <option value="custom">Anderes Datum...</option>
+            </select>
+
+            {updatedDateFilter === "custom" && (
+              <input
+                type="date"
+                value={customDate}
+                onChange={(e) => {
+                  setCustomDate(e.target.value);
+                  setPage(1);
+                }}
+                className="rounded-md px-2.5 py-1.5 text-xs border outline-none cursor-pointer animate-fade-in"
+                style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-2)" }}
+              />
+            )}
+          </div>
+
           {/* Status Filter */}
           <select
             value={statusFilter}
