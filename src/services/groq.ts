@@ -104,7 +104,7 @@ Antworte mit exakt diesem JSON-Format:
 
   const analysisText = await withGroqClient(async (client) => {
     const response = await client.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
+      model: "qwen/qwen3.6-27b",
       messages: [{ role: "user", content: analysisPrompt }],
       temperature: 0.3,
     });
@@ -389,7 +389,7 @@ Antworte auf Deutsch, kurz, freundlich und hilfreich.`;
   // Tool-Calling Loop mit automatischer Key-Rotation
   return await withGroqClient(async (client) => {
     let response = await client.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
+      model: "qwen/qwen3.6-27b",
       messages,
       tools: ASSISTANT_TOOLS,
       tool_choice: "auto",
@@ -414,7 +414,7 @@ Antworte auf Deutsch, kurz, freundlich und hilfreich.`;
       }
 
       response = await client.chat.completions.create({
-        model: "llama-3.3-70b-versatile",
+        model: "qwen/qwen3.6-27b",
         messages,
         tools: ASSISTANT_TOOLS,
         tool_choice: "auto",
@@ -422,7 +422,9 @@ Antworte auf Deutsch, kurz, freundlich und hilfreich.`;
       });
     }
 
-    return response.choices[0]?.message?.content || "";
+    const content = response.choices[0]?.message?.content || "";
+    // Entferne mögliche <think> Blöcke, damit die interne Kette nicht im Chat angezeigt wird
+    return content.replace(/<think>[\s\S]*?<\/think>\s*/g, "");
   });
 }
 
@@ -451,7 +453,7 @@ Antworte NUR mit gültigem JSON:
   try {
     const text = await withGroqClient(async (client) => {
       const response = await client.chat.completions.create({
-        model: "llama-3.3-70b-versatile",
+        model: "qwen/qwen3.6-27b",
         messages: [{ role: "user", content: prompt }],
         temperature: 0.3,
       });
