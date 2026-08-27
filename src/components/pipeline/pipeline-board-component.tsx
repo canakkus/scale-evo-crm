@@ -9,6 +9,8 @@ import type { LeadStatus } from "@prisma/client";
 export function PipelineBoardComponent() {
   const [leads, setLeads] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [draggedLead, setDraggedLead] = useState<string | null>(null);
+  const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
 
   const fetchLeads = useCallback(async () => {
     setLoading(true);
@@ -32,6 +34,9 @@ export function PipelineBoardComponent() {
   async function handleAdvanceStatus(leadId: string, currentStatus: LeadStatus) {
     const next = NEXT_STATUS[currentStatus];
     if (!next) return;
+    
+    // Optimistic update
+    setLeads((prev) => prev.map((l) => (l.id === leadId ? { ...l, status: next } : l)));
 
     try {
       const res = await fetch(`/api/leads/${leadId}`, {
@@ -40,15 +45,19 @@ export function PipelineBoardComponent() {
         body: JSON.stringify({ status: next }),
       });
 
-      if (res.ok) {
-        fetchLeads();
+      if (!res.ok) {
+        fetchLeads(); // Revert on failure
       }
     } catch (err) {
       console.error(err);
+      fetchLeads(); // Revert on failure
     }
   }
 
   async function handleSetStatus(leadId: string, status: LeadStatus) {
+    // Optimistic update
+    setLeads((prev) => prev.map((l) => (l.id === leadId ? { ...l, status } : l)));
+
     try {
       const res = await fetch(`/api/leads/${leadId}`, {
         method: "PATCH",
@@ -56,11 +65,46 @@ export function PipelineBoardComponent() {
         body: JSON.stringify({ status }),
       });
 
-      if (res.ok) {
-        fetchLeads();
+      if (!res.ok) {
+        fetchLeads(); // Revert on failure
       }
     } catch (err) {
       console.error(err);
+      fetchLeads(); // Revert on failure
+    }
+  }
+
+  // --- Drag & Drop Handlers ---
+  function onDragStart(e: React.DragEvent, leadId: string) {
+    e.dataTransfer.setData("text/plain", leadId);
+    e.dataTransfer.effectAllowed = "move";
+    setDraggedLead(leadId);
+  }
+
+  function onDragOver(e: React.DragEvent, statusKey: string) {
+    e.preventDefault(); // Necessary to allow dropping
+    e.dataTransfer.dropEffect = "move";
+    if (dragOverColumn !== statusKey) {
+      setDragOverColumn(statusKey);
+    }
+  }
+
+  function onDragLeave(e: React.DragEvent) {
+    e.preventDefault();
+    setDragOverColumn(null);
+  }
+
+  function onDrop(e: React.DragEvent, statusKey: LeadStatus) {
+    e.preventDefault();
+    setDragOverColumn(null);
+    setDraggedLead(null);
+    
+    const leadId = e.dataTransfer.getData("text/plain");
+    if (!leadId) return;
+
+    const lead = leads.find((l) => l.id === leadId);
+    if (lead && lead.status !== statusKey) {
+      handleSetStatus(leadId, statusKey);
     }
   }
 
@@ -80,8 +124,13 @@ export function PipelineBoardComponent() {
         return (
           <div
             key={statusKey}
-            className="w-72 shrink-0 rounded-xl border flex flex-col max-h-[75vh]"
-            style={{ background: "var(--surface)", borderColor: "var(--border)" }}
+            className={`w-72 shrink-0 rounded-xl border flex flex-col max-h-[75vh] transition-colors ${
+              dragOverColumn === statusKey ? "border-[var(--accent)] ring-1 ring-[var(--accent)]" : ""
+            }`}
+            style={{ background: "var(--surface)", borderColor: dragOverColumn === statusKey ? "var(--accent)" : "var(--border)" }}
+            onDragOver={(e) => onDragOver(e, statusKey)}
+            onDragLeave={onDragLeave}
+            onDrop={(e) => onDrop(e, statusKey as LeadStatus)}
           >
             {/* Column Header */}
             <div className="p-3.5 border-b flex items-center justify-between shrink-0" style={{ borderColor: "var(--border)", background: "var(--surface-2)" }}>
@@ -105,7 +154,12 @@ export function PipelineBoardComponent() {
                   return (
                     <div
                       key={lead.id}
-                      className="p-3.5 rounded-lg border space-y-2.5 transition hover:shadow-md hover:border-[var(--border-2)]"
+                      draggable
+                      onDragStart={(e) => onDragStart(e, lead.id)}
+                      onDragEnd={() => setDraggedLead(null)}
+                      className={`p-3.5 rounded-lg border space-y-2.5 transition cursor-grab active:cursor-grabbing hover:shadow-md hover:border-[var(--border-2)] ${
+                        draggedLead === lead.id ? "opacity-50 scale-95" : "opacity-100"
+                      }`}
                       style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}
                     >
                       <div>
