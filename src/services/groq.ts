@@ -386,7 +386,7 @@ Antworte auf Deutsch, kurz, freundlich und hilfreich.`;
     { role: "user", content: message },
   ];
 
-  // Tool-Calling Loop mit automatischer Key-Rotation
+  // Tool-Calling Loop mit automatischer Key-Rotation und Sicherheits-Limit
   return await withGroqClient(async (client) => {
     let response = await client.chat.completions.create({
       model: "qwen/qwen3.6-27b",
@@ -396,7 +396,11 @@ Antworte auf Deutsch, kurz, freundlich und hilfreich.`;
       temperature: 0.5,
     });
 
-    while (response.choices[0]?.finish_reason === "tool_calls") {
+    let iterations = 0;
+    const maxIterations = 5;
+
+    while (response.choices[0]?.finish_reason === "tool_calls" && iterations < maxIterations) {
+      iterations++;
       const assistantMessage = response.choices[0].message;
       messages.push(assistantMessage);
 
