@@ -44,6 +44,15 @@ This file contains the guidelines, build commands, recent changes, and troublesh
 
 ### August 2026
 
+* **Restaurant Scout & Gemini KI-Speisekarten-Erkennung (`/restaurant-scout`):**
+  * Extended `Lead` schema in Prisma with `hasMenu`, `menuUrl`, `menuSnippet`, and `menuCheckedAt` fields and pushed to database.
+  * Implemented `@/lib/menu-detector.ts` using `cheerio` link extraction and direct `model.generateContent` calls to Gemini Flash (`gemini-1.5-flash`) to detect HTML/PDF/delivery menus.
+  * Created dedicated backend scout pipeline `@/services/restaurant-scout.ts` and API endpoint `POST /api/scout/restaurants` to batch-scout via Google Places and run menu detection with concurrency of 5.
+  * Created endpoint `POST /api/leads/[id]/check-menu` to re-check menus on existing leads directly from the UI.
+  * Added responsive dashboard `/restaurant-scout` with live stats, cuisine filter, "Nur ohne Speisekarte" toggle, live preview drawer, and full CRM integration.
+  * Registered `scoutRestaurants` tool for AI Chat assistant (`gemini.ts` and `groq.ts`).
+  * Added `Restaurant Scout` to Sidebar navigation with `UtensilsCrossed` icon.
+
 * **Google Places API & Region Code Trimming Fix:**
   * Added `GOOGLE_PLACES_API_KEY` and `GOOGLE_PLACES_REGION` environment variables to Vercel production & development.
   * Added defensive `.trim()` for `GOOGLE_PLACES_REGION` across `/api/places`, `lead-scout.ts`, and `/api/leads/[id]` to prevent `Invalid region code 'AT '` Unicode CLDR errors caused by trailing whitespaces.

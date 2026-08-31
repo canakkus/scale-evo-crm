@@ -18,6 +18,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Zap,
+  UtensilsCrossed,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -26,6 +27,7 @@ const NAV_ITEMS = [
   { href: "/leads",       label: "Leads",        icon: Users },
   { href: "/pipeline",    label: "Pipeline",     icon: Kanban },
   { href: "/lead-scout",  label: "Lead Scout",   icon: Search },
+  { href: "/restaurant-scout", label: "Restaurant Scout", icon: UtensilsCrossed },
   { href: "/cold-calls",  label: "Cold Calls",   icon: Phone },
   { href: "/follow-ups",  label: "Follow-ups",   icon: Calendar },
   { href: "/journal",     label: "Journal",      icon: BookOpen },

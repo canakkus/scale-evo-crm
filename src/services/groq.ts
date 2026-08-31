@@ -17,6 +17,7 @@
 import Groq from "groq-sdk";
 import { prisma } from "@/lib/prisma";
 import { runLeadScout } from "./lead-scout";
+import { runRestaurantScout } from "./restaurant-scout";
 import { withGroqClient } from "@/lib/groq-key-manager";
 
 // Re-export für bequemen Import in anderen Modulen
@@ -250,6 +251,33 @@ export async function executeAssistantTool(name: string, args: any, userId: stri
         };
       }
 
+      case "scoutRestaurants": {
+        const { location, cuisineType, filterNoMenuOnly, maxResults } = args;
+        const results = await runRestaurantScout(
+          {
+            location: location || "Wien",
+            cuisineType,
+            filterNoMenuOnly: Boolean(filterNoMenuOnly),
+            maxResults: maxResults || 5,
+          },
+          userId
+        );
+        return {
+          success: true,
+          sessionId: results.sessionId,
+          totalScouted: results.totalScouted,
+          foundCount: results.results.length,
+          restaurants: results.results.map((r) => ({
+            companyName: r.companyName,
+            address: r.address,
+            phone: r.phone,
+            hasMenu: r.hasMenu,
+            menuUrl: r.menuUrl,
+            menuSnippet: r.menuSnippet,
+          })),
+        };
+      }
+
       default:
         return { error: `Unbekanntes Tool: ${name}` };
     }
@@ -350,6 +378,23 @@ const ASSISTANT_TOOLS: Groq.Chat.ChatCompletionTool[] = [
           maxResults: { type: "integer", description: "Die maximale Anzahl der zu importierenden Ergebnisse (Standard ist 5)." },
         },
         required: ["category", "city"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "scoutRestaurants",
+      description: "Sucht gezielt nach Restaurants/Gastronomiebetrieben via Google Places, scannt deren Speisekarten per KI und importiert sie als Leads in die Datenbank.",
+      parameters: {
+        type: "object",
+        properties: {
+          location: { type: "string", description: "Die Stadt oder der Bezirk (z.B. 'Wien', 'München', '1010 Wien')." },
+          cuisineType: { type: "string", description: "Optionale Küchenrichtung (z.B. 'Italienisch', 'Asiatisch', 'Burger', 'Pizzeria')." },
+          filterNoMenuOnly: { type: "boolean", description: "Falls true, werden gezielt nur Restaurants ohne auffindbare Online-Speisekarte zurückgegeben." },
+          maxResults: { type: "integer", description: "Maximale Anzahl an Ergebnissen (Standard: 5)." },
+        },
+        required: ["location"],
       },
     },
   },

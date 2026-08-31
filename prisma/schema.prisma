@@ -126,6 +126,10 @@ model Lead {
   opportunityTags        Json?
   interestingReason      String?
   enrichmentStatus       String                  @default("idle")
+  hasMenu                Boolean?
+  menuUrl                String?
+  menuSnippet            String?                 @db.Text
+  menuCheckedAt          DateTime?
   addedAt                DateTime                @default(now())
   createdAt              DateTime                @default(now())
   updatedAt              DateTime                @updatedAt

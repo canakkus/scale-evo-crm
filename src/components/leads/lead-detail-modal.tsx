@@ -23,6 +23,9 @@ import {
   Activity,
   Loader2,
   FileAudio,
+  UtensilsCrossed,
+  ExternalLink,
+  RefreshCw,
 } from "lucide-react";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { STATUS_LABELS, INTERACTION_LABELS } from "@/lib/constants";
@@ -40,6 +43,7 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
   const [loading, setLoading] = useState(false);
   const [notesText, setNotesText] = useState("");
   const [savingNotes, setSavingNotes] = useState(false);
+  const [checkingMenu, setCheckingMenu] = useState(false);
 
   // Tab State: "timeline" or "gemini"
   const [activeTab, setActiveTab] = useState<"timeline" | "gemini">("timeline");
@@ -205,6 +209,27 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
       console.error(err);
     } finally {
       setSavingDetails(false);
+    }
+  }
+
+  async function handleCheckMenu() {
+    if (!lead) return;
+    setCheckingMenu(true);
+    try {
+      const res = await fetch(`/api/leads/${lead.id}/check-menu`, {
+        method: "POST",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.lead) {
+          setLead(data.lead);
+          onUpdate();
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setCheckingMenu(false);
     }
   }
 
@@ -550,6 +575,70 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                     </div>
                   </div>
                 )}
+
+                {/* Speisekarte (Gemini AI Detection) */}
+                <div className="pt-3 border-t mt-3 space-y-2" style={{ borderColor: "var(--border)" }}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 font-semibold" style={{ color: "var(--text)" }}>
+                      <UtensilsCrossed className="w-3.5 h-3.5" style={{ color: "var(--accent)" }} />
+                      <span>Speisekarte (KI-Check)</span>
+                    </div>
+                    {lead.hasMenu === true ? (
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                        🟢 Online
+                      </span>
+                    ) : lead.hasMenu === false ? (
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-500/10 text-red-400 border border-red-500/20">
+                        🔴 Keine Karte
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-zinc-500/10 text-zinc-400 border border-zinc-500/20">
+                        ⚠️ Nicht geprüft
+                      </span>
+                    )}
+                  </div>
+
+                  {lead.menuSnippet && (
+                    <p className="text-[11px] leading-relaxed p-2 rounded border" style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text-2)" }}>
+                      {lead.menuSnippet}
+                    </p>
+                  )}
+
+                  {lead.menuUrl && (
+                    <a
+                      href={lead.menuUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-1 text-[11px] hover:underline"
+                      style={{ color: "var(--accent)" }}
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      <span>Speisekarte öffnen</span>
+                    </a>
+                  )}
+
+                  {lead.menuCheckedAt && (
+                    <div className="text-[10px]" style={{ color: "var(--text-3)" }}>
+                      Zuletzt geprüft: {formatDate(lead.menuCheckedAt)}
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handleCheckMenu}
+                    disabled={checkingMenu || !lead.website}
+                    className="w-full flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium border transition-colors hover:bg-[var(--surface-3)] disabled:opacity-50"
+                    style={{ background: "var(--surface-2)", borderColor: "var(--border-2)", color: "var(--text)" }}
+                  >
+                    <RefreshCw className={`w-3 h-3 ${checkingMenu ? "animate-spin text-[var(--accent)]" : ""}`} />
+                    <span>{checkingMenu ? "Prüfe Speisekarte..." : "🔄 Speisekarte neu prüfen"}</span>
+                  </button>
+                  {!lead.website && (
+                    <span className="block text-[10px] text-center" style={{ color: "var(--text-3)" }}>
+                      (Website erforderlich für KI-Check)
+                    </span>
+                  )}
+                </div>
               </div>
             ) : (
               // Edit Form
