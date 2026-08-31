@@ -21,18 +21,23 @@ export function LoginForm() {
     setError("");
 
     const formData = new FormData(event.currentTarget);
-    const email = String(formData.get("email") || "").trim();
+    const identifier = String(formData.get("identifier") || "").trim();
     const password = String(formData.get("password") || "").trim();
 
     try {
-      const supabase = createSupabaseBrowserClient();
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: identifier,
+          password: password,
+        }),
       });
 
-      if (signInError) {
-        setError("Anmeldung fehlgeschlagen. E-Mail und Passwort prüfen.");
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Anmeldung fehlgeschlagen. Anmeldedaten prüfen.");
         setLoading(false);
         return;
       }
@@ -76,17 +81,18 @@ export function LoginForm() {
       <div className="space-y-4">
         <div>
           <label
-            htmlFor="email"
+            htmlFor="identifier"
             className="block text-xs font-medium mb-1.5"
             style={{ color: "var(--text-2)" }}
           >
-            E-Mail-Adresse
+            Benutzername oder E-Mail
           </label>
           <input
-            id="email"
-            name="email"
-            type="email"
-            autoComplete="email"
+            id="identifier"
+            name="identifier"
+            type="text"
+            autoComplete="username"
+            placeholder="z.B. Lucario oder E-Mail"
             required
             className="w-full rounded-md px-3 py-2 text-sm border outline-none transition-colors"
             style={{

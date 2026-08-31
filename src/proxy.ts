@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { verifySessionToken } from "@/lib/session";
 
 const PUBLIC_PATHS = ["/login", "/api/auth"];
 
@@ -19,6 +20,13 @@ export async function proxy(request: NextRequest) {
     request: { headers: request.headers },
   });
 
+  // 1. Check custom session token
+  const sessionToken = request.cookies.get("crm_user_session")?.value;
+  if (sessionToken && verifySessionToken(sessionToken)) {
+    return response;
+  }
+
+  // 2. Check Supabase auth
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
