@@ -47,7 +47,7 @@ export async function getOptionalUser(): Promise<User | null> {
     const cookieStore = await cookies();
     const sessionCookie = cookieStore.get("crm_user_session")?.value;
     if (sessionCookie) {
-      const payload = verifySessionToken(sessionCookie);
+      const payload = await verifySessionToken(sessionCookie);
       if (payload) {
         return sessionToUser(payload);
       }

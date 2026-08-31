@@ -63,7 +63,7 @@ export async function POST(request: Request) {
           },
         });
 
-        const token = createSessionToken({
+        const token = await createSessionToken({
           id: LUCARIO_UUID,
           email: LUCARIO_EMAIL,
           displayName: "Lucario",
