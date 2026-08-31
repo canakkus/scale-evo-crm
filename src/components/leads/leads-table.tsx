@@ -320,8 +320,18 @@ export function LeadsTable() {
                   >
                     {/* Firma */}
                     <td className="px-4 py-3.5">
-                      <div className="font-semibold text-sm" style={{ color: "var(--text)" }}>
-                        {lead.companyName}
+                      <div className="flex items-center gap-1.5 font-semibold text-sm" style={{ color: "var(--text)" }}>
+                        <span>{lead.companyName}</span>
+                        {lead.hasMenu === true && (
+                          <span className="text-[10px] font-normal px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            🟢 Karte
+                          </span>
+                        )}
+                        {lead.hasMenu === false && lead.website && (
+                          <span className="text-[10px] font-normal px-1.5 py-0.2 rounded bg-red-500/10 text-red-400 border border-red-500/20">
+                            🔴 Keine Karte
+                          </span>
+                        )}
                       </div>
                       <div className="text-[11px]" style={{ color: "var(--text-2)" }}>
                         {lead.industry || "—"}

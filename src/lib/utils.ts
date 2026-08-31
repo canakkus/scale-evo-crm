@@ -35,11 +35,17 @@ export function formatNumber(n: number): string {
 
 export function formatDate(date: Date | string | null | undefined): string {
   if (!date) return "—";
-  return new Intl.DateTimeFormat("de-AT", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(new Date(date));
+  try {
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return "—";
+    return new Intl.DateTimeFormat("de-AT", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    }).format(d);
+  } catch {
+    return "—";
+  }
 }
 
 export function timeAgo(date: Date | string): string {
