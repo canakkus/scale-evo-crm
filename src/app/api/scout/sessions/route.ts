@@ -28,6 +28,7 @@ export async function GET(request: Request) {
     }
 
     const sessions = await prisma.scoutSession.findMany({
+      where: { createdById: user.id },
       orderBy: { createdAt: "desc" },
       take: 20,
       select: {

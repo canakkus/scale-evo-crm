@@ -43,17 +43,26 @@ export async function POST(request: Request) {
       });
     }
 
-    // Build CRM Context Snapshot
+    // Build CRM Context Snapshot (scoped to user)
+    const userScope = {
+      OR: [
+        { createdById: dbUser.id },
+        { assignedToId: dbUser.id },
+      ],
+    };
+
     const [totalLeads, openFollowUps, openTasks, topLeads, recentInteractions, chatHistory] = await Promise.all([
-      prisma.lead.count(),
-      prisma.lead.count({ where: { status: "FOLLOW_UP" } }),
+      prisma.lead.count({ where: userScope }),
+      prisma.lead.count({ where: { ...userScope, status: "FOLLOW_UP" } }),
       prisma.task.count({ where: { status: "OPEN", userId: dbUser.id } }),
       prisma.lead.findMany({
+        where: userScope,
         take: 5,
         orderBy: { score: "desc" },
         select: { companyName: true, status: true, score: true },
       }),
       prisma.interaction.findMany({
+        where: { createdById: dbUser.id },
         take: 5,
         orderBy: { createdAt: "desc" },
         include: { lead: { select: { companyName: true } } },

@@ -16,7 +16,13 @@ export async function POST(request: Request) {
     });
 
     const openFollowUps = await prisma.lead.findMany({
-      where: { status: "FOLLOW_UP" },
+      where: {
+        status: "FOLLOW_UP",
+        OR: [
+          { createdById: user.id },
+          { assignedToId: user.id },
+        ],
+      },
       select: { companyName: true, nextFollowUpAt: true },
       take: 10,
     });

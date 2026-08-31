@@ -120,7 +120,10 @@ export function PipelineBoardComponent() {
   }
 
   return (
-    <div className="flex gap-4 overflow-x-auto pb-6 min-h-[70vh]">
+    <div
+      className="flex gap-4 overflow-x-auto pb-6 min-h-[70vh] touch-pan-x select-none md:select-auto"
+      style={{ WebkitOverflowScrolling: "touch" }}
+    >
       {PIPELINE_STATUSES.map((statusKey) => {
         const columnLeads = leads.filter((l) => l.status === statusKey);
         return (

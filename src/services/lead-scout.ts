@@ -356,7 +356,14 @@ export async function runLeadScout(options: LeadScoutOptions, userId: string): P
 
   const selected = filtered.slice(0, options.maxResults);
 
-  const leads = await prisma.lead.findMany();
+  const leads = await prisma.lead.findMany({
+    where: {
+      OR: [
+        { createdById: userId },
+        { assignedToId: userId },
+      ],
+    },
+  });
   const CONCURRENCY = 5;
   const results: ScoutResult[] = [];
   for (let i = 0; i < selected.length; i += CONCURRENCY) {

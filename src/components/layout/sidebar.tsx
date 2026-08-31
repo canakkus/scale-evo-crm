@@ -19,6 +19,8 @@ import {
   ChevronRight,
   Zap,
   UtensilsCrossed,
+  Menu,
+  X as CloseIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -40,97 +42,141 @@ const NAV_ITEMS = [
 export function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <aside
-      className="relative flex flex-col h-screen border-r shrink-0 transition-all duration-200"
-      style={{
-        width: collapsed ? "var(--sidebar-collapsed)" : "var(--sidebar-w)",
-        background: "var(--surface)",
-        borderColor: "var(--border)",
-      }}
-    >
-      {/* Logo */}
-      <div
-        className="flex items-center gap-3 px-4 h-14 border-b shrink-0 overflow-hidden"
-        style={{ borderColor: "var(--border)" }}
-      >
-        <div
-          className="flex items-center justify-center w-7 h-7 rounded shrink-0"
-          style={{ background: "var(--accent)", color: "var(--bg)" }}
-        >
-          <Zap size={14} strokeWidth={2.5} />
-        </div>
-        {!collapsed && (
-          <span
-            className="font-heading text-sm font-bold tracking-tight whitespace-nowrap"
-            style={{ color: "var(--text)" }}
-          >
-            Scale Evo CRM
-          </span>
-        )}
-      </div>
-
-      {/* Nav Links */}
-      <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
-        {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
-          const isActive =
-            href === "/" ? pathname === "/" : pathname.startsWith(href);
-          return (
-            <Link
-              key={href}
-              href={href}
-              title={collapsed ? label : undefined}
-              className={cn(
-                "flex items-center gap-3 rounded-md px-2.5 py-2 text-sm transition-all duration-150 group relative",
-                "hover:bg-[var(--surface-3)]",
-                isActive
-                  ? "bg-[var(--surface-2)] text-[var(--text)]"
-                  : "text-[var(--text-2)]"
-              )}
-            >
-              <Icon
-                size={16}
-                strokeWidth={isActive ? 2.5 : 2}
-                className={cn(
-                  "shrink-0 transition-colors",
-                  isActive ? "text-[var(--accent)]" : "text-[var(--text-2)] group-hover:text-[var(--text)]"
-                )}
-              />
-              {!collapsed && (
-                <span className={cn("truncate", isActive && "font-medium")}>
-                  {label}
-                </span>
-              )}
-              {/* Active indicator */}
-              {isActive && (
-                <span
-                  className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 rounded-full"
-                  style={{ background: "var(--accent)" }}
-                />
-              )}
-            </Link>
-          );
-        })}
-      </nav>
-
-      {/* Collapse Toggle */}
+    <>
+      {/* Mobile/Tablet Floating Toggle Button */}
       <button
-        onClick={() => setCollapsed(!collapsed)}
-        className="absolute -right-3 top-16 z-10 flex items-center justify-center w-6 h-6 rounded-full border transition-colors hover:bg-[var(--surface-3)]"
+        onClick={() => setMobileOpen(true)}
+        aria-label="Menü öffnen"
+        className="md:hidden fixed bottom-4 left-4 z-40 flex items-center justify-center w-12 h-12 rounded-full shadow-xl border transition-all active:scale-95"
         style={{
-          background: "var(--surface-2)",
-          borderColor: "var(--border-2)",
-          color: "var(--text-2)",
+          background: "var(--accent)",
+          color: "var(--bg)",
+          borderColor: "var(--border)",
         }}
-        aria-label={collapsed ? "Sidebar ausklappen" : "Sidebar einklappen"}
       >
-        {collapsed ? (
-          <ChevronRight size={12} strokeWidth={2.5} />
-        ) : (
-          <ChevronLeft size={12} strokeWidth={2.5} />
-        )}
+        <Menu size={22} strokeWidth={2.5} />
       </button>
-    </aside>
+
+      {/* Mobile/Tablet Backdrop Overlay */}
+      {mobileOpen && (
+        <div
+          className="md:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-xs animate-fade-in"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      <aside
+        className={cn(
+          "flex flex-col h-screen border-r shrink-0 transition-all duration-200 z-50",
+          "max-md:fixed max-md:top-0 max-md:left-0 max-md:bottom-0 max-md:z-50 shadow-2xl md:shadow-none",
+          mobileOpen ? "max-md:translate-x-0" : "max-md:-translate-x-full md:translate-x-0"
+        )}
+        style={{
+          width: collapsed ? "var(--sidebar-collapsed)" : "var(--sidebar-w)",
+          background: "var(--surface)",
+          borderColor: "var(--border)",
+          touchAction: "manipulation",
+        }}
+      >
+        {/* Logo & Mobile Close */}
+        <div
+          className="flex items-center justify-between px-4 h-14 border-b shrink-0 overflow-hidden"
+          style={{ borderColor: "var(--border)" }}
+        >
+          <div className="flex items-center gap-3">
+            <div
+              className="flex items-center justify-center w-7 h-7 rounded shrink-0"
+              style={{ background: "var(--accent)", color: "var(--bg)" }}
+            >
+              <Zap size={14} strokeWidth={2.5} />
+            </div>
+            {!collapsed && (
+              <span
+                className="font-heading text-sm font-bold tracking-tight whitespace-nowrap"
+                style={{ color: "var(--text)" }}
+              >
+                Scale Evo CRM
+              </span>
+            )}
+          </div>
+
+          <button
+            onClick={() => setMobileOpen(false)}
+            className="md:hidden p-1.5 rounded-lg hover:bg-[var(--surface-3)] text-[var(--text-2)]"
+            aria-label="Menü schließen"
+          >
+            <CloseIcon size={18} />
+          </button>
+        </div>
+
+        {/* Nav Links */}
+        <nav
+          className="flex-1 overflow-y-auto py-3 px-2 space-y-1"
+          style={{ WebkitOverflowScrolling: "touch" }}
+        >
+          {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+            const isActive =
+              href === "/" ? pathname === "/" : pathname.startsWith(href);
+            return (
+              <Link
+                key={href}
+                href={href}
+                onClick={() => setMobileOpen(false)}
+                title={collapsed ? label : undefined}
+                className={cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all duration-150 group relative select-none",
+                  "hover:bg-[var(--surface-3)] active:scale-[0.98]",
+                  isActive
+                    ? "bg-[var(--surface-2)] text-[var(--text)] font-semibold"
+                    : "text-[var(--text-2)]"
+                )}
+              >
+                <Icon
+                  size={18}
+                  strokeWidth={isActive ? 2.5 : 2}
+                  className={cn(
+                    "shrink-0 transition-colors",
+                    isActive ? "text-[var(--accent)]" : "text-[var(--text-2)] group-hover:text-[var(--text)]"
+                  )}
+                />
+                {!collapsed && (
+                  <span className="truncate">
+                    {label}
+                  </span>
+                )}
+                {/* Active indicator */}
+                {isActive && (
+                  <span
+                    className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 rounded-full"
+                    style={{ background: "var(--accent)" }}
+                  />
+                )}
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Collapse Toggle for Desktop / Tablet Landscape */}
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          className="hidden md:flex absolute -right-3.5 top-16 z-10 items-center justify-center w-7 h-7 rounded-full border transition-transform hover:scale-110 shadow-sm active:scale-95"
+          style={{
+            background: "var(--surface-2)",
+            borderColor: "var(--border-2)",
+            color: "var(--text-2)",
+          }}
+          aria-label={collapsed ? "Sidebar ausklappen" : "Sidebar einklappen"}
+        >
+          {collapsed ? (
+            <ChevronRight size={14} strokeWidth={2.5} />
+          ) : (
+            <ChevronLeft size={14} strokeWidth={2.5} />
+          )}
+        </button>
+      </aside>
+    </>
   );
 }

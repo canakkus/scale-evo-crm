@@ -12,7 +12,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const leadId = searchParams.get("leadId");
 
-    const where: any = {};
+    const where: any = { createdById: user.id };
     if (leadId) where.leadId = leadId;
 
     const recordings = await prisma.callRecording.findMany({

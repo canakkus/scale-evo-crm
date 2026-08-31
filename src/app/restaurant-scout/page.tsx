@@ -53,6 +53,9 @@ export default function RestaurantScoutPage() {
   const [hasScouted, setHasScouted] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Filter panel collapse on tablet/mobile
+  const [showFilters, setShowFilters] = useState(true);
+
   // Preview Drawer State
   const [selectedLead, setSelectedLead] = useState<RestaurantScoutLeadItem | null>(null);
   const [checkingMenuId, setCheckingMenuId] = useState<string | null>(null);
@@ -166,41 +169,58 @@ export default function RestaurantScoutPage() {
   const countNoWebsite = results.filter((r) => !r.website).length;
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden" style={{ background: "var(--bg)" }}>
+    <div className="flex-1 flex flex-col h-full overflow-hidden select-none md:select-auto" style={{ background: "var(--bg)" }}>
       {/* Top Header Bar */}
       <div
-        className="px-6 py-4 border-b shrink-0 flex flex-col md:flex-row md:items-center md:justify-between gap-3"
+        className="px-4 md:px-6 py-3.5 border-b shrink-0 flex flex-col md:flex-row md:items-center md:justify-between gap-3"
         style={{ background: "var(--surface)", borderColor: "var(--border)" }}
       >
-        <div className="flex items-center gap-3">
-          <div
-            className="flex items-center justify-center w-10 h-10 rounded-xl shrink-0 shadow-sm"
-            style={{ background: "linear-gradient(135deg, var(--accent) 0%, #ff8c00 100%)", color: "#000" }}
-          >
-            <UtensilsCrossed size={20} strokeWidth={2.5} />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="font-heading text-lg font-bold" style={{ color: "var(--text)" }}>
-                Restaurant Scout & Menü-Radar
-              </h1>
-              <span
-                className="px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider"
-                style={{ background: "var(--surface-2)", color: "var(--accent)", border: "1px solid var(--border)" }}
-              >
-                Gemini 1.5 KI
-              </span>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div
+              className="flex items-center justify-center w-10 h-10 rounded-xl shrink-0 shadow-sm"
+              style={{ background: "linear-gradient(135deg, var(--accent) 0%, #ff8c00 100%)", color: "#000" }}
+            >
+              <UtensilsCrossed size={20} strokeWidth={2.5} />
             </div>
-            <p className="text-xs" style={{ color: "var(--text-2)" }}>
-              Finde Gastronomiebetriebe automatisiert via Google Places & erkenne fehlende Speisekarten zur Akquise.
-            </p>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="font-heading text-base md:text-lg font-bold" style={{ color: "var(--text)" }}>
+                  Restaurant Scout & Menü-Radar
+                </h1>
+                <span
+                  className="px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider"
+                  style={{ background: "var(--surface-2)", color: "var(--accent)", border: "1px solid var(--border)" }}
+                >
+                  Gemini 1.5 KI
+                </span>
+              </div>
+              <p className="text-xs hidden sm:block" style={{ color: "var(--text-2)" }}>
+                Finde Gastronomiebetriebe automatisiert via Google Places & erkenne fehlende Speisekarten zur Akquise.
+              </p>
+            </div>
           </div>
+
+          {/* Toggle Filter Button on Tablet/iPad Portrait */}
+          <button
+            type="button"
+            onClick={() => setShowFilters(!showFilters)}
+            className="lg:hidden flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-semibold shadow-xs"
+            style={{
+              background: showFilters ? "var(--accent)" : "var(--surface-2)",
+              color: showFilters ? "#000" : "var(--text)",
+              borderColor: "var(--border)",
+            }}
+          >
+            <SlidersHorizontal size={14} />
+            <span>{showFilters ? "Filter verbergen" : "Filter öffnen"}</span>
+          </button>
         </div>
 
         {hasScouted && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0" style={{ WebkitOverflowScrolling: "touch" }}>
             <div
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs whitespace-nowrap shrink-0"
               style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}
             >
               <span style={{ color: "var(--text-3)" }}>Ergebnisse:</span>
@@ -219,14 +239,17 @@ export default function RestaurantScoutPage() {
       {/* Main Content Layout */}
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
         {/* Left Filter & Action Panel */}
-        <div
-          className="w-full lg:w-80 border-r shrink-0 flex flex-col p-5 overflow-y-auto space-y-5"
-          style={{ background: "var(--surface)", borderColor: "var(--border)" }}
-        >
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-3)" }}>
-            <SlidersHorizontal size={14} />
-            <span>Scout Parameter</span>
-          </div>
+        {showFilters && (
+          <div
+            className="w-full lg:w-80 border-b lg:border-b-0 lg:border-r shrink-0 flex flex-col p-4 md:p-5 overflow-y-auto space-y-4 md:space-y-5"
+            style={{ background: "var(--surface)", borderColor: "var(--border)", WebkitOverflowScrolling: "touch" }}
+          >
+            <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-3)" }}>
+              <div className="flex items-center gap-2">
+                <SlidersHorizontal size={14} />
+                <span>Scout Parameter</span>
+              </div>
+            </div>
 
           <form onSubmit={handleStartScout} className="space-y-4">
             {/* Location Input */}
@@ -418,7 +441,8 @@ export default function RestaurantScoutPage() {
               <span>Automatische Speicherung als Lead in der CRM-Pipeline.</span>
             </div>
           </div>
-        </div>
+          </div>
+        )}
 
         {/* Center / Right: Results List + Detail Side-Panel */}
         <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
@@ -463,17 +487,19 @@ export default function RestaurantScoutPage() {
                   className="rounded-xl border overflow-hidden shadow-sm"
                   style={{ background: "var(--surface)", borderColor: "var(--border)" }}
                 >
-                  <div
-                    className="grid grid-cols-12 gap-3 px-4 py-2.5 text-[11px] font-bold uppercase tracking-wider border-b"
-                    style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text-3)" }}
-                  >
-                    <div className="col-span-4">Restaurant & Küche</div>
-                    <div className="col-span-3">Standort & Kontakt</div>
-                    <div className="col-span-3">Speisekarte (KI)</div>
-                    <div className="col-span-2 text-right">Aktion</div>
-                  </div>
+                  <div className="overflow-x-auto" style={{ WebkitOverflowScrolling: "touch" }}>
+                    <div className="min-w-[620px]">
+                      <div
+                        className="grid grid-cols-12 gap-3 px-4 py-2.5 text-[11px] font-bold uppercase tracking-wider border-b"
+                        style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text-3)" }}
+                      >
+                        <div className="col-span-4">Restaurant & Küche</div>
+                        <div className="col-span-3">Standort & Kontakt</div>
+                        <div className="col-span-3">Speisekarte (KI)</div>
+                        <div className="col-span-2 text-right">Aktion</div>
+                      </div>
 
-                  <div className="divide-y" style={{ borderColor: "var(--border)" }}>
+                      <div className="divide-y" style={{ borderColor: "var(--border)" }}>
                     {results.map((lead) => {
                       const isSelected = selectedLead?.id === lead.id;
                       const isChecking = checkingMenuId === lead.id;
@@ -622,6 +648,8 @@ export default function RestaurantScoutPage() {
                         </div>
                       );
                     })}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

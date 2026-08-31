@@ -21,16 +21,27 @@ export async function GET(request: Request) {
     const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
     const limit = Math.min(100, Math.max(10, parseInt(searchParams.get("limit") || "25", 10)));
 
-    const where: Record<string, any> = {};
+    const andClauses: any[] = [
+      {
+        OR: [
+          { createdById: user.id },
+          { assignedToId: user.id },
+        ],
+      },
+    ];
 
     if (search) {
-      where.OR = [
-        { companyName: { contains: search, mode: "insensitive" } },
-        { city: { contains: search, mode: "insensitive" } },
-        { contactPerson: { contains: search, mode: "insensitive" } },
-        { phone: { contains: search, mode: "insensitive" } },
-      ];
+      andClauses.push({
+        OR: [
+          { companyName: { contains: search, mode: "insensitive" } },
+          { city: { contains: search, mode: "insensitive" } },
+          { contactPerson: { contains: search, mode: "insensitive" } },
+          { phone: { contains: search, mode: "insensitive" } },
+        ],
+      });
     }
+
+    const where: Record<string, any> = { AND: andClauses };
 
     if (status) where.status = status;
     if (priority) where.priority = priority;
@@ -109,7 +120,10 @@ export async function GET(request: Request) {
       }),
       prisma.lead.count({ where }),
       prisma.lead.findMany({
-        where: { industry: { not: null } },
+        where: {
+          industry: { not: null },
+          OR: [{ createdById: user.id }, { assignedToId: user.id }],
+        },
         distinct: ["industry"],
         select: { industry: true },
       }),

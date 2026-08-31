@@ -149,11 +149,21 @@ export async function executeAssistantTool(name: string, args: any, userId: stri
         const { query } = args;
         const leads = await prisma.lead.findMany({
           where: {
-            OR: [
-              { companyName: { contains: query, mode: "insensitive" } },
-              { city: { contains: query, mode: "insensitive" } },
-              { phone: { contains: query, mode: "insensitive" } },
-              { industry: { contains: query, mode: "insensitive" } },
+            AND: [
+              {
+                OR: [
+                  { createdById: userId },
+                  { assignedToId: userId },
+                ],
+              },
+              {
+                OR: [
+                  { companyName: { contains: query, mode: "insensitive" } },
+                  { city: { contains: query, mode: "insensitive" } },
+                  { phone: { contains: query, mode: "insensitive" } },
+                  { industry: { contains: query, mode: "insensitive" } },
+                ],
+              },
             ],
           },
           take: 10,

@@ -9,6 +9,13 @@ export async function GET() {
       return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
     }
 
+    const leadScope = {
+      OR: [
+        { createdById: user.id },
+        { assignedToId: user.id },
+      ],
+    };
+
     const [
       totalLeads,
       contactedLeads,
@@ -19,20 +26,26 @@ export async function GET() {
       recentLeads,
       upcomingFollowUps,
     ] = await Promise.all([
-      prisma.lead.count(),
-      prisma.lead.count({ where: { status: { in: ["CONTACTED", "REPLIED", "INTERESTED", "APPOINTMENT", "OFFER_SENT"] } } }),
-      prisma.lead.count({ where: { status: "FOLLOW_UP" } }),
-      prisma.lead.count({ where: { status: "WON" } }),
-      prisma.callRecording.count(),
-      prisma.task.count({ where: { status: "OPEN" } }),
+      prisma.lead.count({ where: leadScope }),
+      prisma.lead.count({
+        where: {
+          ...leadScope,
+          status: { in: ["CONTACTED", "REPLIED", "INTERESTED", "APPOINTMENT", "OFFER_SENT"] },
+        },
+      }),
+      prisma.lead.count({ where: { ...leadScope, status: "FOLLOW_UP" } }),
+      prisma.lead.count({ where: { ...leadScope, status: "WON" } }),
+      prisma.callRecording.count({ where: { createdById: user.id } }),
+      prisma.task.count({ where: { userId: user.id, status: "OPEN" } }),
       prisma.lead.findMany({
+        where: leadScope,
         take: 5,
         orderBy: { createdAt: "desc" },
         select: { id: true, companyName: true, industry: true, city: true, status: true, score: true, createdAt: true },
       }),
       prisma.lead.findMany({
+        where: { ...leadScope, status: "FOLLOW_UP" },
         take: 5,
-        where: { status: "FOLLOW_UP" },
         orderBy: { nextFollowUpAt: "asc" },
         select: { id: true, companyName: true, phone: true, nextFollowUpAt: true, city: true },
       }),

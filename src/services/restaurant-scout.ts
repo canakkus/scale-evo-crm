@@ -141,16 +141,26 @@ export async function runRestaurantScout(
     const normPhone = normalizePhone(place.phone);
     const normMaps = place.googleMapsUri ? normalizeUrl(place.googleMapsUri) : null;
 
-    // Check if lead already exists in DB
+    // Check if lead already exists in user's DB
     const existingLead = await prisma.lead.findFirst({
       where: {
-        OR: [
-          ...(normMaps ? [{ googleMapsUrl: normMaps }] : []),
-          ...(normPhone ? [{ phone: normPhone }] : []),
+        AND: [
           {
-            AND: [
-              { companyName: { equals: place.name, mode: "insensitive" as const } },
-              { city: { equals: place.city || location, mode: "insensitive" as const } },
+            OR: [
+              { createdById: userId },
+              { assignedToId: userId },
+            ],
+          },
+          {
+            OR: [
+              ...(normMaps ? [{ googleMapsUrl: normMaps }] : []),
+              ...(normPhone ? [{ phone: normPhone }] : []),
+              {
+                AND: [
+                  { companyName: { equals: place.name, mode: "insensitive" as const } },
+                  { city: { equals: place.city || location, mode: "insensitive" as const } },
+                ],
+              },
             ],
           },
         ],
