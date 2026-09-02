@@ -20,17 +20,19 @@ import {
 import { StatusBadge } from "@/components/ui/status-badge";
 import { formatDate, timeAgo } from "@/lib/utils";
 
-export function DashboardComponent() {
-  const [data, setData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+export function DashboardComponent({ initialData }: { initialData?: any }) {
+  const [data, setData] = useState<any>(initialData || null);
+  const [loading, setLoading] = useState(!initialData);
 
   useEffect(() => {
-    fetch("/api/dashboard")
-      .then((res) => res.json())
-      .then((resData) => setData(resData))
-      .catch((err) => console.error(err))
-      .finally(() => setLoading(false));
-  }, []);
+    if (!initialData) {
+      fetch("/api/dashboard")
+        .then((res) => res.json())
+        .then((resData) => setData(resData))
+        .catch((err) => console.error(err))
+        .finally(() => setLoading(false));
+    }
+  }, [initialData]);
 
   if (loading) {
     return (

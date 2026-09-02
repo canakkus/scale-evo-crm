@@ -1,10 +1,77 @@
 import { requireAuth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { DashboardComponent } from "@/components/dashboard/dashboard-component";
 
 export const metadata = { title: "Dashboard | Scale Evo CRM" };
 
+async function getDashboardData(userId: string) {
+  try {
+    const leadScope = {
+      OR: [
+        { createdById: userId },
+        { assignedToId: userId },
+      ],
+    };
+
+    const [
+      totalLeads,
+      contactedLeads,
+      openFollowUps,
+      wonLeads,
+      totalCalls,
+      openTasks,
+      recentLeads,
+      upcomingFollowUps,
+    ] = await Promise.all([
+      prisma.lead.count({ where: leadScope }),
+      prisma.lead.count({
+        where: {
+          ...leadScope,
+          status: { in: ["CONTACTED", "REPLIED", "INTERESTED", "APPOINTMENT", "OFFER_SENT"] },
+        },
+      }),
+      prisma.lead.count({ where: { ...leadScope, status: "FOLLOW_UP" } }),
+      prisma.lead.count({ where: { ...leadScope, status: "WON" } }),
+      prisma.callRecording.count({ where: { createdById: userId } }),
+      prisma.task.count({ where: { userId, status: "OPEN" } }),
+      prisma.lead.findMany({
+        where: leadScope,
+        take: 5,
+        orderBy: { createdAt: "desc" },
+        select: { id: true, companyName: true, industry: true, city: true, status: true, score: true, createdAt: true },
+      }),
+      prisma.lead.findMany({
+        where: { ...leadScope, status: "FOLLOW_UP" },
+        take: 5,
+        orderBy: { nextFollowUpAt: "asc" },
+        select: { id: true, companyName: true, phone: true, nextFollowUpAt: true, city: true },
+      }),
+    ]);
+
+    return {
+      metrics: {
+        totalLeads,
+        contactedLeads,
+        openFollowUps,
+        wonLeads,
+        totalCalls,
+        openTasks,
+      },
+      recentLeads: recentLeads.map((l) => ({ ...l, createdAt: l.createdAt.toISOString() })),
+      upcomingFollowUps: upcomingFollowUps.map((f) => ({
+        ...f,
+        nextFollowUpAt: f.nextFollowUpAt ? f.nextFollowUpAt.toISOString() : null,
+      })),
+    };
+  } catch (err) {
+    console.error("[Dashboard] Error fetching data:", err);
+    return null;
+  }
+}
+
 export default async function DashboardPage() {
-  await requireAuth();
+  const user = await requireAuth();
+  const initialData = await getDashboardData(user.id);
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
@@ -17,7 +84,7 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      <DashboardComponent />
+      <DashboardComponent initialData={initialData} />
     </div>
   );
 }
