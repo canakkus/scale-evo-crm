@@ -73,10 +73,21 @@
 
 ### 4. Lead Scout (`/lead-scout`) & Restaurant Scout (`/restaurant-scout`)
 - **Service:** `src/services/lead-scout.ts`, `src/services/restaurant-scout.ts` + `src/lib/menu-detector.ts`
-- **Direct Status Assignment:** Both scout modules feature a category dropdown with all 12 pipeline statuses to import candidates directly into the right CRM stage.
+- **Haversine Distance Calculator (`src/lib/distance.ts`):** Calculates distance in km from base coordinates (defaults to Stephansplatz, 1010 Wien). Displays distance badges (`X.X km entfernt`) on result cards.
+- **Proximity Sorting:** Supports `sortBy: "distance"` for optimal walk-in route scouting in addition to `sortBy: "rating"`.
+- **Direct Status Assignment & Walk-In Flagging:** Category dropdown for all pipeline statuses + checkbox **"Als Walk-In Vormerken"** (`acquisitionType: "WALK_IN"`, defaults to `WALK_IN_PLANNED` with optional `nfcDemoUrl`).
 - **Menu Radar:** Automatically verifies digital menus (HTML/PDF/Lieferando/Wolt) from Google Places results.
 
-### 5. Auth, Session Management & User Badging
+### 5. Walk-In Acquisition System & Dual-Pipeline (`/pipeline`, `/leads`, `src/lib/constants.ts`)
+- **Schema & Enums:** `AcquisitionType` (`CALL`, `WALK_IN`), `nfcDemoUrl` string, and specialized Walk-In statuses:
+  - `WALK_IN_PLANNED`: Vor-Ort-Besuch geplant
+  - `DEMO_DISPATCHED`: Vor-Ort-Demo übergeben / hinterlassen
+  - `VISITED_INTERESTED`: Besucht — Interesse signalisiert
+  - `VISITED_NO_INTEREST`: Besucht — Kein Interesse
+- **Dual-Pipeline View Switcher:** Toggle between **Cold Call Pipeline** (11 stages) and **Walk-In Pipeline** (11 stages) with custom stage transitions (`CALL_NEXT_STATUS`, `WALK_IN_NEXT_STATUS`).
+- **Acquisition Filter & Badges:** Leads table filtering by `acquisitionType` (`Alle`, `Nur Cold Calls`, `Nur Walk-Ins`), visual Walk-In badges (`🚶 Walk-In`), and 1-click NFC Demo URL copying.
+
+### 6. Auth, Session Management & User Badging
 - **Endpoints:** `POST /api/auth/login`, `POST /api/auth/logout`
 - **Helpers:** `src/lib/session.ts` (Web Crypto HMAC-SHA256), `src/lib/auth.ts` (`requireAuth`, `getOptionalUser`)
 - **Credentials Security:** Server-side verification with salted SHA-256 hashes.
