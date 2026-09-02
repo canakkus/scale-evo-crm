@@ -142,8 +142,9 @@ Antworte AUSSCHLIESSLICH im folgenden JSON-Format ohne weiteren Fließtext:
 
   const analysisText = await withGroqClient(async (client) => {
     const response = await client.chat.completions.create({
-      model: "qwen/qwen3.6-27b",
+      model: "openai/gpt-oss-120b",
       messages: [{ role: "user", content: analysisPrompt }],
+      response_format: { type: "json_object" },
       temperature: 0.2,
       max_tokens: 4096,
     });
@@ -769,7 +770,7 @@ Antworte auf Deutsch, präzise, freundlich und liste Firmennamen, Erstellungsdat
   // Tool-Calling Loop mit automatischer Key-Rotation und Sicherheits-Limit
   return await withGroqClient(async (client) => {
     let response = await client.chat.completions.create({
-      model: "qwen/qwen3.6-27b",
+      model: "openai/gpt-oss-120b",
       messages,
       tools: ASSISTANT_TOOLS,
       tool_choice: "auto",
@@ -798,7 +799,7 @@ Antworte auf Deutsch, präzise, freundlich und liste Firmennamen, Erstellungsdat
       }
 
       response = await client.chat.completions.create({
-        model: "qwen/qwen3.6-27b",
+        model: "openai/gpt-oss-120b",
         messages,
         tools: ASSISTANT_TOOLS,
         tool_choice: "auto",
@@ -807,7 +808,7 @@ Antworte auf Deutsch, präzise, freundlich und liste Firmennamen, Erstellungsdat
     }
 
     const content = response.choices[0]?.message?.content || "";
-    // Entferne mögliche <think> Blöcke, damit die interne Kette nicht im Chat angezeigt wird
+    // Entferne mögliche <think> Blöcke, falls vorhanden
     return content.replace(/<think>[\s\S]*?<\/think>\s*/g, "");
   });
 }
@@ -837,8 +838,9 @@ Antworte NUR mit gültigem JSON:
   try {
     const text = await withGroqClient(async (client) => {
       const response = await client.chat.completions.create({
-        model: "qwen/qwen3.6-27b",
+        model: "openai/gpt-oss-120b",
         messages: [{ role: "user", content: prompt }],
+        response_format: { type: "json_object" },
         temperature: 0.3,
       });
       return (response.choices[0]?.message?.content || "").trim();

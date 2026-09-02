@@ -13,6 +13,7 @@ function extractFirstJsonObject(str: string): string | null {
       escaped = false;
       continue;
     }
+    if (char === '\\') {
       escaped = true;
       continue;
     }
@@ -126,8 +127,9 @@ Antworte AUSSCHLIESSLICH im folgenden JSON-Format ohne weiteren Fließtext:
       console.log(`-> Sende an Groq AI...`);
       const analysisText = await withGroqClient(async (client) => {
         const response = await client.chat.completions.create({
-          model: 'qwen/qwen3.6-27b',
+          model: 'openai/gpt-oss-120b',
           messages: [{ role: 'user', content: analysisPrompt }],
+          response_format: { type: 'json_object' },
           temperature: 0.2,
           max_tokens: 4096,
         });

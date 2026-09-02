@@ -15,6 +15,10 @@ const STATUS_STYLES: Record<LeadStatus, { bg: string; tx: string }> = {
   WON:          { bg: "var(--status-warm-bg)", tx: "var(--status-warm-tx)" },
   LOST:         { bg: "var(--status-lost-bg)", tx: "var(--status-lost-tx)" },
   NOT_RELEVANT: { bg: "var(--surface-3)", tx: "var(--text-3)" },
+  WALK_IN_PLANNED: { bg: "var(--status-planned-bg)", tx: "var(--status-planned-tx)" },
+  VISITED_INTERESTED: { bg: "var(--status-warm-bg)", tx: "var(--status-warm-tx)" },
+  VISITED_NO_INTEREST: { bg: "var(--status-lost-bg)", tx: "var(--status-lost-tx)" },
+  DEMO_DISPATCHED: { bg: "var(--status-contacted-bg)", tx: "var(--status-contacted-tx)" },
 };
 
 export function StatusBadge({ status, className }: { status: LeadStatus; className?: string }) {

@@ -20,7 +20,7 @@
 - **Gatekeeping:** `src/proxy.ts` (strict Next.js 16 Proxy interceptor)
 - **External APIs:**
   - Google Places API (Places Search & Address/Phone Enrichment)
-  - Groq SDK (Whisper `whisper-large-v3` for <2s speech-to-text, `qwen/qwen3.6-27b` for AI Chat, Tool Calling, Task Prioritization & Call Analysis)
+  - Groq SDK (Whisper `whisper-large-v3` for <2s speech-to-text, `openai/gpt-oss-120b` for AI Chat, Tool Calling, Task Prioritization & Call Analysis)
   - Google Generative AI (Gemini 1.5 Flash SDK fallback for Menu Detection & Assistant)
 
 ---
@@ -55,12 +55,12 @@
 
 ### 1. Cold Calls, Automatic Dialogue Formatting & Sales Coaching (`/cold-calls`, `src/services/groq.ts`)
 - **Transcription (Step 1):** Groq `whisper-large-v3` converts audio into raw text in ~1-2 seconds.
-- **Dialogue & Diarization Formatting (Step 2):** LLM splits continuous raw transcript into clean speaker-separated dialogue (`[Anrufer / Verkäufer]` vs. `[Kunde / Ansprechpartner]`).
+- **Dialogue & Diarization Formatting (Step 2):** `openai/gpt-oss-120b` (with native `response_format: { type: "json_object" }`) formats continuous raw transcripts into clean speaker-separated dialogue (`[Anrufer]` vs. `[Kunde]`).
 - **Analysis:** Automatically extracts structured `summary`, `nextSteps`, `sentiment`, `extractedData` (contact, appointment date, objections, interest level) and `aiFeedback` (pace, stuttering/fillers, tone, rhetoric tips).
 - **Reprocessing Utility:** `scripts/reprocess-call-recordings.ts` to re-analyze and re-format historical recordings.
 
 ### 2. AI Assistant Chat & Tooling (`/ai-assistant`, `src/services/groq.ts`)
-- **Model:** Groq Qwen/Llama with Function/Tool Calling.
+- **Model:** Groq `openai/gpt-oss-120b` with Function/Tool Calling.
 - **Available Tools:**
   - `listLeads`: Flexible lead querying with sorting (e.g. `sortBy="createdAt"`, `sortOrder="asc"` for oldest leads), date filtering (`olderThanDays`), status, and pagination.
   - `bulkUpdateLeadStatus`: Batch-updates lead status (e.g. bulk-setting stale/uncontacted leads to `NOT_RELEVANT` or `LOST`).
@@ -86,8 +86,9 @@
 
 ## ⚠️ Important Gotchas
 
-1. **Groq Reasoning Tokens:** Reasoning models output `<think>...</think>` blocks. Always use `cleanAndParseJson()` or `extractFirstJsonObject()` when parsing JSON from Groq completions.
-2. **Gemini Function Calling:** Function response turns must use `role: "user"` (the API rejects `role: "function"` with a 400 error).
-3. **Google Places Region Code:** Always use `.trim()` on `GOOGLE_PLACES_REGION` to avoid CLDR trailing whitespace errors (e.g. `'AT '`).
-4. **App Router Middleware:** Next.js 16 uses `src/proxy.ts` (with `export async function proxy`) rather than `middleware.ts`.
+1. **Groq Models & JSON Output:** Use `openai/gpt-oss-120b` with `response_format: { type: "json_object" }` for structured outputs (call analysis, task prioritization). Reasoning models (like `qwen3.6-27b`) can get caught in `<think>` token loops that exhaust the token budget before outputting JSON.
+2. **Key Rotation & Cooldown:** Always wrap Groq calls with `withGroqClient()` to leverage automatic 429 rate-limit rotation and 65-second cooldown management.
+3. **Gemini Function Calling:** Function response turns must use `role: "user"` (the API rejects `role: "function"` with a 400 error).
+4. **Google Places Region Code:** Always use `.trim()` on `GOOGLE_PLACES_REGION` to avoid CLDR trailing whitespace errors (e.g. `'AT '`).
+5. **App Router Middleware:** Next.js 16 uses `src/proxy.ts` (with `export async function proxy`) rather than `middleware.ts`.
 

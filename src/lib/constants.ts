@@ -20,6 +20,10 @@ export const STATUS_LABELS: Record<LeadStatus, string> = {
   WON: "Gewonnen",
   LOST: "Verloren",
   NOT_RELEVANT: "Nicht relevant",
+  WALK_IN_PLANNED: "Walk-In geplant",
+  VISITED_INTERESTED: "Besucht - Interessiert",
+  VISITED_NO_INTEREST: "Besucht - Kein Interesse",
+  DEMO_DISPATCHED: "Demo übergeben",
 };
 
 export const PIPELINE_STATUSES: LeadStatus[] = [
@@ -34,6 +38,10 @@ export const PIPELINE_STATUSES: LeadStatus[] = [
   "FOLLOW_UP",
   "WON",
   "LOST",
+  "WALK_IN_PLANNED",
+  "VISITED_INTERESTED",
+  "VISITED_NO_INTEREST",
+  "DEMO_DISPATCHED",
 ];
 
 export const NEXT_STATUS: Partial<Record<LeadStatus, LeadStatus>> = {
