@@ -82,6 +82,18 @@
 - **Credentials Security:** Server-side verification with salted SHA-256 hashes.
 - **User Status:** Subtle avatar badge and user indicator at the bottom of the sidebar and settings profile card.
 
+### 6. Walk-In Akquise, NFC Demos & Proximity Scouting (`/pipeline`, `/lead-scout`, `src/lib/distance.ts`)
+- **Acquisition Channel Separation:** Leads are typed via `acquisitionType` (`CALL` vs. `WALK_IN`, default `CALL`).
+- **Dedicated Walk-In Pipeline:**
+  - Instant Tab Switcher in `/pipeline` between Cold Call and Walk-In kanban boards.
+  - Dedicated stages: `WALK_IN_PLANNED` (Walk-In geplant), `DEMO_DISPATCHED` (Demo versendet), `VISITED_INTERESTED` (Besucht - Interessiert), `VISITED_NO_INTEREST` (Besucht - Kein Interesse).
+  - Channel-specific advancement mappings (`CALL_NEXT_STATUS` vs. `WALK_IN_NEXT_STATUS`).
+- **NFC Demo URLs & Fast Actions:**
+  - Dynamic `nfcDemoUrl` per lead with 1-click clipboard copy, external demo opening, and direct Google Maps route opening.
+- **Distance & Proximity Calculation:**
+  - `src/lib/distance.ts`: Haversine formula calculation against customizable/default base coords (Stephansplatz, 1010 Wien).
+  - Lead Scout & Restaurant Scout support distance sorting and direct Walk-In import.
+
 ---
 
 ## ⚠️ Important Gotchas
