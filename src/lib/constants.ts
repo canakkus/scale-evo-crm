@@ -1,4 +1,5 @@
 import type {
+  AcquisitionType,
   InteractionType,
   LeadStatus,
   PreferredContactMethod,
@@ -21,9 +22,14 @@ export const STATUS_LABELS: Record<LeadStatus, string> = {
   LOST: "Verloren",
   NOT_RELEVANT: "Nicht relevant",
   WALK_IN_PLANNED: "Walk-In geplant",
-  VISITED_INTERESTED: "Besucht - Interessiert",
-  VISITED_NO_INTEREST: "Besucht - Kein Interesse",
-  DEMO_DISPATCHED: "Demo übergeben",
+  VISITED_INTERESTED: "Besucht (Interessiert)",
+  VISITED_NO_INTEREST: "Besucht (Kein Interesse)",
+  DEMO_DISPATCHED: "Demo versendet",
+};
+
+export const ACQUISITION_TYPE_LABELS: Record<AcquisitionType, string> = {
+  CALL: "Cold Call",
+  WALK_IN: "Walk-In",
 };
 
 export const PIPELINE_STATUSES: LeadStatus[] = [
