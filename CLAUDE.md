@@ -1,110 +1,75 @@
-# CLAUDE.md — Developer Guide & Project Log
+# Scale Evo CRM 3.0 — Developer & Architecture Guide
 
-This file contains the guidelines, build commands, recent changes, and troubleshooting history for **Scale Evo CRM 3.0**. Update this file after making changes so future developers/agents have a clear context.
+## 🛠 Commands
 
----
-
-## 🛠 Build & Development Commands
-
-* **Install dependencies:** `npm install`
-* **Run development server:** `npm run dev`
-* **Build production build:** `npm run build`
-* **Start production server:** `npm run start`
-* **Run TypeScript type checks:** `npm run typecheck` (or `npx tsc --noEmit`)
-* **Push database schema changes:** `npx prisma db push`
-* **Generate Prisma client:** `npx prisma generate`
-* **Run user provisioning script:** `npm run users:provision`
+- **Dev Server:** `npm run dev` (running on `http://localhost:3000`)
+- **Typecheck:** `npx tsc --noEmit`
+- **Production Build:** `npm run build`
+- **Database Push:** `npx prisma db push`
+- **Prisma Client Generate:** `npx prisma generate`
 
 ---
 
-## 🎨 Tech Stack & Architecture
+## 🎨 Tech Stack
 
-* **Framework:** Next.js 16 (App Router, Turbopack, Tailwind CSS v4)
-* **Database & ORM:** Prisma ORM, PostgreSQL (hosted on Supabase)
-* **Auth:** Supabase Auth (`@supabase/ssr` server-side cookies)
-* **Integrations:**
-  * **Google Places API** (Category scout searches & place data enrichment)
-  * **Google Generative AI SDK (Gemini)** (Transcriptions, sentiment analysis, AI assistant chat)
-
----
-
-## 📌 Coding Guidelines
-
-1. **Imports:** Use absolute path aliases starting with `@/` (e.g. `@/components/leads/...` or `@/lib/prisma`).
-2. **Styles:** Use Tailwind v4 along with custom theme CSS variables (`var(--bg)`, `var(--surface)`, `var(--border)`, `var(--text)`, `var(--accent)`) to ensure consistency across views.
-3. **Database Changes:** Always check `prisma/schema.prisma` and sync with `npx prisma db push` to keep the database aligned.
-4. **Vercel Deployments & Branching Workflow:**
-   * **`main` branch** → automatically triggers a production deployment to `https://scale-evo-crm.vercel.app` on every push/merge.
-   * **Feature/Fix Branches** → generate preview URLs only (never production). This is intended and should remain this way.
-   * **Rule of Thumb:** Always develop and test on dedicated feature/fix branches before merging into `main`.
+- **Framework:** Next.js 16 (App Router, Turbopack, Tailwind CSS v4)
+- **Database & ORM:** PostgreSQL (Supabase) + Prisma ORM
+- **Authentication:** Dual-Auth System:
+  - Custom Web Crypto HMAC-SHA256 session cookies (`crm_user_session`)
+  - Supabase Auth (`@supabase/ssr`)
+- **Gatekeeping:** `src/proxy.ts` (strict Next.js 16 Proxy interceptor)
+- **External APIs:**
+  - Google Places API (Places Search & Address/Phone Enrichment)
+  - Google Generative AI (Gemini 1.5 Flash SDK for Transcripts, Sentiment, Menu Detection & AI Assistant)
+  - Groq SDK (Llama 3.3 for ultra-fast task prioritization & fallback chat)
 
 ---
 
-## 🚀 Recent Changes (Log)
+## 📌 Architecture & Rules
 
-### August 2026
+### 1. Vercel Deployment & Git Workflow
+- **`main` branch:** Automatically deploys to Production (`https://scale-evo-crm.vercel.app`) on every push (~20-25s build).
+- **Feature branches (e.g. `Lucas-crm`):** Deploy to preview URLs only. Always develop/test on feature branches first.
 
-* **Restaurant Scout & Gemini KI-Speisekarten-Erkennung (`/restaurant-scout`):**
-  * Extended `Lead` schema in Prisma with `hasMenu`, `menuUrl`, `menuSnippet`, and `menuCheckedAt` fields and pushed to database.
-  * Implemented `@/lib/menu-detector.ts` using `cheerio` link extraction and direct `model.generateContent` calls to Gemini Flash (`gemini-1.5-flash`) to detect HTML/PDF/delivery menus.
-  * Created dedicated backend scout pipeline `@/services/restaurant-scout.ts` and API endpoint `POST /api/scout/restaurants` to batch-scout via Google Places and run menu detection with concurrency of 5.
-  * Created endpoint `POST /api/leads/[id]/check-menu` to re-check menus on existing leads directly from the UI.
-  * Added responsive dashboard `/restaurant-scout` with live stats, cuisine filter, "Nur ohne Speisekarte" toggle, live preview drawer, and full CRM integration.
-  * Registered `scoutRestaurants` tool for AI Chat assistant (`gemini.ts` and `groq.ts`).
-  * Added `Restaurant Scout` to Sidebar navigation with `UtensilsCrossed` icon.
+### 2. Multi-Tenancy & Workspace Isolation
+- Leads, pipeline stages, dashboard metrics, tasks, scout sessions, and AI context are scoped per user (`createdById: user.id` or `assignedToId: user.id`).
+- When a new or second user (e.g. `Lucario`) logs in, they start with a clean isolated workspace (0 leads, 0 pipeline items).
 
-* **Google Places API & Region Code Trimming Fix:**
-  * Added `GOOGLE_PLACES_API_KEY` and `GOOGLE_PLACES_REGION` environment variables to Vercel production & development.
-  * Added defensive `.trim()` for `GOOGLE_PLACES_REGION` across `/api/places`, `lead-scout.ts`, and `/api/leads/[id]` to prevent `Invalid region code 'AT '` Unicode CLDR errors caused by trailing whitespaces.
-  * Enhanced error handling and timeout propagation with `AbortSignal.timeout(8000)` in `/api/places` to surface actionable Google Places API error messages.
-* **Lead Scout Engine & Treatwell Fallback:**
-  * Updated Treatwell scraping endpoints and added automatic Google Places fallback when Treatwell returns 0 results.
-* **Gemini Function Calling (Role 'function' 400 Fix):**
-  * Fixed 400 Bad Request error `Role 'function' is not supported` during tool execution (`runScoutSession`, etc.) in `chatWithAssistant`.
-  * Replaced `startChat` / `sendMessage` pattern with direct `model.generateContent({ contents })` to manually manage history turns, sending function response parts under role `"user"` as required by the Gemini API.
-* **Rhetorik- & Sprechstil-Coaching für Calls:**
-  * Added `aiFeedback` Json field to `CallRecording` schema and synced database.
-  * Configured Gemini Prompt in `transcribeAndAnalyzeCall` to evaluate pace (speed), stuttering/filler words, and emotional tone (calmness), giving concrete coaching tips.
-  * Added a dedicated visual card showing speaking style feedback in the expanded Call Recording UI.
-* **KI-Assistent Supercharged (Function Calling):**
-  * Configured Gemini Function Calling (Tool Use) on `/api/ai/chat`.
-  * Gemini can now dynamically execute backend functions: `searchLeads`, `getLeadDetails`, `updateLeadStatus`, `createTask`, `addLeadInteraction`, and `runScoutSession`.
-  * Implemented an inline Markdown parser in the chat bubble UI to render headings, bolding, lists, and code snippets correctly.
-  * **Bugfix:** When Gemini/Groq calls `createTask` with category `FOLLOW_UP` and a `leadId`, it now automatically updates the lead's `status` to `FOLLOW_UP` and sets `nextFollowUpAt` to the task's due date, ensuring the lead appears in the filtered pipeline/table correctly.
-* **Lead Filterung nach Arbeitstag (Zuletzt geändert):**
-  * Added `updatedDate` query parameter filter to the GET `/api/leads` route. Supports presets (`today`, `yesterday`, `thisWeek`) as well as custom dates (`YYYY-MM-DD`).
-  * Updated `LeadsTable` component with UI controls for filtering leads by update date. Included presets and a custom date picker.
-* **Multi-Select Branchen-Filter:**
-  * Replaced the standard industry select dropdown in `LeadsTable` with a custom React popover containing checkboxes, filter search, and reset capabilities.
-  * Added query logic to dynamically fetch all distinct custom industries currently present in the database.
-* **Inline Audio Player & Storage:**
-  * Added the `AudioFile` relation model in Prisma to store call recordings as binary data (`Bytes`) directly in PostgreSQL.
-  * Created streaming API endpoint `/api/cold-calls/recordings/[id]/audio` to serve audio buffers as streaming responses.
-  * Rendered an HTML5 `<audio controls>` player within each expanded call transcript card.
-* **HTML5 Drag & Drop Uploads:**
-  * Added drag-and-drop file upload capabilities for audio files (supporting `.mp3`, `.wav`, `.m4a`, `.ogg`) inside the Lead Details modal and general Cold Calls modal.
-* **Google Maps Link Enrichment:**
-  * Programmed automatic Places API enrichment in the lead PATCH route. Pasting a Google Maps link (including `maps.app.goo.gl` redirects) parses the location name and retrieves missing details (phone, website, address, stars rating, and reviews counts).
-  * Automatically overwrites outdated fields unless the user manually inputs a override in the form.
-
-* **Interactions & Timeline Improvements:**
-  * Added inline editing capabilities for past interactions directly inside the `LeadDetailModal` timeline, backed by a new `PATCH /api/interactions/[id]` API route.
-  * Added visual feedback (loading spinners and state changes) for adding new interactions to prevent duplicate submissions and clarify network delays.
+### 3. Styling & Responsive Design
+- Tailwind v4 with CSS variables: `var(--bg)`, `var(--surface)`, `var(--surface-2)`, `var(--surface-3)`, `var(--border)`, `var(--text)`, `var(--accent)`.
+- iPad & Tablet friendly: touch momentum scrolling (`-webkit-overflow-scrolling: touch`), min 44px tap targets, collapsible panels, and floating mobile/tablet drawer.
 
 ---
 
-## ⚠️ Troubleshooting & Error History
+## 🚀 Key Modules
 
-* **Gemini SDK Function Response 400 Bad Request (`Role 'function' is not supported`):**
-  * *Error:* ChatSession in `@google/generative-ai` sends function response parts with role `'function'` or `'tool'`, which the API rejects with 400.
-  * *Fix:* Call `model.generateContent({ contents })` directly and append function response parts as a turn with `role: "user"`.
-* **Google Places Invalid Region Code (`Invalid region code 'AT '`):**
-  * *Error:* Trailing whitespace in `GOOGLE_PLACES_REGION` env var caused CLDR validation failure in Google Places API.
-  * *Fix:* Applied `.trim()` in code and re-saved the environment variable without whitespace.
-* **TypeScript Compilation Failures (`LeadScoutOptions` match):**
-  * *Error:* `"any"` is not assignable to type `"all" | "no" | "yes" | undefined` on filter parameters in `gemini.ts`.
-  * *Fix:* Changed the default filter arguments in `gemini.ts` from `"any"` to `"all"`.
-* **Zsh Glob matching errors during Git commits:**
-  * *Error:* `no matches found: src/app/api/leads/[id]/route.ts` when adding files to Git.
-  * *Fix:* Escaped or wrapped bracket paths in double quotes: `git add "src/app/api/leads/[id]/route.ts"`.
+### 1. Restaurant Scout & Menü-Radar (`/restaurant-scout`)
+- **Service:** `src/services/restaurant-scout.ts` + `src/lib/menu-detector.ts`
+- **Endpoints:** `POST /api/scout/restaurants`, `POST /api/leads/[id]/check-menu`
+- **Functionality:** Searches Google Places for gastronomy leads, extracts website HTML/links via Cheerio, and uses Gemini 1.5 Flash to verify whether a digital menu (HTML, PDF, Wolt/Lieferando) is present or missing. Saves directly into CRM pipeline.
 
+### 2. Auth & Session Management
+- **Endpoints:** `POST /api/auth/login`, `POST /api/auth/logout`
+- **Helpers:** `src/lib/session.ts` (Web Crypto HMAC-SHA256), `src/lib/auth.ts` (`requireAuth`, `getOptionalUser`)
+- **Credentials Security:** Server-side verification with salted SHA-256 hashes (never exposed in client bundles).
+- **Sidebar Logout:** Dedicated red logout button under *Einstellungen* with a confirmation modal before sign-out.
+
+### 3. Dashboard Performance (`/`)
+- **Page:** `src/app/page.tsx`
+- **Optimization:** Direct server-side parallel fetching of metrics via `Promise.all`, passed as `initialData` to `DashboardComponent` for 0ms load times and no client-side spinner.
+
+### 4. Lead Scout Engine (`/lead-scout`)
+- **Service:** `src/services/lead-scout.ts`
+- **Features:** Multi-industry filtering, Treatwell & Google Places scraping, duplicate prevention, and automatic phone/address enrichment.
+
+### 5. Cold Calls & Speech Coaching (`/cold-calls`)
+- **Storage:** Binary audio stored in PostgreSQL `AudioFile` and streamed via `/api/cold-calls/recordings/[id]/audio`.
+- **AI Feedback:** Gemini evaluates pace, stuttering/filler words, and emotional tone, providing actionable sales tips.
+
+---
+
+## ⚠️ Important Gotchas
+
+1. **Gemini Function Calling:** Function response turns must use `role: "user"` (the API rejects `role: "function"` with a 400 error).
+2. **Google Places Region Code:** Always use `.trim()` on `GOOGLE_PLACES_REGION` to avoid CLDR trailing whitespace errors (e.g. `'AT '`).
+3. **App Router Middleware:** Next.js 16 uses `src/proxy.ts` (with `export async function proxy`) rather than `middleware.ts`.
