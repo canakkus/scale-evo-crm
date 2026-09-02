@@ -159,6 +159,7 @@ model User {
   displayName            String
   active                 Boolean            @default(true)
   restaurantScoutEnabled Boolean            @default(true)
+  sidebarConfig          Json?
   workClockStartedAt     DateTime?
   createdAt              DateTime           @default(now())
   updatedAt              DateTime           @updatedAt

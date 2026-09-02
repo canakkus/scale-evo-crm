@@ -14,7 +14,7 @@ import {
   CheckSquare,
   Bot,
   BarChart3,
-  Settings,
+  Settings as SettingsIcon,
   ChevronLeft,
   ChevronRight,
   Zap,
@@ -25,23 +25,25 @@ import {
   Loader2,
   X as CloseIcon,
   User as UserIcon,
+  Layers,
 } from "lucide-react";
 import { cn, initials } from "@/lib/utils";
+import { DEFAULT_NAV_ITEMS, resolveNavConfig, type NavItemConfig } from "@/lib/nav-config";
 
-const NAV_ITEMS = [
-  { href: "/",            label: "Dashboard",    icon: LayoutDashboard },
-  { href: "/leads",       label: "Leads",        icon: Users },
-  { href: "/pipeline",    label: "Pipeline",     icon: Kanban },
-  { href: "/lead-scout",  label: "Lead Scout",   icon: Search },
-  { href: "/restaurant-scout", label: "Restaurant Scout", icon: UtensilsCrossed },
-  { href: "/cold-calls",  label: "Cold Calls",   icon: Phone },
-  { href: "/follow-ups",  label: "Follow-ups",   icon: Calendar },
-  { href: "/journal",     label: "Journal",      icon: BookOpen },
-  { href: "/tasks",       label: "Tasks",        icon: CheckSquare },
-  { href: "/ai",          label: "KI-Assistent", icon: Bot },
-  { href: "/analytics",   label: "Analytics",    icon: BarChart3 },
-  { href: "/settings",    label: "Einstellungen",icon: Settings },
-] as const;
+const NAV_ICON_MAP: Record<string, any> = {
+  "/": LayoutDashboard,
+  "/leads": Users,
+  "/pipeline": Kanban,
+  "/lead-scout": Search,
+  "/restaurant-scout": UtensilsCrossed,
+  "/cold-calls": Phone,
+  "/follow-ups": Calendar,
+  "/journal": BookOpen,
+  "/tasks": CheckSquare,
+  "/ai": Bot,
+  "/analytics": BarChart3,
+  "/settings": SettingsIcon,
+};
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -50,6 +52,7 @@ export function Sidebar() {
 
   // User state & Feature toggles
   const [currentUser, setCurrentUser] = useState<{ displayName?: string; email?: string } | null>(null);
+  const [navConfig, setNavConfig] = useState<NavItemConfig[]>(DEFAULT_NAV_ITEMS);
   const [restaurantScoutEnabled, setRestaurantScoutEnabled] = useState(true);
 
   // Logout confirmation modal state
@@ -63,9 +66,11 @@ export function Sidebar() {
         .then((data) => {
           if (data?.currentUser) {
             setCurrentUser(data.currentUser);
-            if (data.currentUser.restaurantScoutEnabled !== undefined) {
-              setRestaurantScoutEnabled(data.currentUser.restaurantScoutEnabled);
-            }
+            const scoutEnabled = data.currentUser.restaurantScoutEnabled ?? true;
+            setRestaurantScoutEnabled(scoutEnabled);
+
+            const resolved = resolveNavConfig(data.currentUser.sidebarConfig, scoutEnabled);
+            setNavConfig(resolved);
           }
         })
         .catch((err) => console.error("Error loading user settings in sidebar:", err));
@@ -77,6 +82,9 @@ export function Sidebar() {
     function handleSettingsUpdate(e: any) {
       if (e.detail?.restaurantScoutEnabled !== undefined) {
         setRestaurantScoutEnabled(e.detail.restaurantScoutEnabled);
+      }
+      if (e.detail?.sidebarConfig !== undefined) {
+        setNavConfig(resolveNavConfig(e.detail.sidebarConfig, e.detail.restaurantScoutEnabled ?? true));
       }
     }
 
@@ -97,13 +105,8 @@ export function Sidebar() {
     }
   }
 
-  // Filter out Restaurant Scout if toggled off for the user
-  const visibleNavItems = NAV_ITEMS.filter((item) => {
-    if (item.href === "/restaurant-scout" && !restaurantScoutEnabled) {
-      return false;
-    }
-    return true;
-  });
+  // Visible items based on user's custom sort and toggle state
+  const visibleNavItems = navConfig.filter((item) => item.visible !== false);
 
   return (
     <>
@@ -178,7 +181,8 @@ export function Sidebar() {
           className="flex-1 overflow-y-auto py-3 px-2 space-y-1"
           style={{ WebkitOverflowScrolling: "touch" }}
         >
-          {visibleNavItems.map(({ href, label, icon: Icon }) => {
+          {visibleNavItems.map(({ href, label }) => {
+            const Icon = NAV_ICON_MAP[href] || Layers;
             const isActive =
               href === "/" ? pathname === "/" : pathname.startsWith(href);
             return (

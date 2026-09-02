@@ -50,6 +50,7 @@ export async function GET() {
         email: authUser.email,
         displayName: dbUser?.displayName || authUser.user_metadata?.displayName || email.split("@")[0] || "Benutzer",
         restaurantScoutEnabled,
+        sidebarConfig: dbUser?.sidebarConfig || null,
       },
       allowedEmails: allowedEmails.split(",").map((e) => e.trim()).filter(Boolean),
       hasGeminiKey: Boolean(process.env.GEMINI_API_KEY),
@@ -71,42 +72,49 @@ export async function PATCH(request: Request) {
     const body = await request.json();
     const email = (authUser.email || "").toLowerCase();
 
-    if (body.restaurantScoutEnabled !== undefined) {
-      const enabled = Boolean(body.restaurantScoutEnabled);
+    // Find user
+    let dbUser = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { id: authUser.id },
+          ...(email ? [{ email: { equals: email, mode: "insensitive" as const } }] : []),
+        ],
+      },
+    });
 
-      // Find user
-      const dbUser = await prisma.user.findFirst({
-        where: {
-          OR: [
-            { id: authUser.id },
-            ...(email ? [{ email: { equals: email, mode: "insensitive" as const } }] : []),
-          ],
+    if (!dbUser && email) {
+      dbUser = await prisma.user.create({
+        data: {
+          id: authUser.id,
+          email: authUser.email || "user@scaleevo.at",
+          displayName: authUser.user_metadata?.displayName || email.split("@")[0],
+          restaurantScoutEnabled: email === "canakkus378@gmail.com" ? false : true,
         },
-      });
-
-      if (dbUser) {
-        await prisma.user.update({
-          where: { id: dbUser.id },
-          data: { restaurantScoutEnabled: enabled },
-        });
-      } else if (email) {
-        await prisma.user.create({
-          data: {
-            id: authUser.id,
-            email: authUser.email || "user@scaleevo.at",
-            displayName: authUser.user_metadata?.displayName || email.split("@")[0],
-            restaurantScoutEnabled: enabled,
-          },
-        });
-      }
-
-      return NextResponse.json({
-        success: true,
-        restaurantScoutEnabled: enabled,
       });
     }
 
-    return NextResponse.json({ success: true });
+    const updateData: any = {};
+
+    if (body.restaurantScoutEnabled !== undefined) {
+      updateData.restaurantScoutEnabled = Boolean(body.restaurantScoutEnabled);
+    }
+
+    if (body.sidebarConfig !== undefined) {
+      updateData.sidebarConfig = body.sidebarConfig;
+    }
+
+    if (dbUser && Object.keys(updateData).length > 0) {
+      dbUser = await prisma.user.update({
+        where: { id: dbUser.id },
+        data: updateData,
+      });
+    }
+
+    return NextResponse.json({
+      success: true,
+      restaurantScoutEnabled: dbUser?.restaurantScoutEnabled,
+      sidebarConfig: dbUser?.sidebarConfig,
+    });
   } catch (error) {
     console.error("[PATCH /api/settings] Error:", error);
     return NextResponse.json({ error: "Fehler beim Aktualisieren der Einstellungen." }, { status: 500 });

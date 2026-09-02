@@ -10,13 +10,52 @@ import {
   User,
   Sliders,
   Sparkles,
+  ArrowUp,
+  ArrowDown,
+  Eye,
+  EyeOff,
+  RotateCcw,
+  LayoutDashboard,
+  Users,
+  Kanban,
+  Search,
+  Phone,
+  Calendar,
+  BookOpen,
+  CheckSquare,
+  Bot,
+  BarChart3,
+  Settings as SettingsIcon,
+  Check,
+  Layers,
 } from "lucide-react";
 import { initials } from "@/lib/utils";
+import { DEFAULT_NAV_ITEMS, resolveNavConfig, type NavItemConfig } from "@/lib/nav-config";
+
+const NAV_ICON_MAP: Record<string, any> = {
+  "/": LayoutDashboard,
+  "/leads": Users,
+  "/pipeline": Kanban,
+  "/lead-scout": Search,
+  "/restaurant-scout": UtensilsCrossed,
+  "/cold-calls": Phone,
+  "/follow-ups": Calendar,
+  "/journal": BookOpen,
+  "/tasks": CheckSquare,
+  "/ai": Bot,
+  "/analytics": BarChart3,
+  "/settings": SettingsIcon,
+};
 
 export default function SettingsPage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [savingScout, setSavingScout] = useState(false);
+  const [savingNav, setSavingNav] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // Nav Items configuration state
+  const [navItems, setNavItems] = useState<NavItemConfig[]>(DEFAULT_NAV_ITEMS);
   const [restaurantScoutEnabled, setRestaurantScoutEnabled] = useState(true);
 
   useEffect(() => {
@@ -24,9 +63,11 @@ export default function SettingsPage() {
       .then((res) => res.json())
       .then((resData) => {
         setData(resData);
-        if (resData?.currentUser?.restaurantScoutEnabled !== undefined) {
-          setRestaurantScoutEnabled(resData.currentUser.restaurantScoutEnabled);
-        }
+        const scoutEnabled = resData?.currentUser?.restaurantScoutEnabled ?? true;
+        setRestaurantScoutEnabled(scoutEnabled);
+
+        const resolved = resolveNavConfig(resData?.currentUser?.sidebarConfig, scoutEnabled);
+        setNavItems(resolved);
       })
       .catch((err) => console.error(err))
       .finally(() => setLoading(false));
@@ -42,14 +83,79 @@ export default function SettingsPage() {
         body: JSON.stringify({ restaurantScoutEnabled: newVal }),
       });
       if (res.ok) {
-        // Broadcast custom event so sidebar updates immediately without full page reload
-        window.dispatchEvent(new CustomEvent("user-settings-updated", { detail: { restaurantScoutEnabled: newVal } }));
+        // Update nav items scout visibility
+        const updated = navItems.map((item) =>
+          item.href === "/restaurant-scout" ? { ...item, visible: newVal } : item
+        );
+        setNavItems(updated);
+        window.dispatchEvent(
+          new CustomEvent("user-settings-updated", {
+            detail: { restaurantScoutEnabled: newVal, sidebarConfig: updated },
+          })
+        );
       }
     } catch (err) {
       console.error(err);
     } finally {
       setSavingScout(false);
     }
+  }
+
+  async function saveSidebarConfig(newConfig: NavItemConfig[]) {
+    setNavItems(newConfig);
+    setSavingNav(true);
+    setSaveSuccess(false);
+
+    try {
+      const res = await fetch("/api/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sidebarConfig: newConfig }),
+      });
+
+      if (res.ok) {
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 2000);
+        window.dispatchEvent(
+          new CustomEvent("user-settings-updated", {
+            detail: { sidebarConfig: newConfig, restaurantScoutEnabled },
+          })
+        );
+      }
+    } catch (err) {
+      console.error("Error saving sidebar config:", err);
+    } finally {
+      setSavingNav(false);
+    }
+  }
+
+  function moveItem(index: number, direction: "up" | "down") {
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= navItems.length) return;
+
+    const updated = [...navItems];
+    const [moved] = updated.splice(index, 1);
+    updated.splice(targetIndex, 0, moved);
+
+    saveSidebarConfig(updated);
+  }
+
+  function toggleItemVisibility(index: number) {
+    const item = navItems[index];
+    if (item.href === "/settings") return; // settings always visible
+
+    const updated = [...navItems];
+    updated[index] = { ...item, visible: !item.visible };
+
+    saveSidebarConfig(updated);
+  }
+
+  function resetToDefault() {
+    const defaultResolved = DEFAULT_NAV_ITEMS.map((item) => ({
+      ...item,
+      visible: item.href === "/restaurant-scout" ? restaurantScoutEnabled : true,
+    }));
+    saveSidebarConfig(defaultResolved);
   }
 
   if (loading) {
@@ -71,11 +177,11 @@ export default function SettingsPage() {
           Einstellungen & Profil
         </h1>
         <p className="mt-1 text-xs" style={{ color: "var(--text-2)" }}>
-          Übersicht deines Accounts, Feature-Toggles und API-Schnittstellen.
+          Konfiguriere deine Sidebar-Reihenfolge, Feature-Toggles und API-Schnittstellen nach deinem Workflow.
         </p>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-5">
         {/* User Account Info Card */}
         <div
           className="rounded-xl border p-5 shadow-sm"
@@ -115,6 +221,131 @@ export default function SettingsPage() {
           </div>
         </div>
 
+        {/* Sidebar Tabs Reordering & Customization Card */}
+        <div
+          className="rounded-xl border p-6 space-y-4 shadow-sm"
+          style={{ background: "var(--surface)", borderColor: "var(--border)" }}
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b" style={{ borderColor: "var(--border)" }}>
+            <div>
+              <div className="flex items-center gap-2">
+                <Layers className="w-4 h-4" style={{ color: "var(--accent)" }} />
+                <h3 className="text-sm font-bold" style={{ color: "var(--text)" }}>
+                  Sidebar-Tabs sortieren & anpassen
+                </h3>
+              </div>
+              <p className="text-[11px] mt-0.5" style={{ color: "var(--text-3)" }}>
+                Verschiebe wichtige Tabs nach oben oder blende selten genutzte Tabs aus.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {saveSuccess && (
+                <span className="flex items-center gap-1 text-[11px] font-semibold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-md border border-emerald-500/20">
+                  <Check size={12} /> Gespeichert
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={resetToDefault}
+                disabled={savingNav}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors hover:bg-[var(--surface-2)] cursor-pointer"
+                style={{ borderColor: "var(--border)", color: "var(--text-2)" }}
+              >
+                <RotateCcw size={13} />
+                <span>Standard</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Nav Items List */}
+          <div className="space-y-1.5 pt-1">
+            {navItems.map((item, index) => {
+              const Icon = NAV_ICON_MAP[item.href] || Layers;
+              const isFirst = index === 0;
+              const isLast = index === navItems.length - 1;
+              const isVisible = item.visible !== false;
+
+              return (
+                <div
+                  key={item.href}
+                  className={`flex items-center justify-between p-2.5 rounded-xl border transition-all ${
+                    isVisible ? "bg-[var(--surface-2)] opacity-100" : "bg-[var(--surface)] opacity-50"
+                  }`}
+                  style={{ borderColor: "var(--border)" }}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="text-[11px] font-mono font-bold w-5 text-center shrink-0" style={{ color: "var(--text-3)" }}>
+                      {index + 1}
+                    </span>
+                    <div
+                      className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border"
+                      style={{
+                        background: "var(--surface)",
+                        borderColor: "var(--border)",
+                        color: isVisible ? "var(--accent)" : "var(--text-3)",
+                      }}
+                    >
+                      <Icon size={15} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold truncate" style={{ color: "var(--text)" }}>
+                        {item.label}
+                      </p>
+                      <p className="text-[10px] font-mono truncate" style={{ color: "var(--text-3)" }}>
+                        {item.href}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Actions: Reorder + Toggle Visibility */}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {/* Move Up */}
+                    <button
+                      type="button"
+                      disabled={isFirst || savingNav}
+                      onClick={() => moveItem(index, "up")}
+                      title="Nach oben verschieben"
+                      className="p-1.5 rounded-lg border transition-colors hover:bg-[var(--surface-3)] disabled:opacity-20 cursor-pointer"
+                      style={{ borderColor: "var(--border)", color: "var(--text-2)" }}
+                    >
+                      <ArrowUp size={13} />
+                    </button>
+
+                    {/* Move Down */}
+                    <button
+                      type="button"
+                      disabled={isLast || savingNav}
+                      onClick={() => moveItem(index, "down")}
+                      title="Nach unten verschieben"
+                      className="p-1.5 rounded-lg border transition-colors hover:bg-[var(--surface-3)] disabled:opacity-20 cursor-pointer"
+                      style={{ borderColor: "var(--border)", color: "var(--text-2)" }}
+                    >
+                      <ArrowDown size={13} />
+                    </button>
+
+                    {/* Visibility Toggle */}
+                    {item.href !== "/settings" && (
+                      <button
+                        type="button"
+                        onClick={() => toggleItemVisibility(index)}
+                        title={isVisible ? "In Sidebar ausblenden" : "In Sidebar einblenden"}
+                        className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+                          isVisible
+                            ? "hover:bg-[var(--surface-3)] text-emerald-400 border-emerald-500/20"
+                            : "bg-red-500/10 hover:bg-red-500/20 text-red-400 border-red-500/20"
+                        }`}
+                      >
+                        {isVisible ? <Eye size={13} /> : <EyeOff size={13} />}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Feature Toggles & Modules Card */}
         <div
           className="rounded-xl border p-6 space-y-4 shadow-sm"
@@ -138,7 +369,7 @@ export default function SettingsPage() {
                   </p>
                 </div>
                 <p className="text-[11px] max-w-lg leading-relaxed" style={{ color: "var(--text-3)" }}>
-                  Automatisiertes Scouting von Gastronomiebetrieben via Google Places & Speisekarten-Erkennung per Gemini KI in der Sidebar.
+                  Automatisiertes Scouting von Gastronomiebetrieben via Google Places & Speisekarten-Erkennung per Gemini KI.
                 </p>
               </div>
 

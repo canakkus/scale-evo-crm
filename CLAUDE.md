@@ -35,11 +35,10 @@
 - Leads, pipeline stages, dashboard metrics, tasks, scout sessions, and AI context are scoped per user (`createdById: user.id` or `assignedToId: user.id`).
 - When a new or second user (e.g. `Lucario`) logs in, they start with a clean isolated workspace (0 leads, 0 pipeline items).
 
-### 3. Feature-Toggles & Per-User Modules
-- `restaurantScoutEnabled` is stored on the `User` model in Prisma.
-- Toggled via `GET` / `PATCH /api/settings` and interactive toggle switch in `/settings`.
-- Canakkus user (`canakkus378@gmail.com`) has Restaurant Scout hidden by default; other users have it enabled.
-- Sidebar dynamically updates without page reloads via custom browser events (`user-settings-updated`).
+### 3. Sidebar Customization & Feature-Toggles
+- **Custom Tab Reordering & Visibility:** `sidebarConfig` is stored on the `User` model in Prisma. Users can freely sort/reorder tabs (Up/Down) and toggle tab visibility in `/settings`.
+- **Dynamic Real-Time Sync:** Sidebar reacts to `user-settings-updated` custom events and renders the custom order and visibility instantly without page reloads.
+- **Per-User Modules:** `restaurantScoutEnabled` controls access to Restaurant Scout and is toggleable in Settings.
 
 ### 4. Styling & Responsive Design
 - Tailwind v4 with CSS variables: `var(--bg)`, `var(--surface)`, `var(--surface-2)`, `var(--surface-3)`, `var(--border)`, `var(--text)`, `var(--accent)`.
@@ -49,23 +48,27 @@
 
 ## 🚀 Key Modules
 
-### 1. Lead Scout (`/lead-scout`) & Restaurant Scout (`/restaurant-scout`)
+### 1. Sidebar Configurator (`/settings` & `src/lib/nav-config.ts`)
+- **Helper:** `resolveNavConfig(savedConfig, restaurantScoutEnabled)`
+- **Features:** Visual card in Settings with tab icons, numbering (1..12), move up/down controls, eye toggle to show/hide tabs, and "Standard wiederherstellen" (reset to default) button.
+
+### 2. Lead Scout (`/lead-scout`) & Restaurant Scout (`/restaurant-scout`)
 - **Service:** `src/services/lead-scout.ts`, `src/services/restaurant-scout.ts` + `src/lib/menu-detector.ts`
 - **Direct Status Assignment:** Both scout modules feature a category dropdown with all 12 pipeline statuses (`NEW`, `RESEARCHED`, `TO_CONTACT`, `CONTACTED`, `REPLIED`, `INTERESTED`, `APPOINTMENT`, `OFFER_SENT`, `FOLLOW_UP`, `WON`, `LOST`, `NOT_RELEVANT`) to import candidates directly into the right CRM stage.
 - **Menu Radar:** Gemini 1.5 Flash automatically verifies digital menus (HTML/PDF/Lieferando/Wolt) from Google Places results.
 
-### 2. Auth, Session Management & User Badging
+### 3. Auth, Session Management & User Badging
 - **Endpoints:** `POST /api/auth/login`, `POST /api/auth/logout`
 - **Helpers:** `src/lib/session.ts` (Web Crypto HMAC-SHA256), `src/lib/auth.ts` (`requireAuth`, `getOptionalUser`)
 - **Credentials Security:** Server-side verification with salted SHA-256 hashes (never exposed in client bundles).
 - **Sidebar User Status:** Subtle avatar badge and user indicator (`currentUser.displayName` / `currentUser.email` with active online dot) at the bottom of the sidebar and settings profile card.
 - **Sidebar Logout:** Dedicated red logout button under *Einstellungen* with a confirmation modal before sign-out.
 
-### 3. Dashboard Performance (`/`)
+### 4. Dashboard Performance (`/`)
 - **Page:** `src/app/page.tsx`
 - **Optimization:** Direct server-side parallel fetching of metrics via `Promise.all`, passed as `initialData` to `DashboardComponent` for 0ms load times and no client-side spinner.
 
-### 4. Cold Calls & Speech Coaching (`/cold-calls`)
+### 5. Cold Calls & Speech Coaching (`/cold-calls`)
 - **Storage:** Binary audio stored in PostgreSQL `AudioFile` and streamed via `/api/cold-calls/recordings/[id]/audio`.
 - **AI Feedback:** Gemini evaluates pace, stuttering/filler words, and emotional tone, providing actionable sales tips.
 
