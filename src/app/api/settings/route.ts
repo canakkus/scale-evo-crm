@@ -20,6 +20,11 @@ export async function GET() {
 
     return NextResponse.json({
       settings,
+      currentUser: {
+        id: user.id,
+        email: user.email,
+        displayName: user.user_metadata?.displayName || user.email?.split("@")[0] || "Benutzer",
+      },
       allowedEmails: allowedEmails.split(",").map((e) => e.trim()).filter(Boolean),
       hasGeminiKey: Boolean(process.env.GEMINI_API_KEY),
       hasPlacesKey: Boolean(process.env.GOOGLE_PLACES_API_KEY),

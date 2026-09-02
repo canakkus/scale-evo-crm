@@ -5,6 +5,11 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 export async function POST() {
   try {
     const cookieStore = await cookies();
+    cookieStore.set("crm_user_session", "", {
+      path: "/",
+      maxAge: 0,
+      expires: new Date(0),
+    });
     cookieStore.delete("crm_user_session");
 
     try {
