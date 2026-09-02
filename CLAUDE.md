@@ -72,6 +72,14 @@
 - **Storage:** Binary audio stored in PostgreSQL `AudioFile` and streamed via `/api/cold-calls/recordings/[id]/audio`.
 - **AI Feedback:** Gemini evaluates pace, stuttering/filler words, and emotional tone, providing actionable sales tips.
 
+### 6. AI Assistant Chat & Lead Tooling (`/ai-assistant`, `src/services/groq.ts` & `src/services/gemini.ts`)
+- **Dual-Model Support:** Groq Llama 3.3 / Qwen & Gemini 1.5 Flash with Tool/Function Calling.
+- **Tools:**
+  - `listLeads`: Flexible lead querying with sorting (e.g. `sortBy="createdAt"`, `sortOrder="asc"` for oldest leads), date filtering (`olderThanDays`), status, and pagination.
+  - `bulkUpdateLeadStatus`: Batch-updates lead status (e.g. bulk-setting stale/uncontacted leads to `NOT_RELEVANT` or `LOST`).
+  - `searchLeads`, `getLeadDetails`, `updateLeadStatus`, `createTask`, `addLeadInteraction`, `runScoutSession`, `scoutRestaurants`.
+- **Leads API Sorting:** `GET /api/leads` supports dynamic `sortBy` (`createdAt`, `updatedAt`, `score`, `companyName`, `status`, `lastContactAt`) and `sortOrder` (`asc`/`desc`).
+
 ---
 
 ## ⚠️ Important Gotchas

@@ -18,8 +18,10 @@ export async function GET(request: Request) {
     const webPresence = searchParams.get("webPresence") as WebPresence | null;
     const industryParam = searchParams.get("industry")?.trim();
     const updatedDate = searchParams.get("updatedDate")?.trim(); // e.g. "today", "yesterday", "thisWeek", or "2026-08-27"
+    const sortBy = searchParams.get("sortBy")?.trim() || "updatedAt";
+    const sortOrder = (searchParams.get("sortOrder")?.toLowerCase() === "asc" ? "asc" : "desc") as "asc" | "desc";
     const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
-    const limit = Math.min(100, Math.max(10, parseInt(searchParams.get("limit") || "25", 10)));
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "25", 10)));
 
     const andClauses: any[] = [
       {
@@ -106,10 +108,13 @@ export async function GET(request: Request) {
       }
     }
 
+    const validSortFields = ["createdAt", "updatedAt", "score", "companyName", "status", "lastContactAt"];
+    const sortField = validSortFields.includes(sortBy) ? sortBy : "updatedAt";
+
     const [leads, total, distinctIndustries] = await Promise.all([
       prisma.lead.findMany({
         where,
-        orderBy: { updatedAt: "desc" },
+        orderBy: { [sortField]: sortOrder },
         skip: (page - 1) * limit,
         take: limit,
         include: {

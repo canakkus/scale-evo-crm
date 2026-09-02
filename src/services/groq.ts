@@ -145,29 +145,219 @@ export async function executeAssistantTool(name: string, args: any, userId: stri
   console.log(`[Groq Assistant Tool] Executing ${name} with args:`, args);
   try {
     switch (name) {
-      case "searchLeads": {
-        const { query } = args;
-        const leads = await prisma.lead.findMany({
-          where: {
-            AND: [
-              {
-                OR: [
-                  { createdById: userId },
-                  { assignedToId: userId },
-                ],
-              },
-              {
-                OR: [
-                  { companyName: { contains: query, mode: "insensitive" } },
-                  { city: { contains: query, mode: "insensitive" } },
-                  { phone: { contains: query, mode: "insensitive" } },
-                  { industry: { contains: query, mode: "insensitive" } },
-                ],
-              },
+      case "listLeads": {
+        const {
+          sortBy = "createdAt",
+          sortOrder = "asc",
+          status,
+          olderThanDays,
+          industry,
+          city,
+          query,
+          limit = 10,
+        } = args;
+
+        const andClauses: any[] = [
+          {
+            OR: [
+              { createdById: userId },
+              { assignedToId: userId },
             ],
           },
-          take: 10,
-          select: { id: true, companyName: true, status: true, score: true, city: true, phone: true, industry: true },
+        ];
+
+        if (status && status !== "ALL") {
+          andClauses.push({ status: status as any });
+        }
+
+        if (olderThanDays && !isNaN(Number(olderThanDays))) {
+          const cutoffDate = new Date();
+          cutoffDate.setDate(cutoffDate.getDate() - Number(olderThanDays));
+          andClauses.push({ createdAt: { lte: cutoffDate } });
+        }
+
+        if (query?.trim()) {
+          andClauses.push({
+            OR: [
+              { companyName: { contains: query.trim(), mode: "insensitive" } },
+              { city: { contains: query.trim(), mode: "insensitive" } },
+              { phone: { contains: query.trim(), mode: "insensitive" } },
+              { industry: { contains: query.trim(), mode: "insensitive" } },
+            ],
+          });
+        }
+
+        if (city?.trim()) {
+          andClauses.push({ city: { contains: city.trim(), mode: "insensitive" } });
+        }
+
+        if (industry?.trim()) {
+          andClauses.push({ industry: { contains: industry.trim(), mode: "insensitive" } });
+        }
+
+        const validSortFields = ["createdAt", "updatedAt", "score", "companyName", "lastContactAt"];
+        const sortField = validSortFields.includes(sortBy) ? sortBy : "createdAt";
+        const orderDirection = sortOrder === "desc" ? "desc" : "asc";
+        const takeLimit = Math.min(50, Math.max(1, Number(limit) || 10));
+
+        const [leads, totalCount] = await Promise.all([
+          prisma.lead.findMany({
+            where: { AND: andClauses },
+            orderBy: { [sortField]: orderDirection },
+            take: takeLimit,
+            select: {
+              id: true,
+              companyName: true,
+              status: true,
+              score: true,
+              city: true,
+              phone: true,
+              industry: true,
+              createdAt: true,
+              updatedAt: true,
+              lastContactAt: true,
+            },
+          }),
+          prisma.lead.count({
+            where: { AND: andClauses },
+          }),
+        ]);
+
+        const now = new Date();
+        const formattedLeads = leads.map((l) => {
+          const createdDaysAgo = Math.floor((now.getTime() - new Date(l.createdAt).getTime()) / (1000 * 60 * 60 * 24));
+          return {
+            id: l.id,
+            companyName: l.companyName,
+            status: l.status,
+            score: l.score,
+            city: l.city || "k.A.",
+            phone: l.phone || "k.A.",
+            industry: l.industry || "k.A.",
+            createdAt: l.createdAt.toISOString().split("T")[0],
+            createdDaysAgo: `${createdDaysAgo} Tage her`,
+            lastContactAt: l.lastContactAt ? l.lastContactAt.toISOString().split("T")[0] : "noch nicht kontaktiert",
+          };
+        });
+
+        return {
+          success: true,
+          totalMatching: totalCount,
+          returnedCount: formattedLeads.length,
+          sortBy: sortField,
+          sortOrder: orderDirection,
+          leads: formattedLeads,
+        };
+      }
+
+      case "bulkUpdateLeadStatus": {
+        const { leadIds, newStatus, currentStatus, olderThanDays, query, limit = 50 } = args;
+
+        if (!newStatus) {
+          return { error: "newStatus ist erforderlich (z.B. 'NOT_RELEVANT', 'LOST', 'WON', 'NEW')." };
+        }
+
+        const andClauses: any[] = [
+          {
+            OR: [
+              { createdById: userId },
+              { assignedToId: userId },
+            ],
+          },
+        ];
+
+        if (Array.isArray(leadIds) && leadIds.length > 0) {
+          andClauses.push({ id: { in: leadIds } });
+        }
+
+        if (currentStatus && currentStatus !== "ALL") {
+          andClauses.push({ status: currentStatus as any });
+        }
+
+        if (olderThanDays && !isNaN(Number(olderThanDays))) {
+          const cutoffDate = new Date();
+          cutoffDate.setDate(cutoffDate.getDate() - Number(olderThanDays));
+          andClauses.push({ createdAt: { lte: cutoffDate } });
+        }
+
+        if (query?.trim()) {
+          andClauses.push({
+            OR: [
+              { companyName: { contains: query.trim(), mode: "insensitive" } },
+              { city: { contains: query.trim(), mode: "insensitive" } },
+              { phone: { contains: query.trim(), mode: "insensitive" } },
+              { industry: { contains: query.trim(), mode: "insensitive" } },
+            ],
+          });
+        }
+
+        const takeLimit = Math.min(100, Math.max(1, Number(limit) || 50));
+
+        const targetLeads = await prisma.lead.findMany({
+          where: { AND: andClauses },
+          take: takeLimit,
+          select: { id: true, companyName: true, status: true },
+        });
+
+        if (targetLeads.length === 0) {
+          return {
+            success: true,
+            count: 0,
+            message: "Keine passenden Leads gefunden, die aktualisiert werden konnten.",
+            updatedLeads: [],
+          };
+        }
+
+        const idsToUpdate = targetLeads.map((l) => l.id);
+
+        await prisma.lead.updateMany({
+          where: { id: { in: idsToUpdate } },
+          data: { status: newStatus as any },
+        });
+
+        return {
+          success: true,
+          count: idsToUpdate.length,
+          newStatus,
+          updatedLeads: targetLeads.map((l) => ({ id: l.id, companyName: l.companyName, previousStatus: l.status })),
+        };
+      }
+
+      case "searchLeads": {
+        const { query = "", status, sortBy = "createdAt", sortOrder = "desc", limit = 10 } = args;
+        const andClauses: any[] = [
+          {
+            OR: [
+              { createdById: userId },
+              { assignedToId: userId },
+            ],
+          },
+        ];
+
+        if (query && query.trim()) {
+          andClauses.push({
+            OR: [
+              { companyName: { contains: query.trim(), mode: "insensitive" } },
+              { city: { contains: query.trim(), mode: "insensitive" } },
+              { phone: { contains: query.trim(), mode: "insensitive" } },
+              { industry: { contains: query.trim(), mode: "insensitive" } },
+            ],
+          });
+        }
+
+        if (status && status !== "ALL") {
+          andClauses.push({ status: status as any });
+        }
+
+        const validSortFields = ["createdAt", "updatedAt", "score", "companyName"];
+        const sortField = validSortFields.includes(sortBy) ? sortBy : "createdAt";
+        const orderDirection = sortOrder === "asc" ? "asc" : "desc";
+
+        const leads = await prisma.lead.findMany({
+          where: { AND: andClauses },
+          take: Math.min(50, Math.max(1, Number(limit) || 10)),
+          orderBy: { [sortField]: orderDirection },
+          select: { id: true, companyName: true, status: true, score: true, city: true, phone: true, industry: true, createdAt: true },
         });
         return { success: true, count: leads.length, leads };
       }
@@ -189,8 +379,9 @@ export async function executeAssistantTool(name: string, args: any, userId: stri
         const updated = await prisma.lead.update({
           where: { id: leadId },
           data: { status: status as any },
+          select: { id: true, companyName: true, status: true },
         });
-        return { success: true, leadId: updated.id, status: updated.status };
+        return { success: true, leadId: updated.id, companyName: updated.companyName, status: updated.status };
       }
 
       case "createTask": {
@@ -301,14 +492,102 @@ const ASSISTANT_TOOLS: Groq.Chat.ChatCompletionTool[] = [
   {
     type: "function",
     function: {
+      name: "listLeads",
+      description: "Ruft Leads mit flexibler Filterung und Sortierung ab (z.B. älteste Leads zuerst via sortBy='createdAt' & sortOrder='asc', Filter nach Status, Inaktivität in Tagen oder Stadt). Ideal um Fragen wie 'was ist der älteste Lead', 'welche Leads wurden lange nicht kontaktiert' oder 'zeige mir Leads mit Status X' sofort und präzise zu beantworten.",
+      parameters: {
+        type: "object",
+        properties: {
+          sortBy: {
+            type: "string",
+            enum: ["createdAt", "updatedAt", "score", "companyName", "lastContactAt"],
+            description: "Feld nach dem sortiert werden soll (z.B. 'createdAt' für Erstellungsdatum).",
+          },
+          sortOrder: {
+            type: "string",
+            enum: ["asc", "desc"],
+            description: "'asc' für älteste zuerst / aufsteigend, 'desc' für neueste zuerst / absteigend.",
+          },
+          status: {
+            type: "string",
+            description: "Optionaler Status-Filter (z.B. 'NEW', 'RESEARCHED', 'TO_CONTACT', 'CONTACTED', 'FOLLOW_UP', 'WON', 'LOST', 'NOT_RELEVANT', 'ALL').",
+          },
+          olderThanDays: {
+            type: "number",
+            description: "Optional: Filtert nur Leads, die vor mehr als X Tagen erstellt wurden.",
+          },
+          city: {
+            type: "string",
+            description: "Optional: Stadt-Filter.",
+          },
+          industry: {
+            type: "string",
+            description: "Optional: Branchen-Filter.",
+          },
+          query: {
+            type: "string",
+            description: "Optionaler Suchbegriff für Name, Stadt oder Branche.",
+          },
+          limit: {
+            type: "integer",
+            description: "Maximale Anzahl zurückzugebender Leads (1 bis 50, Standard 10).",
+          },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "bulkUpdateLeadStatus",
+      description: "Aktualisiert den Status von mehreren Leads auf einmal. Perfekt, um alte oder irrelevante Leads direkt auf 'NOT_RELEVANT' (oder einen anderen Status) zu setzen.",
+      parameters: {
+        type: "object",
+        properties: {
+          newStatus: {
+            type: "string",
+            enum: ["NEW", "RESEARCHED", "TO_CONTACT", "CONTACTED", "REPLIED", "INTERESTED", "APPOINTMENT", "OFFER_SENT", "FOLLOW_UP", "WON", "LOST", "NOT_RELEVANT"],
+            description: "Der neue Status (z.B. 'NOT_RELEVANT', 'LOST', 'WON').",
+          },
+          leadIds: {
+            type: "array",
+            items: { type: "string" },
+            description: "Optionale Liste konkreter Lead-IDs, die aktualisiert werden sollen.",
+          },
+          currentStatus: {
+            type: "string",
+            description: "Optionaler Filter: Nur Leads aktualisieren, die aktuell diesen Status haben (z.B. 'NEW').",
+          },
+          olderThanDays: {
+            type: "number",
+            description: "Optionaler Filter: Nur Leads aktualisieren, die älter als X Tage sind.",
+          },
+          query: {
+            type: "string",
+            description: "Optionaler Suchbegriff zur Eingrenzung der zu aktualisierenden Leads.",
+          },
+          limit: {
+            type: "integer",
+            description: "Maximale Anzahl an Leads, die aktualisiert werden sollen (Standard: 50).",
+          },
+        },
+        required: ["newStatus"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "searchLeads",
       description: "Suche nach Leads in der Datenbank anhand eines Suchbegriffs (Name, Stadt, Telefon, Branche). Gibt bis zu 10 Übereinstimmungen zurück.",
       parameters: {
         type: "object",
         properties: {
           query: { type: "string", description: "Der Suchbegriff für Name, Stadt, Branche oder Telefonnummer." },
+          status: { type: "string", description: "Optionaler Status-Filter." },
+          sortBy: { type: "string", description: "Sortierfeld (z.B. 'createdAt', 'score')." },
+          sortOrder: { type: "string", enum: ["asc", "desc"], description: "Sortierreihenfolge." },
+          limit: { type: "integer", description: "Maximale Anzahl der Ergebnisse." },
         },
-        required: ["query"],
       },
     },
   },
@@ -330,12 +609,16 @@ const ASSISTANT_TOOLS: Groq.Chat.ChatCompletionTool[] = [
     type: "function",
     function: {
       name: "updateLeadStatus",
-      description: "Aktualisiert den Status eines Leads. Gültige Status-Werte: NEW, RESEARCHED, TO_CONTACT, CONTACTED, REPLIED, INTERESTED, APPOINTMENT, OFFER_SENT, FOLLOW_UP, WON, LOST, NOT_RELEVANT.",
+      description: "Aktualisiert den Status eines einzelnen Leads. Gültige Status-Werte: NEW, RESEARCHED, TO_CONTACT, CONTACTED, REPLIED, INTERESTED, APPOINTMENT, OFFER_SENT, FOLLOW_UP, WON, LOST, NOT_RELEVANT.",
       parameters: {
         type: "object",
         properties: {
           leadId: { type: "string", description: "Die ID des Leads." },
-          status: { type: "string", description: "Der neue Status (z.B. WON, FOLLOW_UP)." },
+          status: {
+            type: "string",
+            enum: ["NEW", "RESEARCHED", "TO_CONTACT", "CONTACTED", "REPLIED", "INTERESTED", "APPOINTMENT", "OFFER_SENT", "FOLLOW_UP", "WON", "LOST", "NOT_RELEVANT"],
+            description: "Der neue Status (z.B. 'NOT_RELEVANT', 'WON', 'FOLLOW_UP').",
+          },
         },
         required: ["leadId", "status"],
       },
@@ -419,7 +702,7 @@ export async function chatWithAssistant(
   context: CrmContext,
   userId: string
 ): Promise<string> {
-  const systemPrompt = `Du bist ein intelligenter CRM-Assistent für Scale Evo CRM. Du hilfst beim Lead-Management und der Vertriebsarbeit.
+  const systemPrompt = `Du bist ein intelligenter und proaktiver CRM-Assistent für Scale Evo CRM. Du hilfst beim Lead-Management, Lead-Aufräumen und der Vertriebsarbeit.
 
 Aktueller CRM-Snapshot:
 - Gesamt-Leads: ${context.totalLeads}
@@ -428,8 +711,12 @@ Aktueller CRM-Snapshot:
 - Top-Leads: ${JSON.stringify(context.topLeads)}
 - Letzte Interaktionen: ${JSON.stringify(context.recentInteractions)}
 
-Du kannst direkt Aktionen ausführen wie Suchen, Status ändern, Interaktionen hinzufügen, Aufgaben erstellen und den Lead Scout ausführen unter Verwendung deiner Tools.
-Antworte auf Deutsch, kurz, freundlich und hilfreich.`;
+Wichtige Handlungsanweisungen für Tools:
+1. Wenn der Nutzer nach dem/den ältesten Leads fragt, Leads nach Datum/Alter auflisten will oder Inaktivität prüfen möchte: Nutze IMMER das Tool 'listLeads' mit sortBy="createdAt" und sortOrder="asc" (für die ältesten Leads zuerst).
+2. Wenn der Nutzer alte/irrelevante Leads auf "irrelevant" (Status: NOT_RELEVANT) setzen, aussortieren oder aufräumen möchte: Nutze 'bulkUpdateLeadStatus' oder 'updateLeadStatus' mit newStatus/status="NOT_RELEVANT".
+3. Du hast mächtige Tools um Leads zu durchsuchen ('listLeads', 'searchLeads'), Status zu ändern ('updateLeadStatus', 'bulkUpdateLeadStatus'), Aufgaben zu erstellen ('createTask'), Interaktionen zu dokumentieren ('addLeadInteraction') und neue Leads zu finden ('runScoutSession', 'scoutRestaurants').
+
+Antworte auf Deutsch, präzise, freundlich und liste Firmennamen, Erstellungsdatum und Status übersichtlich und verständlich auf.`;
 
   // Konvertiere Gemini-History-Format zu OpenAI/Groq-Format
   const messages: Groq.Chat.ChatCompletionMessageParam[] = [
