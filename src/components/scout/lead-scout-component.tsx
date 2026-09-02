@@ -19,8 +19,10 @@ import {
   X,
   History,
   Filter,
+  Navigation,
 } from "lucide-react";
 import { cn, timeAgo } from "@/lib/utils";
+import { formatDistance } from "@/lib/distance";
 import { RESTAURANT_CATEGORIES, type LeadScoutResponse, type ScoutResult, type ScoutStepStatus } from "@/lib/lead-scout-types";
 
 const CATEGORIES = [
@@ -77,7 +79,7 @@ function ResultCard({
   adding,
 }: {
   result: ScoutResult;
-  onAdd: (status: LeadStatus) => void;
+  onAdd: (status: LeadStatus, acquisitionType: "CALL" | "WALK_IN", nfcDemoUrl?: string) => void;
   added: boolean;
   adding: boolean;
 }) {
@@ -86,20 +88,45 @@ function ResultCard({
   const possibleDuplicate = duplicate.matches.length > 0 && !isDuplicate;
 
   const [status, setStatus] = useState<LeadStatus>("NEW");
+  const [isWalkIn, setIsWalkIn] = useState(false);
+  const [nfcDemoUrl, setNfcDemoUrl] = useState("");
+  const [showNfcInput, setShowNfcInput] = useState(false);
+
+  const handleWalkInToggle = (checked: boolean) => {
+    setIsWalkIn(checked);
+    if (checked && status === "NEW") {
+      setStatus("WALK_IN_PLANNED");
+    } else if (!checked && status === "WALK_IN_PLANNED") {
+      setStatus("NEW");
+    }
+  };
 
   const handleAdd = () => {
     if (possibleDuplicate && !window.confirm("Als mögliches Duplikat trotzdem als neuen Lead anlegen?")) return;
-    onAdd(status);
+    onAdd(status, isWalkIn ? "WALK_IN" : "CALL", nfcDemoUrl.trim() || undefined);
   };
 
   return (
     <div className="rounded-xl border p-5 transition hover:shadow-lg space-y-4" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2.5">
             <h3 className="text-base font-bold" style={{ color: "var(--text)" }}>{venue.name}</h3>
             <Stars rating={venue.rating} />
             <span className="text-xs" style={{ color: "var(--text-3)" }}>{venue.reviewCount} Bewertungen</span>
+            {result.distanceKm != null && (
+              <span
+                className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-wide"
+                style={{
+                  background: "rgba(56, 189, 248, 0.12)",
+                  color: "#38bdf8",
+                  border: "1px solid rgba(56, 189, 248, 0.25)",
+                }}
+              >
+                <Navigation className="w-3 h-3" />
+                {formatDistance(result.distanceKm)} entfernt
+              </span>
+            )}
           </div>
           <div className="mt-1 flex items-center gap-1.5 text-xs" style={{ color: "var(--text-2)" }}>
             <MapPin className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--text-3)" }} />
@@ -210,46 +237,97 @@ function ResultCard({
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center justify-end gap-3 pt-2 border-t" style={{ borderColor: "var(--border)" }}>
-        {added && (
-          <span className="inline-flex items-center gap-1 text-xs font-semibold" style={{ color: "var(--status-warm-tx)" }}>
-            <Check className="w-4 h-4" /> Als Lead angelegt
-          </span>
-        )}
+      {/* Walk-In & NFC Demo URL expanded row */}
+      {isWalkIn && (
+        <div className="rounded-lg border p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-fade-in" style={{ background: "var(--surface-2)", borderColor: "rgba(56, 189, 248, 0.3)" }}>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold px-2 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">
+              🚶 Walk-In Lead
+            </span>
+            <span className="text-xs" style={{ color: "var(--text-2)" }}>
+              Lead wird als Vor-Ort-Akquise markiert.
+            </span>
+          </div>
 
-        {/* Status Dropdown with all Categories */}
-        <div className="flex items-center gap-2">
-          <label className="text-xs font-semibold" style={{ color: "var(--text-3)" }}>
-            Status:
-          </label>
-          <select
-            value={status}
-            disabled={isDuplicate || added || adding}
-            onChange={(e) => setStatus(e.target.value as LeadStatus)}
-            className="rounded-lg px-2.5 py-1.5 text-xs font-semibold border outline-none cursor-pointer transition-colors disabled:opacity-50"
-            style={{
-              background: "var(--surface-2)",
-              borderColor: "var(--border)",
-              color: "var(--text)",
-            }}
-          >
-            {Object.entries(STATUS_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
+          <div className="w-full sm:w-auto flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowNfcInput(!showNfcInput)}
+              className="text-xs font-semibold underline hover:no-underline cursor-pointer"
+              style={{ color: "var(--accent)" }}
+            >
+              {showNfcInput ? "NFC URL verbergen" : "+ NFC Demo URL hinzufügen"}
+            </button>
+            {showNfcInput && (
+              <input
+                type="url"
+                placeholder="https://scaleevo.at/demo/..."
+                value={nfcDemoUrl}
+                onChange={(e) => setNfcDemoUrl(e.target.value)}
+                className="rounded-md px-2.5 py-1 text-xs border outline-none w-full sm:w-64"
+                style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}
+              />
+            )}
+          </div>
         </div>
+      )}
 
-        <button
-          disabled={isDuplicate || added || adding}
-          onClick={handleAdd}
-          className="flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all disabled:opacity-50 cursor-pointer shadow-sm active:scale-95"
-          style={{ background: "var(--accent)", color: "var(--bg)" }}
-        >
-          {adding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
-          {isDuplicate ? "Duplikat im CRM" : added ? "Bereits Angelegt" : `Als Lead anlegen (${STATUS_LABELS[status]})`}
-        </button>
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t" style={{ borderColor: "var(--border)" }}>
+        {/* Walk-In Checkbox Selector */}
+        <label className="flex items-center gap-2 text-xs font-semibold cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={isWalkIn}
+            disabled={isDuplicate || added || adding}
+            onChange={(e) => handleWalkInToggle(e.target.checked)}
+            className="rounded accent-[var(--accent)] cursor-pointer w-4 h-4"
+          />
+          <span style={{ color: isWalkIn ? "var(--accent)" : "var(--text-2)" }}>
+            Als Walk-In Vormerken
+          </span>
+        </label>
+
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          {added && (
+            <span className="inline-flex items-center gap-1 text-xs font-semibold" style={{ color: "var(--status-warm-tx)" }}>
+              <Check className="w-4 h-4" /> Als Lead angelegt
+            </span>
+          )}
+
+          {/* Status Dropdown with all Categories */}
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-semibold" style={{ color: "var(--text-3)" }}>
+              Status:
+            </label>
+            <select
+              value={status}
+              disabled={isDuplicate || added || adding}
+              onChange={(e) => setStatus(e.target.value as LeadStatus)}
+              className="rounded-lg px-2.5 py-1.5 text-xs font-semibold border outline-none cursor-pointer transition-colors disabled:opacity-50"
+              style={{
+                background: "var(--surface-2)",
+                borderColor: "var(--border)",
+                color: "var(--text)",
+              }}
+            >
+              {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <button
+            disabled={isDuplicate || added || adding}
+            onClick={handleAdd}
+            className="flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all disabled:opacity-50 cursor-pointer shadow-sm active:scale-95"
+            style={{ background: "var(--accent)", color: "var(--bg)" }}
+          >
+            {adding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+            {isDuplicate ? "Duplikat im CRM" : added ? "Bereits Angelegt" : `Als Lead anlegen (${STATUS_LABELS[status]})`}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -265,6 +343,7 @@ export function LeadScoutComponent() {
   const [minRating, setMinRating] = useState("4.0");
   const [minReviews, setMinReviews] = useState("10");
   const [maxResults, setMaxResults] = useState("10");
+  const [sortBy, setSortBy] = useState<"rating" | "distance">("rating");
   const [hasWebsiteFilter, setHasWebsiteFilter] = useState<"all" | "yes" | "no">("all");
   const [hasTreatwellFilter, setHasTreatwellFilter] = useState<"all" | "yes" | "no">("all");
   const [hasPhoneFilter, setHasPhoneFilter] = useState<"all" | "yes" | "no">("all");
@@ -343,6 +422,7 @@ export function LeadScoutComponent() {
           minReviews: Number(minReviews),
           maxResults: Number(maxResults),
           source,
+          sortBy,
           hasWebsiteFilter,
           hasTreatwellFilter,
           hasPhoneFilter,
@@ -359,14 +439,21 @@ export function LeadScoutComponent() {
     } finally {
       setLoading(false);
     }
-  }, [category, city, minRating, minReviews, maxResults, source, hasWebsiteFilter, hasTreatwellFilter, hasPhoneFilter, hasInstagramFilter, fetchSessions]);
+  }, [category, city, minRating, minReviews, maxResults, source, sortBy, hasWebsiteFilter, hasTreatwellFilter, hasPhoneFilter, hasInstagramFilter, fetchSessions]);
 
-  const addLead = async (result: ScoutResult, customStatus?: LeadStatus) => {
+  const addLead = async (
+    result: ScoutResult,
+    customStatus?: LeadStatus,
+    acquisitionType: "CALL" | "WALK_IN" = "CALL",
+    nfcDemoUrl?: string
+  ) => {
     setAddingId(result.venue.key);
     try {
       const payload = {
         ...result.leadDraft,
         status: customStatus || (result.leadDraft as any).status || "NEW",
+        acquisitionType,
+        nfcDemoUrl: nfcDemoUrl || (result.leadDraft as any).nfcDemoUrl || null,
       };
       const res = await fetch("/api/leads", {
         method: "POST",
@@ -467,7 +554,20 @@ export function LeadScoutComponent() {
         </div>
 
         {/* Extended Filter Controls */}
-        <div className="pt-4 border-t grid grid-cols-1 sm:grid-cols-4 gap-4" style={{ borderColor: "var(--border)" }}>
+        <div className="pt-4 border-t grid grid-cols-1 sm:grid-cols-5 gap-4" style={{ borderColor: "var(--border)" }}>
+          <div>
+            <label className="block text-[11px] font-semibold mb-1" style={{ color: "var(--text-3)" }}>Sortierung</label>
+            <select
+              className="w-full rounded-md px-2.5 py-1.5 text-xs border outline-none cursor-pointer"
+              style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as "rating" | "distance")}
+            >
+              <option value="rating">Beste Bewertung (Standard)</option>
+              <option value="distance">Kürzeste Distanz (Walk-In)</option>
+            </select>
+          </div>
+
           <div>
             <label className="block text-[11px] font-semibold mb-1" style={{ color: "var(--text-3)" }}>Website-Filter</label>
             <select
@@ -533,7 +633,7 @@ export function LeadScoutComponent() {
           <button
             onClick={runScout}
             disabled={loading}
-            className="flex items-center gap-2 rounded-md px-5 py-2 text-xs font-semibold shadow-md transition-all"
+            className="flex items-center gap-2 rounded-md px-5 py-2 text-xs font-semibold shadow-md transition-all cursor-pointer"
             style={{ background: "var(--accent)", color: "var(--bg)", opacity: loading ? 0.7 : 1 }}
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Radar className="w-4 h-4" />}
@@ -609,7 +709,9 @@ export function LeadScoutComponent() {
             <ResultCard
               key={result.venue.key}
               result={result}
-              onAdd={(selectedStatus) => addLead(result, selectedStatus)}
+              onAdd={(selectedStatus, acquisitionType, nfcDemoUrl) =>
+                addLead(result, selectedStatus, acquisitionType, nfcDemoUrl)
+              }
               added={addedIds.has(result.venue.key)}
               adding={addingId === result.venue.key}
             />
