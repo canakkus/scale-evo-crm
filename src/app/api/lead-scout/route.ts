@@ -24,6 +24,8 @@ export async function POST(request: Request) {
         | "treatwell"
         | "places",
       sortBy: (body.sortBy === "distance" ? "distance" : "rating") as "rating" | "distance",
+      baseLat: body.baseLat != null ? Number(body.baseLat) : null,
+      baseLng: body.baseLng != null ? Number(body.baseLng) : null,
       hasWebsiteFilter: body.hasWebsiteFilter || "all",
       hasTreatwellFilter: body.hasTreatwellFilter || "all",
       hasPhoneFilter: body.hasPhoneFilter || "all",

@@ -172,6 +172,10 @@ model User {
   active                 Boolean            @default(true)
   restaurantScoutEnabled Boolean            @default(true)
   sidebarConfig          Json?
+  baseAddress            String?
+  baseLatitude           Float?
+  baseLongitude          Float?
+  preferredLocationMode  String?            @default("default") // "live" | "fixed" | "default"
   workClockStartedAt     DateTime?
   createdAt              DateTime           @default(now())
   updatedAt              DateTime           @updatedAt

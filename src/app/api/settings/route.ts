@@ -51,6 +51,10 @@ export async function GET() {
         displayName: dbUser?.displayName || authUser.user_metadata?.displayName || email.split("@")[0] || "Benutzer",
         restaurantScoutEnabled,
         sidebarConfig: dbUser?.sidebarConfig || null,
+        baseAddress: dbUser?.baseAddress || null,
+        baseLatitude: dbUser?.baseLatitude ?? null,
+        baseLongitude: dbUser?.baseLongitude ?? null,
+        preferredLocationMode: dbUser?.preferredLocationMode || "default",
       },
       allowedEmails: allowedEmails.split(",").map((e) => e.trim()).filter(Boolean),
       hasGeminiKey: Boolean(process.env.GEMINI_API_KEY),
@@ -103,6 +107,22 @@ export async function PATCH(request: Request) {
       updateData.sidebarConfig = body.sidebarConfig;
     }
 
+    if (body.baseAddress !== undefined) {
+      updateData.baseAddress = body.baseAddress ? String(body.baseAddress).trim() : null;
+    }
+
+    if (body.baseLatitude !== undefined) {
+      updateData.baseLatitude = body.baseLatitude !== null ? Number(body.baseLatitude) : null;
+    }
+
+    if (body.baseLongitude !== undefined) {
+      updateData.baseLongitude = body.baseLongitude !== null ? Number(body.baseLongitude) : null;
+    }
+
+    if (body.preferredLocationMode !== undefined) {
+      updateData.preferredLocationMode = String(body.preferredLocationMode);
+    }
+
     if (dbUser && Object.keys(updateData).length > 0) {
       dbUser = await prisma.user.update({
         where: { id: dbUser.id },
@@ -114,6 +134,10 @@ export async function PATCH(request: Request) {
       success: true,
       restaurantScoutEnabled: dbUser?.restaurantScoutEnabled,
       sidebarConfig: dbUser?.sidebarConfig,
+      baseAddress: dbUser?.baseAddress,
+      baseLatitude: dbUser?.baseLatitude,
+      baseLongitude: dbUser?.baseLongitude,
+      preferredLocationMode: dbUser?.preferredLocationMode,
     });
   } catch (error) {
     console.error("[PATCH /api/settings] Error:", error);

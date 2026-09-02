@@ -28,9 +28,15 @@ import {
   Settings as SettingsIcon,
   Check,
   Layers,
+  MapPin,
+  Navigation,
+  Loader2,
 } from "lucide-react";
 import { initials } from "@/lib/utils";
 import { DEFAULT_NAV_ITEMS, resolveNavConfig, type NavItemConfig } from "@/lib/nav-config";
+import { PlacesAutofill } from "@/components/ui/places-autofill";
+import { useUserLocation } from "@/lib/location-context";
+import type { PlaceSuggestion } from "@/lib/places";
 
 const NAV_ICON_MAP: Record<string, any> = {
   "/": LayoutDashboard,
@@ -53,6 +59,20 @@ export default function SettingsPage() {
   const [savingScout, setSavingScout] = useState(false);
   const [savingNav, setSavingNav] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [locationSuccess, setLocationSuccess] = useState(false);
+
+  // User location context
+  const {
+    mode,
+    coords,
+    fixedAddress,
+    fixedCoords,
+    loadingGps,
+    requestLiveLocation,
+    useFixedLocation,
+    useDefaultLocation,
+    saveFixedLocation,
+  } = useUserLocation();
 
   // Nav Items configuration state
   const [navItems, setNavItems] = useState<NavItemConfig[]>(DEFAULT_NAV_ITEMS);
@@ -72,6 +92,18 @@ export default function SettingsPage() {
       .catch((err) => console.error(err))
       .finally(() => setLoading(false));
   }, []);
+
+  async function handleSelectFixedLocation(place: PlaceSuggestion) {
+    const fullAddress = [place.name, place.address, place.city].filter(Boolean).join(", ");
+    const lat = place.latitude ?? (place as any).lat;
+    const lng = place.longitude ?? (place as any).lng;
+
+    if (lat != null && lng != null) {
+      await saveFixedLocation(fullAddress, lat, lng);
+      setLocationSuccess(true);
+      setTimeout(() => setLocationSuccess(false), 3000);
+    }
+  }
 
   async function handleToggleRestaurantScout(newVal: boolean) {
     setRestaurantScoutEnabled(newVal);
@@ -218,6 +250,137 @@ export default function SettingsPage() {
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               <span>Sitzung aktiv</span>
             </div>
+          </div>
+        </div>
+
+        {/* Location & Distance Base Setting Card */}
+        <div
+          className="rounded-xl border p-6 space-y-5 shadow-sm"
+          style={{ background: "var(--surface)", borderColor: "var(--border)" }}
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b" style={{ borderColor: "var(--border)" }}>
+            <div>
+              <div className="flex items-center gap-2">
+                <MapPin className="w-4 h-4 text-sky-400" />
+                <h3 className="text-sm font-bold" style={{ color: "var(--text)" }}>
+                  Standort & Distanz-Ausgangspunkt (Walk-In)
+                </h3>
+              </div>
+              <p className="text-[11px] mt-0.5" style={{ color: "var(--text-3)" }}>
+                Hinterlege deinen festen Büro-/Startpunkt per Google Places Autofill oder nutze Live-GPS. Alle Distanzen im Scout werden automatisch von hier gemessen.
+              </p>
+            </div>
+
+            {locationSuccess && (
+              <span className="flex items-center gap-1 text-[11px] font-semibold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-md border border-emerald-500/20 animate-fade-in shrink-0">
+                <Check size={12} /> Standort gespeichert
+              </span>
+            )}
+          </div>
+
+          {/* Current Active Location Status */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {/* Live GPS Button/Status */}
+            <button
+              type="button"
+              onClick={requestLiveLocation}
+              disabled={loadingGps}
+              className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+                mode === "live"
+                  ? "bg-sky-500/10 border-sky-500/40 text-sky-400 shadow-sm"
+                  : "bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-2)] hover:border-sky-500/30"
+              }`}
+            >
+              <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center gap-1.5 text-xs font-bold">
+                  {loadingGps ? <Loader2 className="w-3.5 h-3.5 animate-spin text-sky-400" /> : <Navigation className="w-3.5 h-3.5" />}
+                  <span>Live-GPS (Gerät)</span>
+                </div>
+                {mode === "live" && (
+                  <span className="w-2 h-2 rounded-full bg-sky-400 animate-ping" />
+                )}
+              </div>
+              <p className="text-[11px] opacity-80">
+                {mode === "live" ? "Live-Koordinaten aktiv" : "Gerätestandort anfordern"}
+              </p>
+            </button>
+
+            {/* Fixed Location Status */}
+            <button
+              type="button"
+              onClick={useFixedLocation}
+              disabled={!fixedAddress}
+              className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+                mode === "fixed"
+                  ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-400 shadow-sm"
+                  : "bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-2)] hover:border-emerald-500/30"
+              }`}
+            >
+              <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center gap-1.5 text-xs font-bold">
+                  <MapPin className="w-3.5 h-3.5" />
+                  <span>Fixe Adresse</span>
+                </div>
+                {mode === "fixed" && (
+                  <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                )}
+              </div>
+              <p className="text-[11px] truncate opacity-80" title={fixedAddress || "Keine Adresse gespeichert"}>
+                {fixedAddress || "Noch nicht eingerichtet"}
+              </p>
+            </button>
+
+            {/* Default Vienna Center */}
+            <button
+              type="button"
+              onClick={useDefaultLocation}
+              className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+                mode === "default"
+                  ? "bg-amber-500/10 border-amber-500/40 text-amber-400 shadow-sm"
+                  : "bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-2)] hover:border-amber-500/30"
+              }`}
+            >
+              <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center gap-1.5 text-xs font-bold">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Standard (Wien)</span>
+                </div>
+                {mode === "default" && (
+                  <span className="w-2 h-2 rounded-full bg-amber-400" />
+                )}
+              </div>
+              <p className="text-[11px] opacity-80">
+                Stephansplatz, 1010 Wien
+              </p>
+            </button>
+          </div>
+
+          {/* Google Places Autofill for Fixed Address */}
+          <div className="pt-3 border-t space-y-3" style={{ borderColor: "var(--border)" }}>
+            <h4 className="text-xs font-bold" style={{ color: "var(--text)" }}>
+              Fixen Standort ändern / per Google Places suchen:
+            </h4>
+            <PlacesAutofill onSelect={handleSelectFixedLocation} />
+            {fixedAddress && fixedCoords && (
+              <div
+                className="p-3 rounded-lg border text-xs flex flex-wrap items-center justify-between gap-2"
+                style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}
+              >
+                <div>
+                  <span className="font-bold text-[var(--text)] block">{fixedAddress}</span>
+                  <span className="text-[10px] font-mono text-[var(--text-3)]">
+                    Lat: {fixedCoords.lat.toFixed(4)}, Lng: {fixedCoords.lng.toFixed(4)}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={useDefaultLocation}
+                  className="text-[11px] font-semibold text-red-400 hover:underline cursor-pointer"
+                >
+                  Zurücksetzen
+                </button>
+              </div>
+            )}
           </div>
         </div>
 

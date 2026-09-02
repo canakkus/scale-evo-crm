@@ -288,7 +288,11 @@ async function scoutVenue(venue: TreatwellVenue, options: LeadScoutOptions, lead
 
   const lat = place?.latitude ?? venue.latitude ?? null;
   const lng = place?.longitude ?? venue.longitude ?? null;
-  const distanceKm = calculateDistanceKm(lat != null && lng != null ? { lat, lng } : null);
+  const baseCoords =
+    options.baseLat != null && options.baseLng != null
+      ? { lat: options.baseLat, lng: options.baseLng }
+      : undefined;
+  const distanceKm = calculateDistanceKm(lat != null && lng != null ? { lat, lng } : null, baseCoords);
 
   return {
     venue: {

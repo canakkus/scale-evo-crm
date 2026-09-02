@@ -20,9 +20,11 @@ import {
   History,
   Filter,
   Navigation,
+  Settings,
 } from "lucide-react";
 import { cn, timeAgo } from "@/lib/utils";
 import { formatDistance } from "@/lib/distance";
+import { useUserLocation } from "@/lib/location-context";
 import { RESTAURANT_CATEGORIES, type LeadScoutResponse, type ScoutResult, type ScoutStepStatus } from "@/lib/lead-scout-types";
 
 const CATEGORIES = [
@@ -334,6 +336,17 @@ function ResultCard({
 }
 
 export function LeadScoutComponent() {
+  const {
+    mode: locationMode,
+    coords: locationCoords,
+    label: locationLabel,
+    fixedAddress,
+    loadingGps,
+    requestLiveLocation,
+    useFixedLocation,
+    useDefaultLocation,
+  } = useUserLocation();
+
   const [category, setCategory] = useState("Barber");
   const [city, setCity] = useState("Wien");
   const isRestaurant = RESTAURANT_CATEGORIES.includes(category) || category === "Alle";
@@ -423,6 +436,8 @@ export function LeadScoutComponent() {
           maxResults: Number(maxResults),
           source,
           sortBy,
+          baseLat: locationCoords?.lat ?? null,
+          baseLng: locationCoords?.lng ?? null,
           hasWebsiteFilter,
           hasTreatwellFilter,
           hasPhoneFilter,
@@ -439,7 +454,7 @@ export function LeadScoutComponent() {
     } finally {
       setLoading(false);
     }
-  }, [category, city, minRating, minReviews, maxResults, source, sortBy, hasWebsiteFilter, hasTreatwellFilter, hasPhoneFilter, hasInstagramFilter, fetchSessions]);
+  }, [category, city, minRating, minReviews, maxResults, source, sortBy, locationCoords, hasWebsiteFilter, hasTreatwellFilter, hasPhoneFilter, hasInstagramFilter, fetchSessions]);
 
   const addLead = async (
     result: ScoutResult,
@@ -484,6 +499,72 @@ export function LeadScoutComponent() {
               {sessions.length} gespeicherte Sessions
             </span>
           )}
+        </div>
+
+        {/* Location Reference Banner */}
+        <div
+          className="rounded-lg p-3 border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+          style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            <span
+              className={`w-2 h-2 rounded-full shrink-0 ${
+                locationMode === "live"
+                  ? "bg-sky-400 animate-ping"
+                  : locationMode === "fixed"
+                  ? "bg-emerald-400"
+                  : "bg-amber-400"
+              }`}
+            />
+            <span className="font-medium text-[var(--text-3)] shrink-0">Distanz-Ausgangspunkt:</span>
+            <span className="font-bold truncate text-[var(--text)]" title={locationLabel}>
+              {locationLabel}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1.5 shrink-0">
+            {/* Quick Live GPS toggle */}
+            <button
+              type="button"
+              onClick={requestLiveLocation}
+              disabled={loadingGps}
+              title="Live-GPS-Standort abfragen"
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold border transition-all cursor-pointer ${
+                locationMode === "live"
+                  ? "bg-sky-500/20 text-sky-400 border-sky-500/30 font-bold"
+                  : "bg-[var(--surface)] text-[var(--text-2)] border-[var(--border)] hover:text-[var(--text)]"
+              }`}
+            >
+              {loadingGps ? <Loader2 className="w-3 h-3 animate-spin" /> : <Navigation className="w-3 h-3" />}
+              <span>Live-GPS</span>
+            </button>
+
+            {/* Quick Fixed location toggle */}
+            {fixedAddress && (
+              <button
+                type="button"
+                onClick={useFixedLocation}
+                title={`Fixen Standort (${fixedAddress}) nutzen`}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold border transition-all cursor-pointer ${
+                  locationMode === "fixed"
+                    ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30 font-bold"
+                    : "bg-[var(--surface)] text-[var(--text-2)] border-[var(--border)] hover:text-[var(--text)]"
+                }`}
+              >
+                <MapPin className="w-3 h-3" />
+                <span>Fixe Adresse</span>
+              </button>
+            )}
+
+            {/* Settings Link */}
+            <Link
+              href="/settings"
+              title="Standort in den Einstellungen ändern"
+              className="p-1 rounded-md text-[var(--text-3)] hover:text-[var(--text)] transition-colors hover:bg-[var(--surface)]"
+            >
+              <Settings className="w-3.5 h-3.5" />
+            </Link>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">

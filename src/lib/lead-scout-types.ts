@@ -94,6 +94,8 @@ export type LeadScoutOptions = {
   maxResults: number;
   source: VenueSource;
   sortBy?: "rating" | "distance";
+  baseLat?: number | null;
+  baseLng?: number | null;
   // Advanced filters
   hasWebsiteFilter?: "all" | "yes" | "no";
   hasTreatwellFilter?: "all" | "yes" | "no";
