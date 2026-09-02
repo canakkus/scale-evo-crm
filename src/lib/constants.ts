@@ -78,6 +78,18 @@ export const PIPELINE_STATUSES: LeadStatus[] = [
   "DEMO_DISPATCHED",
 ];
 
+export const NEXT_STATUS: Partial<Record<LeadStatus, LeadStatus>> = {
+  NEW: "RESEARCHED",
+  RESEARCHED: "TO_CONTACT",
+  TO_CONTACT: "CONTACTED",
+  CONTACTED: "REPLIED",
+  REPLIED: "INTERESTED",
+  INTERESTED: "APPOINTMENT",
+  APPOINTMENT: "OFFER_SENT",
+  OFFER_SENT: "FOLLOW_UP",
+  FOLLOW_UP: "WON",
+};
+
 export const CALL_NEXT_STATUS: Partial<Record<LeadStatus, LeadStatus>> = {
   NEW: "RESEARCHED",
   RESEARCHED: "TO_CONTACT",
