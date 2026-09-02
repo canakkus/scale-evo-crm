@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   UtensilsCrossed,
   Search,
@@ -62,6 +62,17 @@ export default function RestaurantScoutPage() {
 
   // Full Lead Detail Modal
   const [fullModalLeadId, setFullModalLeadId] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/settings")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.currentUser?.restaurantScoutEnabled === false) {
+          window.location.href = "/settings";
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   async function handleStartScout(e?: React.FormEvent) {
     if (e) e.preventDefault();

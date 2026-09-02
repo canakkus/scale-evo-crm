@@ -154,13 +154,14 @@ model Lead {
 }
 
 model User {
-  id                 String             @id @db.Uuid
-  email              String             @unique
-  displayName        String
-  active             Boolean            @default(true)
-  workClockStartedAt DateTime?
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
+  id                     String             @id @db.Uuid
+  email                  String             @unique
+  displayName            String
+  active                 Boolean            @default(true)
+  restaurantScoutEnabled Boolean            @default(true)
+  workClockStartedAt     DateTime?
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
 
   createdLeads   Lead[]             @relation("LeadCreator")
   assignedLeads  Lead[]             @relation("LeadAssignee")

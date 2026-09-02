@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   LayoutDashboard,
   Users,
@@ -24,8 +24,9 @@ import {
   AlertTriangle,
   Loader2,
   X as CloseIcon,
+  User as UserIcon,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, initials } from "@/lib/utils";
 
 const NAV_ITEMS = [
   { href: "/",            label: "Dashboard",    icon: LayoutDashboard },
@@ -47,9 +48,43 @@ export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  // User state & Feature toggles
+  const [currentUser, setCurrentUser] = useState<{ displayName?: string; email?: string } | null>(null);
+  const [restaurantScoutEnabled, setRestaurantScoutEnabled] = useState(true);
+
   // Logout confirmation modal state
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+
+  useEffect(() => {
+    function loadUserSettings() {
+      fetch("/api/settings")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data?.currentUser) {
+            setCurrentUser(data.currentUser);
+            if (data.currentUser.restaurantScoutEnabled !== undefined) {
+              setRestaurantScoutEnabled(data.currentUser.restaurantScoutEnabled);
+            }
+          }
+        })
+        .catch((err) => console.error("Error loading user settings in sidebar:", err));
+    }
+
+    loadUserSettings();
+
+    // Listen for setting changes from Settings page
+    function handleSettingsUpdate(e: any) {
+      if (e.detail?.restaurantScoutEnabled !== undefined) {
+        setRestaurantScoutEnabled(e.detail.restaurantScoutEnabled);
+      }
+    }
+
+    window.addEventListener("user-settings-updated", handleSettingsUpdate);
+    return () => {
+      window.removeEventListener("user-settings-updated", handleSettingsUpdate);
+    };
+  }, []);
 
   async function handleLogout() {
     setLoggingOut(true);
@@ -61,6 +96,14 @@ export function Sidebar() {
       window.location.href = "/login";
     }
   }
+
+  // Filter out Restaurant Scout if toggled off for the user
+  const visibleNavItems = NAV_ITEMS.filter((item) => {
+    if (item.href === "/restaurant-scout" && !restaurantScoutEnabled) {
+      return false;
+    }
+    return true;
+  });
 
   return (
     <>
@@ -135,7 +178,7 @@ export function Sidebar() {
           className="flex-1 overflow-y-auto py-3 px-2 space-y-1"
           style={{ WebkitOverflowScrolling: "touch" }}
         >
-          {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+          {visibleNavItems.map(({ href, label, icon: Icon }) => {
             const isActive =
               href === "/" ? pathname === "/" : pathname.startsWith(href);
             return (
@@ -203,6 +246,43 @@ export function Sidebar() {
             </button>
           </div>
         </nav>
+
+        {/* Subtle User Status Indicator at Bottom */}
+        <div
+          className="p-3 border-t shrink-0 flex items-center justify-between"
+          style={{ borderColor: "var(--border)", background: "var(--surface-2)" }}
+        >
+          <Link
+            href="/settings"
+            title={currentUser ? `Eingeloggt als ${currentUser.displayName || currentUser.email}` : "Benutzer"}
+            className="flex items-center gap-2.5 min-w-0 flex-1 hover:opacity-80 transition-opacity"
+          >
+            <div
+              className="w-7 h-7 rounded-lg flex items-center justify-center font-bold text-[11px] shrink-0 border relative"
+              style={{
+                background: "var(--surface)",
+                borderColor: "var(--border)",
+                color: "var(--accent)",
+              }}
+            >
+              {currentUser?.displayName ? initials(currentUser.displayName) : <UserIcon size={13} />}
+              <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-400 border border-black" />
+            </div>
+
+            {!collapsed && (
+              <div className="min-w-0 flex-1 leading-tight">
+                <div className="flex items-center gap-1">
+                  <span className="text-[11px] font-bold truncate" style={{ color: "var(--text)" }}>
+                    {currentUser?.displayName || "Benutzer"}
+                  </span>
+                </div>
+                <p className="text-[10px] truncate" style={{ color: "var(--text-3)" }}>
+                  {currentUser?.email || "Online"}
+                </p>
+              </div>
+            )}
+          </Link>
+        </div>
 
         {/* Collapse Toggle for Desktop / Tablet Landscape */}
         <button
