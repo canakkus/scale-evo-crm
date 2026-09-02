@@ -253,7 +253,7 @@ function ResultCard({
             <button
               type="button"
               onClick={() => setShowNfcInput(!showNfcInput)}
-              className="text-xs font-semibold underline hover:no-underline"
+              className="text-xs font-semibold underline hover:no-underline cursor-pointer"
               style={{ color: "var(--accent)" }}
             >
               {showNfcInput ? "NFC URL verbergen" : "+ NFC Demo URL hinzufügen"}

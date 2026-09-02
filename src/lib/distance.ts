@@ -1,6 +1,6 @@
 /**
  * Distance Calculation Utilities using the Haversine Formula.
- * Defaults to Vienna city center (Stephansplatz).
+ * Defaults to Vienna city center (Stephansplatz, 1010 Wien).
  */
 
 export interface Coordinates {
