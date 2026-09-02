@@ -20,6 +20,9 @@ import {
   Zap,
   UtensilsCrossed,
   Menu,
+  LogOut,
+  AlertTriangle,
+  Loader2,
   X as CloseIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -44,13 +47,28 @@ export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  // Logout confirmation modal state
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  async function handleLogout() {
+    setLoggingOut(true);
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+      window.location.href = "/login";
+    } catch (err) {
+      console.error("Logout failed:", err);
+      window.location.href = "/login";
+    }
+  }
+
   return (
     <>
       {/* Mobile/Tablet Floating Toggle Button */}
       <button
         onClick={() => setMobileOpen(true)}
         aria-label="Menü öffnen"
-        className="md:hidden fixed bottom-4 left-4 z-40 flex items-center justify-center w-12 h-12 rounded-full shadow-xl border transition-all active:scale-95"
+        className="md:hidden fixed bottom-4 left-4 z-40 flex items-center justify-center w-12 h-12 rounded-full shadow-xl border transition-all active:scale-95 cursor-pointer"
         style={{
           background: "var(--accent)",
           color: "var(--bg)",
@@ -105,7 +123,7 @@ export function Sidebar() {
 
           <button
             onClick={() => setMobileOpen(false)}
-            className="md:hidden p-1.5 rounded-lg hover:bg-[var(--surface-3)] text-[var(--text-2)]"
+            className="md:hidden p-1.5 rounded-lg hover:bg-[var(--surface-3)] text-[var(--text-2)] cursor-pointer"
             aria-label="Menü schließen"
           >
             <CloseIcon size={18} />
@@ -157,12 +175,39 @@ export function Sidebar() {
               </Link>
             );
           })}
+
+          {/* Red Logout Button directly under Einstellungen */}
+          <div className="pt-2 mt-2 border-t" style={{ borderColor: "var(--border)" }}>
+            <button
+              type="button"
+              onClick={() => {
+                setMobileOpen(false);
+                setShowLogoutConfirm(true);
+              }}
+              title={collapsed ? "Abmelden" : undefined}
+              className={cn(
+                "w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all duration-150 group relative select-none cursor-pointer",
+                "text-red-400 hover:text-red-300 hover:bg-red-500/10 active:scale-[0.98] border border-transparent hover:border-red-500/20"
+              )}
+            >
+              <LogOut
+                size={18}
+                strokeWidth={2}
+                className="shrink-0 text-red-400 group-hover:text-red-300 transition-colors"
+              />
+              {!collapsed && (
+                <span className="truncate font-medium">
+                  Abmelden
+                </span>
+              )}
+            </button>
+          </div>
         </nav>
 
         {/* Collapse Toggle for Desktop / Tablet Landscape */}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="hidden md:flex absolute -right-3.5 top-16 z-10 items-center justify-center w-7 h-7 rounded-full border transition-transform hover:scale-110 shadow-sm active:scale-95"
+          className="hidden md:flex absolute -right-3.5 top-16 z-10 items-center justify-center w-7 h-7 rounded-full border transition-transform hover:scale-110 shadow-sm active:scale-95 cursor-pointer"
           style={{
             background: "var(--surface-2)",
             borderColor: "var(--border-2)",
@@ -177,6 +222,70 @@ export function Sidebar() {
           )}
         </button>
       </aside>
+
+      {/* Confirmation Modal: Really Logout? */}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-fade-in">
+          <div
+            className="w-full max-w-sm rounded-2xl border p-6 space-y-5 shadow-2xl animate-scale-up"
+            style={{ background: "var(--surface)", borderColor: "var(--border)" }}
+          >
+            <div className="flex items-start justify-between">
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center bg-red-500/10 border border-red-500/20 text-red-400"
+              >
+                <AlertTriangle size={20} />
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowLogoutConfirm(false)}
+                className="p-1 rounded-lg hover:bg-[var(--surface-2)] text-[var(--text-3)] hover:text-[var(--text)] transition-colors cursor-pointer"
+              >
+                <CloseIcon size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-1.5">
+              <h4 className="font-heading text-base font-bold" style={{ color: "var(--text)" }}>
+                Wirklich ausloggen?
+              </h4>
+              <p className="text-xs leading-relaxed" style={{ color: "var(--text-2)" }}>
+                Bist du sicher, dass du dich abmelden möchtest? Deine aktuelle Sitzung wird beendet und du musst dich erneut anmelden.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                disabled={loggingOut}
+                onClick={() => setShowLogoutConfirm(false)}
+                className="px-4 py-2.5 rounded-xl text-xs font-semibold border transition-colors hover:bg-[var(--surface-2)] cursor-pointer"
+                style={{ borderColor: "var(--border)", color: "var(--text-2)" }}
+              >
+                Abbrechen
+              </button>
+              <button
+                type="button"
+                disabled={loggingOut}
+                onClick={handleLogout}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 bg-red-600 hover:bg-red-700 text-white disabled:opacity-50 cursor-pointer"
+              >
+                {loggingOut ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" />
+                    <span>Wird abgemeldet…</span>
+                  </>
+                ) : (
+                  <>
+                    <LogOut size={14} />
+                    <span>Ja, wirklich ausloggen</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
