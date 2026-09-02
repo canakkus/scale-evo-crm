@@ -13,7 +13,6 @@ function extractFirstJsonObject(str: string): string | null {
       escaped = false;
       continue;
     }
-    if (char === "\\") {
       escaped = true;
       continue;
     }
