@@ -35,7 +35,13 @@
 - Leads, pipeline stages, dashboard metrics, tasks, scout sessions, and AI context are scoped per user (`createdById: user.id` or `assignedToId: user.id`).
 - When a new or second user (e.g. `Lucario`) logs in, they start with a clean isolated workspace (0 leads, 0 pipeline items).
 
-### 3. Styling & Responsive Design
+### 3. Feature-Toggles & Per-User Modules
+- `restaurantScoutEnabled` is stored on the `User` model in Prisma.
+- Toggled via `GET` / `PATCH /api/settings` and interactive toggle switch in `/settings`.
+- Canakkus user (`canakkus378@gmail.com`) has Restaurant Scout hidden by default; other users have it enabled.
+- Sidebar dynamically updates without page reloads via custom browser events (`user-settings-updated`).
+
+### 4. Styling & Responsive Design
 - Tailwind v4 with CSS variables: `var(--bg)`, `var(--surface)`, `var(--surface-2)`, `var(--surface-3)`, `var(--border)`, `var(--text)`, `var(--accent)`.
 - iPad & Tablet friendly: touch momentum scrolling (`-webkit-overflow-scrolling: touch`), min 44px tap targets, collapsible panels, and floating mobile/tablet drawer.
 
@@ -43,26 +49,23 @@
 
 ## 🚀 Key Modules
 
-### 1. Restaurant Scout & Menü-Radar (`/restaurant-scout`)
-- **Service:** `src/services/restaurant-scout.ts` + `src/lib/menu-detector.ts`
-- **Endpoints:** `POST /api/scout/restaurants`, `POST /api/leads/[id]/check-menu`
-- **Functionality:** Searches Google Places for gastronomy leads, extracts website HTML/links via Cheerio, and uses Gemini 1.5 Flash to verify whether a digital menu (HTML, PDF, Wolt/Lieferando) is present or missing. Saves directly into CRM pipeline.
+### 1. Lead Scout (`/lead-scout`) & Restaurant Scout (`/restaurant-scout`)
+- **Service:** `src/services/lead-scout.ts`, `src/services/restaurant-scout.ts` + `src/lib/menu-detector.ts`
+- **Direct Status Assignment:** Both scout modules feature a category dropdown with all 12 pipeline statuses (`NEW`, `RESEARCHED`, `TO_CONTACT`, `CONTACTED`, `REPLIED`, `INTERESTED`, `APPOINTMENT`, `OFFER_SENT`, `FOLLOW_UP`, `WON`, `LOST`, `NOT_RELEVANT`) to import candidates directly into the right CRM stage.
+- **Menu Radar:** Gemini 1.5 Flash automatically verifies digital menus (HTML/PDF/Lieferando/Wolt) from Google Places results.
 
-### 2. Auth & Session Management
+### 2. Auth, Session Management & User Badging
 - **Endpoints:** `POST /api/auth/login`, `POST /api/auth/logout`
 - **Helpers:** `src/lib/session.ts` (Web Crypto HMAC-SHA256), `src/lib/auth.ts` (`requireAuth`, `getOptionalUser`)
 - **Credentials Security:** Server-side verification with salted SHA-256 hashes (never exposed in client bundles).
+- **Sidebar User Status:** Subtle avatar badge and user indicator (`currentUser.displayName` / `currentUser.email` with active online dot) at the bottom of the sidebar and settings profile card.
 - **Sidebar Logout:** Dedicated red logout button under *Einstellungen* with a confirmation modal before sign-out.
 
 ### 3. Dashboard Performance (`/`)
 - **Page:** `src/app/page.tsx`
 - **Optimization:** Direct server-side parallel fetching of metrics via `Promise.all`, passed as `initialData` to `DashboardComponent` for 0ms load times and no client-side spinner.
 
-### 4. Lead Scout Engine (`/lead-scout`)
-- **Service:** `src/services/lead-scout.ts`
-- **Features:** Multi-industry filtering, Treatwell & Google Places scraping, duplicate prevention, and automatic phone/address enrichment.
-
-### 5. Cold Calls & Speech Coaching (`/cold-calls`)
+### 4. Cold Calls & Speech Coaching (`/cold-calls`)
 - **Storage:** Binary audio stored in PostgreSQL `AudioFile` and streamed via `/api/cold-calls/recordings/[id]/audio`.
 - **AI Feedback:** Gemini evaluates pace, stuttering/filler words, and emotional tone, providing actionable sales tips.
 
