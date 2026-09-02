@@ -79,31 +79,28 @@
 - **Menu Radar:** Automatically verifies digital menus (HTML/PDF/Lieferando/Wolt) from Google Places results.
 
 ### 5. Walk-In Acquisition System & Dual-Pipeline (`/pipeline`, `/leads`, `src/lib/constants.ts`)
-- **Schema & Enums:** `AcquisitionType` (`CALL`, `WALK_IN`), `nfcDemoUrl` string, and specialized Walk-In statuses:
+- **Schema & Enums:** `AcquisitionType` (`CALL`, `WALK_IN`), optional `nfcDemoUrl`, and specialized Walk-In statuses:
   - `WALK_IN_PLANNED`: Vor-Ort-Besuch geplant
   - `DEMO_DISPATCHED`: Vor-Ort-Demo übergeben / hinterlassen
   - `VISITED_INTERESTED`: Besucht — Interesse signalisiert
   - `VISITED_NO_INTEREST`: Besucht — Kein Interesse
-- **Dual-Pipeline View Switcher:** Toggle between **Cold Call Pipeline** (11 stages) and **Walk-In Pipeline** (11 stages) with custom stage transitions (`CALL_NEXT_STATUS`, `WALK_IN_NEXT_STATUS`).
-- **Acquisition Filter & Badges:** Leads table filtering by `acquisitionType` (`Alle`, `Nur Cold Calls`, `Nur Walk-Ins`), visual Walk-In badges (`🚶 Walk-In`), and 1-click NFC Demo URL copying.
+- **Dual-Pipeline View Switcher:** Instant segmented toggle in `/pipeline` between **Cold Call Pipeline** (11 stages) and **Walk-In Pipeline** (11 stages) with custom stage progression (`CALL_NEXT_STATUS`, `WALK_IN_NEXT_STATUS`).
+- **Card & Table Quick-Actions:**
+  - 🗺️ **Google/Apple Maps Navigation:** Direct 1-click route link constructed from lead address/place coordinates.
+  - 📡 **NFC Demo URL:** 1-click copy with instant visual "Kopiert!" feedback + external demo preview.
+  - 📞 **Direct Call:** Instant dialer link (`tel:`).
+- **Leads Filter & Detail Modals:** Filter bar in `/leads` (`[ Alle ] [ 📞 Cold Calls ] [ 🚶‍♂️ Walk-Ins ]`), acquisition channel badges, and full viewing/editing in `LeadDetailModal` and `LeadFormModal`.
 
-### 6. Auth, Session Management & User Badging
+### 6. Distance & Proximity Scouting (`/lead-scout`, `/restaurant-scout`, `src/lib/distance.ts`)
+- **Haversine Distance Calculator (`src/lib/distance.ts`):** Computes distances from base coordinates (defaults to Stephansplatz, 1010 Wien). Displays distance badges (`X.X km entfernt`) on scout cards.
+- **Proximity Sorting:** Supports `sortBy: "distance"` for optimal route planning in addition to rating-based sorting.
+- **Direct Walk-In Lead Creation:** "Als Walk-In Vormerken" checkbox automatically assigns `acquisitionType: "WALK_IN"`, default status `WALK_IN_PLANNED`, and saves optional `nfcDemoUrl`.
+
+### 7. Auth, Session Management & User Badging
 - **Endpoints:** `POST /api/auth/login`, `POST /api/auth/logout`
 - **Helpers:** `src/lib/session.ts` (Web Crypto HMAC-SHA256), `src/lib/auth.ts` (`requireAuth`, `getOptionalUser`)
 - **Credentials Security:** Server-side verification with salted SHA-256 hashes.
 - **User Status:** Subtle avatar badge and user indicator at the bottom of the sidebar and settings profile card.
-
-### 6. Walk-In Akquise, NFC Demos & Proximity Scouting (`/pipeline`, `/lead-scout`, `src/lib/distance.ts`)
-- **Acquisition Channel Separation:** Leads are typed via `acquisitionType` (`CALL` vs. `WALK_IN`, default `CALL`).
-- **Dedicated Walk-In Pipeline:**
-  - Instant Tab Switcher in `/pipeline` between Cold Call and Walk-In kanban boards.
-  - Dedicated stages: `WALK_IN_PLANNED` (Walk-In geplant), `DEMO_DISPATCHED` (Demo versendet), `VISITED_INTERESTED` (Besucht - Interessiert), `VISITED_NO_INTEREST` (Besucht - Kein Interesse).
-  - Channel-specific advancement mappings (`CALL_NEXT_STATUS` vs. `WALK_IN_NEXT_STATUS`).
-- **NFC Demo URLs & Fast Actions:**
-  - Dynamic `nfcDemoUrl` per lead with 1-click clipboard copy, external demo opening, and direct Google Maps route opening.
-- **Distance & Proximity Calculation:**
-  - `src/lib/distance.ts`: Haversine formula calculation against customizable/default base coords (Stephansplatz, 1010 Wien).
-  - Lead Scout & Restaurant Scout support distance sorting and direct Walk-In import.
 
 ---
 
