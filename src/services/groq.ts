@@ -47,8 +47,32 @@ export interface CallAnalysis {
   };
 }
 
+function cleanAndParseJson<T>(rawText: string, fallback: T): T {
+  try {
+    // 1. Entferne <think>...</think> Reasoning-Blöcke
+    const withoutThinking = rawText.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+
+    // 2. Entferne Markdown-Code-Blöcke (z.B. ```json ... ```)
+    const withoutMarkdown = withoutThinking
+      .replace(/^```(?:json)?\s*/i, "")
+      .replace(/\s*```$/i, "")
+      .trim();
+
+    // 3. Suche das äußerste JSON-Objekt { ... } oder Array [ ... ]
+    const jsonMatch = withoutMarkdown.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0]) as T;
+    }
+
+    return JSON.parse(withoutMarkdown) as T;
+  } catch (err) {
+    console.error("[Groq Service] JSON Parse Error. Raw response was:", rawText, err);
+    return fallback;
+  }
+}
+
 /**
- * Transkribiert eine Audiodatei mit Groq Whisper und analysiert sie mit Llama.
+ * Transkribiert eine Audiodatei mit Groq Whisper und analysiert sie mit KI (inkl. Sprechertrennung/Dialog-Formatierung).
  * @param audioBuffer - Audio als Buffer
  * @param mimeType - MIME-Typ der Datei (z.B. "audio/mp3")
  * @param fileName - Dateiname (für die Groq API)
@@ -60,10 +84,10 @@ export async function transcribeAndAnalyzeCall(
   fileName: string,
   companyName?: string
 ): Promise<CallAnalysis> {
-  const context = companyName ? `Der Call war mit ${companyName}.` : "";
+  const context = companyName ? `Der Call war mit dem Lead / Unternehmen "${companyName}".` : "";
 
   // Step 1: Transkription via Whisper large-v3 (Groq) — mit automatischer Key-Rotation
-  const transcription = await withGroqClient(async (client) => {
+  const rawTranscription = await withGroqClient(async (client) => {
     const file = new File([new Uint8Array(audioBuffer)], fileName, { type: mimeType });
     const result = await client.audio.transcriptions.create({
       file,
@@ -74,32 +98,37 @@ export async function transcribeAndAnalyzeCall(
     return String(result).trim();
   });
 
-  // Step 2: Analyse via Llama 3.3 70B — mit automatischer Key-Rotation
-  const analysisPrompt = `Du bist ein Vertriebsassistent und Rhetorik-Coach. ${context}
+  // Step 2: Analyse und Dialog-Formatierung via Qwen / Groq
+  const analysisPrompt = `Du bist ein präziser Vertriebsassistent und Rhetorik-Coach. ${context}
 
-Analysiere diese Transkription eines Verkaufscalls und antworte NUR mit gültigem JSON ohne Markdown-Blöcke:
+AUFGABEN:
+1. Wandle die folgende rohe Audio-Transkription in ein sauberes, strukturiertes DIALOG-PROTOKOLL um:
+   - Identifiziere die Gesprächspartner und trenne deren Aussagen in einzelne Absätze mit Sprecher-Kennzeichnung (z.B. '[Anrufer / Verkäufer]: ...' und '[Kunde / Ansprechpartner]: ...').
+   - Korrigiere Interpunktion und Grammatik sinnvoll, ohne den Inhalt zu verändern.
+2. Analysiere das Gespräch detailliert (Zusammenfassung, nächste Schritte, Stimmung, extrahierte Kontaktdaten/Einwände und Rhetorik-Coaching-Feedback).
 
-Transkription:
+Rohe Transkription:
 """
-${transcription}
+${rawTranscription}
 """
 
-Antworte mit exakt diesem JSON-Format:
+Antworte AUSSCHLIESSLICH im folgenden JSON-Format ohne weiteren Fließtext:
 {
-  "summary": "kurze Zusammenfassung in 2-3 Sätzen",
-  "nextSteps": ["konkrete nächste Schritte als Array"],
+  "dialogueTranscription": "Vollständiges Gespräch als formatierter Dialog mit getrennten Sprecher-Absätzen (z.B. [Anrufer]: ...\\n\\n[Kunde]: ...)",
+  "summary": "Prägnante Zusammenfassung des Gesprächs in 2-3 Sätzen",
+  "nextSteps": ["Konkrete nächste Schritte als Liste"],
   "sentiment": "POSITIVE|NEUTRAL|NEGATIVE|MIXED",
   "extractedData": {
-    "contactName": "Name des Ansprechpartners wenn erwähnt oder null",
-    "appointmentDate": "Termin wenn vereinbart oder null",
-    "objections": ["Einwände als Array"],
+    "contactName": "Name des Ansprechpartners wenn genannt oder null",
+    "appointmentDate": "Konkreter vereinbarter Termin oder null",
+    "objections": ["Vom Kunden geäußerte Einwände als Liste"],
     "interestLevel": "HIGH|MEDIUM|LOW|NONE"
   },
   "aiFeedback": {
     "pace": "Redegeschwindigkeit und Rhythmus des Anrufers",
     "stuttering": "Verwendung von Füllwörtern wie äh, öhm oder Stottern",
-    "tone": "Tonfall und Gelassenheit des Anrufers",
-    "tips": ["Konkrete Rhetorik-Tipps zur Verbesserung als Array"]
+    "tone": "Tonfall, Souveränität und Gelassenheit des Anrufers",
+    "tips": ["Konkrete Rhetorik-Tipps zur Verbesserung als Liste"]
   }
 }`;
 
@@ -107,26 +136,26 @@ Antworte mit exakt diesem JSON-Format:
     const response = await client.chat.completions.create({
       model: "qwen/qwen3.6-27b",
       messages: [{ role: "user", content: analysisPrompt }],
-      temperature: 0.3,
+      temperature: 0.2,
     });
     return (response.choices[0]?.message?.content || "").trim();
   });
 
-  const jsonStr = analysisText.replace(/^```(?:json)?\n?/m, "").replace(/\n?```$/m, "");
+  const parsed = cleanAndParseJson<Partial<CallAnalysis> & { dialogueTranscription?: string }>(
+    analysisText,
+    {}
+  );
 
-  try {
-    const parsed = JSON.parse(jsonStr);
-    return { transcription, ...parsed } as CallAnalysis;
-  } catch {
-    return {
-      transcription,
-      summary: "Zusammenfassung konnte nicht automatisch erstellt werden.",
-      nextSteps: [],
-      sentiment: "NEUTRAL",
-      extractedData: {},
-      aiFeedback: undefined,
-    };
-  }
+  const finalTranscription = parsed.dialogueTranscription?.trim() || rawTranscription;
+
+  return {
+    transcription: finalTranscription,
+    summary: parsed.summary || "Zusammenfassung konnte nicht automatisch erstellt werden.",
+    nextSteps: Array.isArray(parsed.nextSteps) ? parsed.nextSteps : [],
+    sentiment: parsed.sentiment || "NEUTRAL",
+    extractedData: parsed.extractedData || {},
+    aiFeedback: parsed.aiFeedback,
+  };
 }
 
 // ============================================================
@@ -806,8 +835,10 @@ Antworte NUR mit gültigem JSON:
       return (response.choices[0]?.message?.content || "").trim();
     });
 
-    const jsonStr = text.replace(/^```(?:json)?\n?/m, "").replace(/\n?```$/m, "");
-    return JSON.parse(jsonStr);
+    return cleanAndParseJson<{ prioritized: string[]; reasoning: string }>(text, {
+      prioritized: tasks.map((t) => t.title),
+      reasoning: "Automatische Priorisierung nicht möglich.",
+    });
   } catch {
     return {
       prioritized: tasks.map((t) => t.title),

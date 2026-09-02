@@ -2,6 +2,7 @@
 
 import { X, Sparkles, Calendar, User, FileText, CheckCircle2, AlertTriangle, Activity } from "lucide-react";
 import { timeAgo } from "@/lib/utils";
+import { CustomAudioPlayer } from "@/components/ui/custom-audio-player";
 
 type RecordingDetailModalProps = {
   recording: any | null;
@@ -121,15 +122,15 @@ export function RecordingDetailModal({ recording, onClose }: RecordingDetailModa
 
           {/* Audio Player */}
           {recording.audioFile ? (
-            <div className="p-4 rounded-xl border space-y-2" style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}>
+            <div className="space-y-2">
               <h4 className="text-xs font-semibold flex items-center gap-1.5" style={{ color: "var(--accent)" }}>
                 <FileText className="w-4 h-4" />
                 Call-Aufnahme abspielen
               </h4>
-              <audio
-                controls
-                className="w-full h-10 outline-none rounded bg-[var(--surface-3)]"
+              <CustomAudioPlayer
                 src={`/api/cold-calls/recordings/${recording.id}/audio`}
+                title={recording.lead?.companyName || "Call-Aufnahme"}
+                fileName={recording.fileName}
               />
             </div>
           ) : (

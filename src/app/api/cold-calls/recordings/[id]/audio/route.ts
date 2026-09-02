@@ -22,10 +22,37 @@ export async function GET(
       return NextResponse.json({ error: "Audiodatei nicht gefunden." }, { status: 404 });
     }
 
+    const totalSize = audioFile.data.length;
+    const range = request.headers.get("range");
+
+    if (range) {
+      const match = range.match(/bytes=(\d+)-(\d*)/);
+      if (match) {
+        const start = parseInt(match[1], 10);
+        const end = match[2] ? parseInt(match[2], 10) : totalSize - 1;
+
+        if (!isNaN(start) && start < totalSize && end >= start) {
+          const chunk = audioFile.data.subarray(start, Math.min(end + 1, totalSize));
+          return new Response(chunk, {
+            status: 206,
+            headers: {
+              "Content-Range": `bytes ${start}-${Math.min(end, totalSize - 1)}/${totalSize}`,
+              "Accept-Ranges": "bytes",
+              "Content-Length": chunk.length.toString(),
+              "Content-Type": audioFile.mimeType || "audio/mpeg",
+              "Cache-Control": "public, max-age=31536000, immutable",
+            },
+          });
+        }
+      }
+    }
+
     return new Response(audioFile.data, {
+      status: 200,
       headers: {
         "Content-Type": audioFile.mimeType || "audio/mpeg",
-        "Content-Length": audioFile.data.length.toString(),
+        "Content-Length": totalSize.toString(),
+        "Accept-Ranges": "bytes",
         "Cache-Control": "public, max-age=31536000, immutable",
       },
     });

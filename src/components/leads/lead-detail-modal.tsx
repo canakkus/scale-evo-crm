@@ -28,6 +28,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { CustomAudioPlayer } from "@/components/ui/custom-audio-player";
 import { STATUS_LABELS, INTERACTION_LABELS } from "@/lib/constants";
 import { formatDate, timeAgo } from "@/lib/utils";
 import type { LeadStatus, InteractionType } from "@prisma/client";
@@ -1078,14 +1079,14 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                                 <div className="p-4 border-t space-y-4 text-xs" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
                                   {/* Audio Player */}
                                   {rec.audioFile ? (
-                                    <div className="p-3.5 rounded border space-y-2" style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}>
+                                    <div className="space-y-2">
                                       <h5 className="font-semibold text-[11px] flex items-center gap-1.5" style={{ color: "var(--accent)" }}>
                                         <FileAudio className="w-3.5 h-3.5" /> Aufnahme abspielen
                                       </h5>
-                                      <audio 
-                                        controls 
-                                        className="w-full h-10 outline-none rounded bg-[var(--surface-3)]" 
+                                      <CustomAudioPlayer
                                         src={`/api/cold-calls/recordings/${rec.id}/audio`}
+                                        title={rec.fileName || "Call-Aufnahme"}
+                                        fileName={rec.fileName}
                                       />
                                     </div>
                                   ) : (
