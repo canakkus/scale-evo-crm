@@ -49,19 +49,27 @@ export interface CallAnalysis {
 
 function cleanAndParseJson<T>(rawText: string, fallback: T): T {
   try {
-    // 1. Entferne <think>...</think> Reasoning-Blöcke
-    const withoutThinking = rawText.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+    // 1. Wenn ein </think> Tag existiert, nimm nur alles danach. Andernfalls filtere <think>...</think>
+    let content = rawText;
+    if (content.includes("</think>")) {
+      content = content.split("</think>").pop() || "";
+    } else {
+      content = content.replace(/<think>[\s\S]*?<\/think>/gi, "");
+    }
+    content = content.trim();
 
     // 2. Entferne Markdown-Code-Blöcke (z.B. ```json ... ```)
-    const withoutMarkdown = withoutThinking
+    const withoutMarkdown = content
       .replace(/^```(?:json)?\s*/i, "")
       .replace(/\s*```$/i, "")
       .trim();
 
-    // 3. Suche das äußerste JSON-Objekt { ... } oder Array [ ... ]
-    const jsonMatch = withoutMarkdown.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]) as T;
+    // 3. Suche das äußerste JSON-Objekt { ... }
+    const firstBrace = withoutMarkdown.indexOf("{");
+    const lastBrace = withoutMarkdown.lastIndexOf("}");
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      const jsonCandidate = withoutMarkdown.substring(firstBrace, lastBrace + 1);
+      return JSON.parse(jsonCandidate) as T;
     }
 
     return JSON.parse(withoutMarkdown) as T;
@@ -137,6 +145,7 @@ Antworte AUSSCHLIESSLICH im folgenden JSON-Format ohne weiteren Fließtext:
       model: "qwen/qwen3.6-27b",
       messages: [{ role: "user", content: analysisPrompt }],
       temperature: 0.2,
+      max_tokens: 4096,
     });
     return (response.choices[0]?.message?.content || "").trim();
   });
