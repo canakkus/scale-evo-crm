@@ -14,6 +14,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search")?.trim();
     const status = searchParams.get("status") as LeadStatus | null;
+    const acquisitionType = searchParams.get("acquisitionType") as any | null;
     const priority = searchParams.get("priority") as Priority | null;
     const webPresence = searchParams.get("webPresence") as WebPresence | null;
     const industryParam = searchParams.get("industry")?.trim();
@@ -46,6 +47,7 @@ export async function GET(request: Request) {
     const where: Record<string, any> = { AND: andClauses };
 
     if (status) where.status = status;
+    if (acquisitionType) where.acquisitionType = acquisitionType;
     if (priority) where.priority = priority;
     if (webPresence) where.webPresence = webPresence;
 
@@ -198,6 +200,8 @@ export async function POST(request: Request) {
         contactNote: data.contactNote || null,
         notes: data.notes || null,
         source: data.source || "manuell",
+        acquisitionType: data.acquisitionType || "CALL",
+        nfcDemoUrl: data.nfcDemoUrl ? String(data.nfcDemoUrl).trim() : null,
         status: data.status || "NEW",
         priority: data.priority || "MEDIUM",
         score: data.score != null ? parseInt(data.score, 10) : 0,

@@ -37,10 +37,13 @@ export type TreatwellVenue = {
   addressLine: string;
   phone: string | null;
   website: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
 };
 
 export type ScoutResult = {
   venue: TreatwellVenue;
+  distanceKm?: number | null;
   duplicate: {
     status: ScoutStepStatus;
     matches: ScoutDuplicateMatch[];
@@ -78,6 +81,8 @@ export type ScoutResult = {
     googleReviewCount: number | null;
     source: string;
     notes: string;
+    acquisitionType?: "CALL" | "WALK_IN";
+    nfcDemoUrl?: string | null;
   };
 };
 
@@ -88,6 +93,7 @@ export type LeadScoutOptions = {
   minReviews: number;
   maxResults: number;
   source: VenueSource;
+  sortBy?: "rating" | "distance";
   // Advanced filters
   hasWebsiteFilter?: "all" | "yes" | "no";
   hasTreatwellFilter?: "all" | "yes" | "no";

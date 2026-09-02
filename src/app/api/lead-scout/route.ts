@@ -23,6 +23,7 @@ export async function POST(request: Request) {
       source: String(body.source ?? (isRestaurantCategory ? "places" : "treatwell")).trim() as
         | "treatwell"
         | "places",
+      sortBy: (body.sortBy === "distance" ? "distance" : "rating") as "rating" | "distance",
       hasWebsiteFilter: body.hasWebsiteFilter || "all",
       hasTreatwellFilter: body.hasTreatwellFilter || "all",
       hasPhoneFilter: body.hasPhoneFilter || "all",

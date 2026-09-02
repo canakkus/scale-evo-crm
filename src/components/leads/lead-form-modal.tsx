@@ -4,8 +4,8 @@ import { useState } from "react";
 import { X, Save, Sparkles } from "lucide-react";
 import { PlacesAutofill } from "@/components/ui/places-autofill";
 import type { PlaceSuggestion } from "@/lib/places";
-import { INDUSTRIES, PREFERRED_CONTACT_METHOD_LABELS, STATUS_LABELS } from "@/lib/constants";
-import type { LeadStatus, Priority, WebPresence } from "@prisma/client";
+import { INDUSTRIES, PREFERRED_CONTACT_METHOD_LABELS, STATUS_LABELS, ACQUISITION_TYPE_LABELS } from "@/lib/constants";
+import type { AcquisitionType, LeadStatus, Priority, WebPresence } from "@prisma/client";
 
 type LeadFormModalProps = {
   isOpen: boolean;
@@ -19,6 +19,8 @@ export function LeadFormModal({ isOpen, onClose, onSuccess }: LeadFormModalProps
 
   const [formData, setFormData] = useState({
     companyName: "",
+    acquisitionType: "CALL" as AcquisitionType,
+    nfcDemoUrl: "",
     industry: "Friseur",
     address: "",
     city: "",
@@ -131,6 +133,31 @@ export function LeadFormModal({ isOpen, onClose, onSuccess }: LeadFormModalProps
                 style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
                 value={formData.companyName}
                 onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium mb-1" style={{ color: "var(--text-2)" }}>Akquise-Kanal</label>
+              <select
+                className="w-full rounded-md px-3 py-2 text-sm border outline-none font-medium"
+                style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
+                value={formData.acquisitionType}
+                onChange={(e) => setFormData({ ...formData, acquisitionType: e.target.value as AcquisitionType })}
+              >
+                <option value="CALL">📞 Cold Call</option>
+                <option value="WALK_IN">🚶‍♂️ Walk-In</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium mb-1" style={{ color: "var(--text-2)" }}>NFC Demo URL (optional)</label>
+              <input
+                type="url"
+                placeholder="https://demo.scale-evo.com/..."
+                className="w-full rounded-md px-3 py-2 text-sm border outline-none font-mono text-xs"
+                style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
+                value={formData.nfcDemoUrl}
+                onChange={(e) => setFormData({ ...formData, nfcDemoUrl: e.target.value })}
               />
             </div>
 

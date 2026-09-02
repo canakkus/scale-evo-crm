@@ -180,6 +180,8 @@ export async function PATCH(
         menuUrl: data.menuUrl !== undefined ? data.menuUrl : existingLead.menuUrl,
         menuSnippet: data.menuSnippet !== undefined ? data.menuSnippet : existingLead.menuSnippet,
         menuCheckedAt: data.menuCheckedAt !== undefined ? (data.menuCheckedAt ? new Date(data.menuCheckedAt) : null) : existingLead.menuCheckedAt,
+        acquisitionType: data.acquisitionType !== undefined ? data.acquisitionType : existingLead.acquisitionType,
+        nfcDemoUrl: data.nfcDemoUrl !== undefined ? (data.nfcDemoUrl ? String(data.nfcDemoUrl).trim() : null) : existingLead.nfcDemoUrl,
         status: data.status !== undefined ? data.status : existingLead.status,
         priority: data.priority !== undefined ? data.priority : existingLead.priority,
         score: data.score !== undefined ? parseInt(data.score, 10) : existingLead.score,

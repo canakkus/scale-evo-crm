@@ -21,8 +21,10 @@ import {
   Layers,
   ArrowUpRight,
   SlidersHorizontal,
+  Navigation,
 } from "lucide-react";
 import { cn, formatDate } from "@/lib/utils";
+import { formatDistance } from "@/lib/distance";
 import { STATUS_LABELS } from "@/lib/constants";
 import type { LeadStatus } from "@prisma/client";
 import { LeadDetailModal } from "@/components/leads/lead-detail-modal";
@@ -562,6 +564,14 @@ export default function RestaurantScoutPage() {
                                   Im CRM
                                 </span>
                               )}
+                              {lead.distanceKm != null && (
+                                <span
+                                  className="px-1.5 py-0.2 rounded text-[9px] font-semibold text-sky-400 bg-sky-500/10 border border-sky-500/20 flex items-center gap-0.5"
+                                >
+                                  <Navigation size={8} />
+                                  {formatDistance(lead.distanceKm)}
+                                </span>
+                              )}
                             </div>
                             <div className="flex items-center gap-2 text-[11px]" style={{ color: "var(--text-3)" }}>
                               <span className="font-medium text-amber-400 flex items-center gap-0.5">
@@ -723,6 +733,15 @@ export default function RestaurantScoutPage() {
                   {selectedLead.googleReviewCount != null && <span>({selectedLead.googleReviewCount} Bewertungen)</span>}
                   <span>•</span>
                   <span>{selectedLead.city || "Gastro"}</span>
+                  {selectedLead.distanceKm != null && (
+                    <>
+                      <span>•</span>
+                      <span className="text-sky-400 font-medium flex items-center gap-0.5">
+                        <Navigation size={10} />
+                        {formatDistance(selectedLead.distanceKm)}
+                      </span>
+                    </>
+                  )}
                 </div>
               </div>
 

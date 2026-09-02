@@ -13,13 +13,14 @@ import { searchTreatwell } from "./treatwell";
 import { searchFirstExternalUrl } from "./web-search";
 import { WebsiteAuditProvider } from "./audit/website-provider";
 import type { AuditResult } from "./audit/types";
+import { calculateDistanceKm } from "@/lib/distance";
 
 export type { LeadScoutOptions, LeadScoutResponse, ScoutResult, TreatwellVenue };
 
 const PLACES_URL = "https://places.googleapis.com/v1/places:searchText";
 const FIELD_MASK =
   "places.displayName,places.formattedAddress,places.internationalPhoneNumber,places.websiteUri," +
-  "places.rating,places.userRatingCount,places.googleMapsUri,places.types,places.primaryTypeDisplayName";
+  "places.rating,places.userRatingCount,places.googleMapsUri,places.types,places.primaryTypeDisplayName,places.location";
 
 function mapsSearchUrl(category: string, city: string) {
   const query = category === "Alle" ? `Beauty Salon, Friseur, Restaurant, Cafe in ${city}` : `${category} in ${city}`;
@@ -126,6 +127,8 @@ function placesToVenues(places: PlaceSuggestion[], city: string): TreatwellVenue
       addressLine: place.address,
       phone: place.phone,
       website: place.website,
+      latitude: place.latitude,
+      longitude: place.longitude,
     };
   });
 }
@@ -169,6 +172,8 @@ async function scoutVenue(venue: TreatwellVenue, options: LeadScoutOptions, lead
       reviewCount: venue.reviewCount,
       googleMapsUri: venue.googleMapsUri,
       industry: options.category,
+      latitude: venue.latitude,
+      longitude: venue.longitude,
     };
     mapsStatus = "ok";
     matchReason = "Direkt aus Google Places übernommen.";
@@ -281,8 +286,17 @@ async function scoutVenue(venue: TreatwellVenue, options: LeadScoutOptions, lead
     .filter(Boolean)
     .join(" · ");
 
+  const lat = place?.latitude ?? venue.latitude ?? null;
+  const lng = place?.longitude ?? venue.longitude ?? null;
+  const distanceKm = calculateDistanceKm(lat != null && lng != null ? { lat, lng } : null);
+
   return {
-    venue,
+    venue: {
+      ...venue,
+      latitude: lat,
+      longitude: lng,
+    },
+    distanceKm,
     duplicate,
     maps: { status: mapsStatus, place, matchReason },
     website: { status: hasWebsite ? "ok" : "fail", url: websiteUrl, source: websiteSource },
@@ -380,6 +394,13 @@ export async function runLeadScout(options: LeadScoutOptions, userId: string): P
   if (options.hasInstagramFilter === "no") finalResults = finalResults.filter((r) => !r.contacts.instagram);
 
   finalResults.sort((a, b) => {
+    if (options.sortBy === "distance") {
+      const aDist = a.distanceKm ?? Infinity;
+      const bDist = b.distanceKm ?? Infinity;
+      if (aDist !== bDist) return aDist - bDist;
+      return (b.venue.rating ?? 0) - (a.venue.rating ?? 0);
+    }
+
     const aHasSite = a.website.url ? 1 : 0;
     const bHasSite = b.website.url ? 1 : 0;
     if (aHasSite !== bHasSite) return aHasSite - bHasSite;

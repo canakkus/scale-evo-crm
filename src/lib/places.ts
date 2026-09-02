@@ -8,6 +8,8 @@ export type PlaceSuggestion = {
   reviewCount: number | null;
   googleMapsUri: string | null;
   industry: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
 };
 
 export type RawPlace = {
@@ -20,6 +22,10 @@ export type RawPlace = {
   googleMapsUri?: string;
   types?: string[];
   primaryTypeDisplayName?: { text?: string };
+  location?: {
+    latitude?: number;
+    longitude?: number;
+  };
 };
 
 export function mapPlaceToSuggestion(place: RawPlace): PlaceSuggestion {
@@ -34,6 +40,8 @@ export function mapPlaceToSuggestion(place: RawPlace): PlaceSuggestion {
     reviewCount: typeof place.userRatingCount === "number" ? place.userRatingCount : null,
     googleMapsUri: place.googleMapsUri ?? null,
     industry: mapIndustry(place.types ?? [], place.primaryTypeDisplayName?.text),
+    latitude: typeof place.location?.latitude === "number" ? place.location.latitude : null,
+    longitude: typeof place.location?.longitude === "number" ? place.location.longitude : null,
   };
 }
 

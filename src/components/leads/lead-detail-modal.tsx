@@ -26,6 +26,10 @@ import {
   UtensilsCrossed,
   ExternalLink,
   RefreshCw,
+  Navigation,
+  Radio,
+  Check,
+  Copy,
 } from "lucide-react";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { CustomAudioPlayer } from "@/components/ui/custom-audio-player";
@@ -72,6 +76,8 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
   // Lead Editing State
   const [isEditing, setIsEditing] = useState(false);
   const [editCompanyName, setEditCompanyName] = useState("");
+  const [editAcquisitionType, setEditAcquisitionType] = useState<string>("CALL");
+  const [editNfcDemoUrl, setEditNfcDemoUrl] = useState("");
   const [editIndustry, setEditIndustry] = useState("");
   const [editAddress, setEditAddress] = useState("");
   const [editCity, setEditCity] = useState("");
@@ -84,6 +90,7 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
   const [editGoogleMapsUrl, setEditGoogleMapsUrl] = useState("");
   const [editNextFollowUpAt, setEditNextFollowUpAt] = useState("");
   const [savingDetails, setSavingDetails] = useState(false);
+  const [copiedNfc, setCopiedNfc] = useState(false);
 
   const fetchRecordings = useCallback(async () => {
     if (!leadId) return;
@@ -113,6 +120,8 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
 
           // Initialize edit values
           setEditCompanyName(data.lead.companyName || "");
+          setEditAcquisitionType(data.lead.acquisitionType || "CALL");
+          setEditNfcDemoUrl(data.lead.nfcDemoUrl || "");
           setEditIndustry(data.lead.industry || "");
           setEditAddress(data.lead.address || "");
           setEditCity(data.lead.city || "");
@@ -186,6 +195,8 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           companyName: editCompanyName,
+          acquisitionType: editAcquisitionType,
+          nfcDemoUrl: editNfcDemoUrl,
           industry: editIndustry,
           address: editAddress,
           city: editCity,
@@ -432,6 +443,66 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                   </button>
                 </div>
 
+                {/* Akquise-Kanal */}
+                <div className="flex flex-col gap-0.5">
+                  <span className="font-semibold" style={{ color: "var(--text-3)" }}>Akquise-Kanal:</span>
+                  <div>
+                    <span
+                      className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded"
+                      style={{
+                        background: lead.acquisitionType === "WALK_IN" ? "rgba(168, 85, 247, 0.1)" : "rgba(59, 130, 246, 0.1)",
+                        color: lead.acquisitionType === "WALK_IN" ? "rgb(192, 132, 252)" : "rgb(96, 165, 250)",
+                        border: lead.acquisitionType === "WALK_IN" ? "1px solid rgba(168, 85, 247, 0.2)" : "1px solid rgba(59, 130, 246, 0.2)",
+                      }}
+                    >
+                      {lead.acquisitionType === "WALK_IN" ? "🚶‍♂️ Walk-In" : "📞 Cold Call"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* NFC Demo URL */}
+                {lead.nfcDemoUrl && (
+                  <div className="flex flex-col gap-1 p-2.5 rounded border" style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}>
+                    <span className="font-semibold text-[10px] uppercase tracking-wider" style={{ color: "var(--text-3)" }}>NFC Demo URL:</span>
+                    <div className="flex items-center justify-between gap-1">
+                      <a
+                        href={lead.nfcDemoUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[11px] font-mono hover:underline truncate max-w-[170px]"
+                        style={{ color: "var(--accent)" }}
+                      >
+                        {lead.nfcDemoUrl.replace(/^https?:\/\//, "")}
+                      </a>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(lead.nfcDemoUrl);
+                            setCopiedNfc(true);
+                            setTimeout(() => setCopiedNfc(false), 2000);
+                          }}
+                          className="p-1 rounded hover:bg-[var(--surface-3)] transition-colors"
+                          title="NFC Link kopieren"
+                          style={{ color: copiedNfc ? "var(--status-warm-tx)" : "var(--text-2)" }}
+                        >
+                          {copiedNfc ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                        </button>
+                        <a
+                          href={lead.nfcDemoUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="p-1 rounded hover:bg-[var(--surface-3)] transition-colors"
+                          title="NFC Demo öffnen"
+                          style={{ color: "var(--text-2)" }}
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {lead.companyName && (
                   <div className="flex flex-col gap-0.5">
                     <span className="font-semibold" style={{ color: "var(--text-3)" }}>Firma:</span>
@@ -447,11 +518,27 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                 )}
 
                 {(lead.address || lead.city) && (
-                  <div className="flex flex-col gap-0.5">
+                  <div className="flex flex-col gap-1">
                     <span className="font-semibold" style={{ color: "var(--text-3)" }}>Adresse:</span>
-                    <div className="flex items-start gap-1.5" style={{ color: "var(--text)" }}>
-                      <MapPin className="w-3.5 h-3.5 shrink-0 mt-0.5" style={{ color: "var(--text-3)" }} />
-                      <span>{lead.address ? `${lead.address}, ${lead.city}` : lead.city}</span>
+                    <div className="flex items-start justify-between gap-1.5" style={{ color: "var(--text)" }}>
+                      <div className="flex items-start gap-1.5">
+                        <MapPin className="w-3.5 h-3.5 shrink-0 mt-0.5" style={{ color: "var(--text-3)" }} />
+                        <span>{lead.address ? `${lead.address}, ${lead.city}` : lead.city}</span>
+                      </div>
+                      <a
+                        href={
+                          lead.googleMapsUrl ||
+                          `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([lead.companyName, lead.address, lead.city].filter(Boolean).join(", "))}`
+                        }
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold border shrink-0 hover:bg-[var(--surface-3)] transition-colors text-sky-400"
+                        style={{ borderColor: "var(--border)", background: "var(--surface-2)" }}
+                        title="Route auf Google Maps öffnen"
+                      >
+                        <Navigation className="w-2.5 h-2.5" />
+                        <span>Maps</span>
+                      </a>
                     </div>
                   </div>
                 )}
@@ -659,6 +746,31 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                       style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
                       value={editCompanyName}
                       onChange={(e) => setEditCompanyName(e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-semibold mb-1" style={{ color: "var(--text-3)" }}>Akquise-Kanal</label>
+                    <select
+                      className="w-full rounded px-2.5 py-1.5 text-xs border outline-none font-medium"
+                      style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
+                      value={editAcquisitionType}
+                      onChange={(e) => setEditAcquisitionType(e.target.value)}
+                    >
+                      <option value="CALL">📞 Cold Call</option>
+                      <option value="WALK_IN">🚶‍♂️ Walk-In</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-semibold mb-1" style={{ color: "var(--text-3)" }}>NFC Demo URL</label>
+                    <input
+                      type="url"
+                      placeholder="https://demo.scale-evo.com/..."
+                      className="w-full rounded px-2.5 py-1.5 text-xs border outline-none font-mono"
+                      style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
+                      value={editNfcDemoUrl}
+                      onChange={(e) => setEditNfcDemoUrl(e.target.value)}
                     />
                   </div>
 

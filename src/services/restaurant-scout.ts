@@ -2,11 +2,12 @@ import { prisma } from "@/lib/prisma";
 import { mapPlaceToSuggestion, type PlaceSuggestion, type RawPlace } from "@/lib/places";
 import { normalizePhone, normalizeUrl } from "@/lib/utils";
 import { detectRestaurantMenu, type MenuDetectionResult } from "@/lib/menu-detector";
+import { calculateDistanceKm } from "@/lib/distance";
 
 const PLACES_URL = "https://places.googleapis.com/v1/places:searchText";
 const FIELD_MASK =
   "places.displayName,places.formattedAddress,places.internationalPhoneNumber,places.websiteUri," +
-  "places.rating,places.userRatingCount,places.googleMapsUri,places.types,places.primaryTypeDisplayName";
+  "places.rating,places.userRatingCount,places.googleMapsUri,places.types,places.primaryTypeDisplayName,places.location";
 
 export interface RestaurantScoutOptions {
   location: string;
@@ -33,6 +34,9 @@ export interface RestaurantScoutLeadItem {
   menuCheckedAt: string | null;
   status: string;
   isExistingLead: boolean;
+  latitude?: number | null;
+  longitude?: number | null;
+  distanceKm?: number | null;
 }
 
 export interface RestaurantScoutResponse {
@@ -169,6 +173,12 @@ export async function runRestaurantScout(
 
     const now = new Date();
 
+    const distKm = calculateDistanceKm(
+      place.latitude != null && place.longitude != null
+        ? { lat: place.latitude, lng: place.longitude }
+        : null
+    );
+
     if (existingLead) {
       // Update existing lead with latest menu info
       const updated = await prisma.lead.update({
@@ -200,6 +210,9 @@ export async function runRestaurantScout(
         menuCheckedAt: updated.menuCheckedAt ? updated.menuCheckedAt.toISOString() : null,
         status: updated.status,
         isExistingLead: true,
+        latitude: place.latitude,
+        longitude: place.longitude,
+        distanceKm: distKm,
       });
     } else {
       // Create new lead in CRM
@@ -241,6 +254,9 @@ export async function runRestaurantScout(
         menuCheckedAt: created.menuCheckedAt ? created.menuCheckedAt.toISOString() : null,
         status: created.status,
         isExistingLead: false,
+        latitude: place.latitude,
+        longitude: place.longitude,
+        distanceKm: distKm,
       });
     }
 
