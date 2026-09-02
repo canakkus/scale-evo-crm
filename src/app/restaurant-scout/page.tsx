@@ -23,6 +23,8 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 import { cn, formatDate } from "@/lib/utils";
+import { STATUS_LABELS } from "@/lib/constants";
+import type { LeadStatus } from "@prisma/client";
 import { LeadDetailModal } from "@/components/leads/lead-detail-modal";
 import type { RestaurantScoutLeadItem } from "@/services/restaurant-scout";
 
@@ -170,6 +172,26 @@ export default function RestaurantScoutPage() {
       console.error(err);
     } finally {
       setCheckingMenuId(null);
+    }
+  }
+
+  async function handleUpdateLeadStatus(leadId: string, newStatus: LeadStatus) {
+    try {
+      const res = await fetch(`/api/leads/${leadId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (res.ok) {
+        setResults((prev) =>
+          prev.map((r) => (r.id === leadId ? { ...r, status: newStatus } : r))
+        );
+        if (selectedLead?.id === leadId) {
+          setSelectedLead((prev) => (prev ? { ...prev, status: newStatus } : null));
+        }
+      }
+    } catch (err) {
+      console.error("Failed to update status:", err);
     }
   }
 
@@ -852,13 +874,37 @@ export default function RestaurantScoutPage() {
                 )}
               </div>
 
-              {/* Action Buttons */}
-              <div className="pt-4 border-t space-y-2 mt-auto" style={{ borderColor: "var(--border)" }}>
+              {/* Action Buttons & Status Selector */}
+              <div className="pt-4 border-t space-y-3 mt-auto" style={{ borderColor: "var(--border)" }}>
+                {selectedLead.id && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold" style={{ color: "var(--text-3)" }}>
+                      Lead-Status im CRM:
+                    </label>
+                    <select
+                      value={selectedLead.status || "NEW"}
+                      onChange={(e) => handleUpdateLeadStatus(selectedLead.id!, e.target.value as LeadStatus)}
+                      className="w-full rounded-xl px-3 py-2 text-xs font-semibold border outline-none cursor-pointer transition-colors"
+                      style={{
+                        background: "var(--surface-2)",
+                        borderColor: "var(--border)",
+                        color: "var(--text)",
+                      }}
+                    >
+                      {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
                 {selectedLead.id && (
                   <button
                     type="button"
                     onClick={() => setFullModalLeadId(selectedLead.id!)}
-                    className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold border transition-colors hover:bg-[var(--surface-3)]"
+                    className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold border transition-colors hover:bg-[var(--surface-3)] cursor-pointer"
                     style={{ background: "var(--surface-2)", borderColor: "var(--border-2)", color: "var(--text)" }}
                   >
                     <Eye size={14} />

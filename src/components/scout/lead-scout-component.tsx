@@ -67,6 +67,9 @@ function Stars({ rating }: { rating: number | null }) {
   );
 }
 
+import { STATUS_LABELS } from "@/lib/constants";
+import type { LeadStatus } from "@prisma/client";
+
 function ResultCard({
   result,
   onAdd,
@@ -74,7 +77,7 @@ function ResultCard({
   adding,
 }: {
   result: ScoutResult;
-  onAdd: () => void;
+  onAdd: (status: LeadStatus) => void;
   added: boolean;
   adding: boolean;
 }) {
@@ -82,9 +85,11 @@ function ResultCard({
   const isDuplicate = duplicate.matches.some((match) => match.confidence === "high");
   const possibleDuplicate = duplicate.matches.length > 0 && !isDuplicate;
 
+  const [status, setStatus] = useState<LeadStatus>("NEW");
+
   const handleAdd = () => {
     if (possibleDuplicate && !window.confirm("Als mögliches Duplikat trotzdem als neuen Lead anlegen?")) return;
-    onAdd();
+    onAdd(status);
   };
 
   return (
@@ -205,20 +210,45 @@ function ResultCard({
         </div>
       </div>
 
-      <div className="flex items-center justify-end gap-3 pt-2">
+      <div className="flex flex-wrap items-center justify-end gap-3 pt-2 border-t" style={{ borderColor: "var(--border)" }}>
         {added && (
           <span className="inline-flex items-center gap-1 text-xs font-semibold" style={{ color: "var(--status-warm-tx)" }}>
             <Check className="w-4 h-4" /> Als Lead angelegt
           </span>
         )}
+
+        {/* Status Dropdown with all Categories */}
+        <div className="flex items-center gap-2">
+          <label className="text-xs font-semibold" style={{ color: "var(--text-3)" }}>
+            Status:
+          </label>
+          <select
+            value={status}
+            disabled={isDuplicate || added || adding}
+            onChange={(e) => setStatus(e.target.value as LeadStatus)}
+            className="rounded-lg px-2.5 py-1.5 text-xs font-semibold border outline-none cursor-pointer transition-colors disabled:opacity-50"
+            style={{
+              background: "var(--surface-2)",
+              borderColor: "var(--border)",
+              color: "var(--text)",
+            }}
+          >
+            {Object.entries(STATUS_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <button
           disabled={isDuplicate || added || adding}
           onClick={handleAdd}
-          className="flex items-center gap-1.5 rounded-md px-3.5 py-1.5 text-xs font-semibold transition-all disabled:opacity-50"
+          className="flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all disabled:opacity-50 cursor-pointer shadow-sm active:scale-95"
           style={{ background: "var(--accent)", color: "var(--bg)" }}
         >
           {adding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
-          {isDuplicate ? "Duplikat im CRM" : added ? "Bereits Angelegt" : "Als Lead Anlegen"}
+          {isDuplicate ? "Duplikat im CRM" : added ? "Bereits Angelegt" : `Als Lead anlegen (${STATUS_LABELS[status]})`}
         </button>
       </div>
     </div>
@@ -331,13 +361,17 @@ export function LeadScoutComponent() {
     }
   }, [category, city, minRating, minReviews, maxResults, source, hasWebsiteFilter, hasTreatwellFilter, hasPhoneFilter, hasInstagramFilter, fetchSessions]);
 
-  const addLead = async (result: ScoutResult) => {
+  const addLead = async (result: ScoutResult, customStatus?: LeadStatus) => {
     setAddingId(result.venue.key);
     try {
+      const payload = {
+        ...result.leadDraft,
+        status: customStatus || (result.leadDraft as any).status || "NEW",
+      };
       const res = await fetch("/api/leads", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(result.leadDraft),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Lead konnte nicht angelegt werden.");
@@ -575,7 +609,7 @@ export function LeadScoutComponent() {
             <ResultCard
               key={result.venue.key}
               result={result}
-              onAdd={() => addLead(result)}
+              onAdd={(selectedStatus) => addLead(result, selectedStatus)}
               added={addedIds.has(result.venue.key)}
               adding={addingId === result.venue.key}
             />
