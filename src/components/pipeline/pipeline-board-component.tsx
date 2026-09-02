@@ -285,7 +285,7 @@ export function PipelineBoardComponent() {
           className="flex gap-4 overflow-x-auto pb-6 min-h-[70vh] touch-pan-x select-none md:select-auto"
           style={{ WebkitOverflowScrolling: "touch" }}
         >
-          {activeColumns.map((statusKey) => {
+          {(activeColumns as LeadStatus[]).map((statusKey: LeadStatus) => {
             const columnLeads = displayedLeads.filter((l) => l.status === statusKey);
 
             return (
@@ -302,7 +302,7 @@ export function PipelineBoardComponent() {
                 }}
                 onDragOver={(e) => onDragOver(e, statusKey)}
                 onDragLeave={onDragLeave}
-                onDrop={(e) => onDrop(e, statusKey as LeadStatus)}
+                onDrop={(e) => onDrop(e, statusKey)}
               >
                 {/* Column Header */}
                 <div
@@ -494,7 +494,7 @@ export function PipelineBoardComponent() {
                               onChange={(e) => handleSetStatus(lead.id, e.target.value as LeadStatus)}
                             >
                               <optgroup label="Aktuelle Pipeline">
-                                {activeColumns.map((k) => (
+                                {(activeColumns as LeadStatus[]).map((k: LeadStatus) => (
                                   <option key={k} value={k}>
                                     {STATUS_LABELS[k]}
                                   </option>
