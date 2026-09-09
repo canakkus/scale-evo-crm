@@ -1,4 +1,5 @@
 import * as cheerio from "cheerio";
+import { normalizeInstagramHandle } from "@/lib/utils";
 
 const USER_AGENT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
@@ -115,4 +116,99 @@ export async function searchFirstExternalUrl(
     if (found) return found;
   }
   return null;
+}
+
+
+// ============================================================
+// Instagram-Profilsuche
+// ------------------------------------------------------------
+// Bewusst ueber die Suchmaschinen-Treffer, NICHT ueber Instagram
+// selbst: Instagram hat keine offene API fuer Fremdprofile, sperrt
+// serverseitige Zugriffe und untersagt Scraping. Oeffentliche
+// Profile sind aber ohnehin indexiert — das ist der robuste Weg.
+// ============================================================
+
+export type InstagramCandidate = {
+  handle: string;
+  url: string;
+  title: string;
+  confidence: "high" | "medium" | "low";
+};
+
+/** Loest den echten Ziel-Link aus einem Suchmaschinen-Treffer heraus. */
+function unwrapHref(href: string): string {
+  const match = href.match(/uddg=([^&]+)/);
+  if (match) {
+    try {
+      return decodeURIComponent(match[1]);
+    } catch {
+      return href;
+    }
+  }
+  return href;
+}
+
+/**
+ * Bewertet, wie gut ein gefundenes Profil zum gesuchten Betrieb passt.
+ * Nichts wird automatisch uebernommen — die Konfidenz entscheidet, ob
+ * die UI den Treffer vorschlaegt oder zur manuellen Pruefung auffordert.
+ */
+function rateCandidate(handle: string, title: string, venueName: string): InstagramCandidate["confidence"] {
+  const words = significantWords(venueName);
+  if (words.length === 0) return "low";
+
+  const flatHandle = handle.replace(/[._]/g, "");
+  const flatTitle = title.toLowerCase();
+  const hits = words.filter((word) => flatHandle.includes(word) || flatTitle.includes(word));
+
+  if (hits.length === 0) return "low";
+
+  const longest = words.reduce((a, b) => (b.length > a.length ? b : a));
+  const handleHasLongest = flatHandle.includes(longest);
+
+  if (handleHasLongest && hits.length >= 2) return "high";
+  if (handleHasLongest) return "high";
+  if (hits.length >= 2) return "medium";
+  return "low";
+}
+
+/**
+ * Sucht oeffentliche Instagram-Profile zu einem Betrieb.
+ * Gibt mehrere Kandidaten zurueck (beste zuerst) und waehlt bewusst
+ * keinen davon aus — das entscheidet der Nutzer bzw. die Konfidenz.
+ */
+export async function searchInstagramProfiles(
+  venueName: string,
+  city: string,
+): Promise<InstagramCandidate[]> {
+  const query = `site:instagram.com ${venueName} ${city}`.trim();
+  const seen = new Set<string>();
+  const candidates: InstagramCandidate[] = [];
+
+  for (const source of [searchDuckDuckGo, searchBing]) {
+    const links = await source(query);
+    if (!links || links.length === 0) continue;
+
+    for (const result of links) {
+      const target = unwrapHref(result.href);
+      if (!/instagram\.com/i.test(target)) continue;
+
+      const handle = normalizeInstagramHandle(target);
+      if (!handle || seen.has(handle)) continue;
+      seen.add(handle);
+
+      candidates.push({
+        handle,
+        url: `https://www.instagram.com/${handle}`,
+        title: result.title,
+        confidence: rateCandidate(handle, result.title, venueName),
+      });
+    }
+
+    // Ein sicherer Treffer reicht — die zweite Suchmaschine sparen wir uns.
+    if (candidates.some((candidate) => candidate.confidence === "high")) break;
+  }
+
+  const rank = { high: 0, medium: 1, low: 2 } as const;
+  return candidates.sort((a, b) => rank[a.confidence] - rank[b.confidence]).slice(0, 5);
 }

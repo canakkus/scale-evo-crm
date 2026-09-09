@@ -183,6 +183,25 @@ export function LeadsTable() {
               <span>🚶‍♂️</span>
               <span>Walk-Ins</span>
             </button>
+            <button
+              type="button"
+              onClick={() => {
+                setAcquisitionFilter("DM");
+                setPage(1);
+              }}
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                acquisitionFilter === "DM"
+                  ? "shadow-sm"
+                  : "opacity-75 hover:opacity-100 hover:text-[var(--text)]"
+              }`}
+              style={{
+                background: acquisitionFilter === "DM" ? "var(--accent)" : "transparent",
+                color: acquisitionFilter === "DM" ? "var(--bg)" : "var(--text-2)",
+              }}
+            >
+              <span>💬</span>
+              <span>Instagram DM</span>
+            </button>
           </div>
 
           {/* Search Input */}
@@ -437,13 +456,25 @@ export function LeadsTable() {
                           <StatusBadge status={lead.status} />
                           <span
                             className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
-                            style={{
-                              background: isWalkIn ? "rgba(168, 85, 247, 0.1)" : "rgba(59, 130, 246, 0.1)",
-                              color: isWalkIn ? "rgb(192, 132, 252)" : "rgb(96, 165, 250)",
-                              border: isWalkIn ? "1px solid rgba(168, 85, 247, 0.2)" : "1px solid rgba(59, 130, 246, 0.2)",
-                            }}
+                            style={
+                              lead.acquisitionType === "DM"
+                                ? {
+                                    background: "var(--channel-dm-bg)",
+                                    color: "var(--channel-dm-tx)",
+                                    border: "1px solid var(--border-2)",
+                                  }
+                                : {
+                                    background: isWalkIn ? "rgba(168, 85, 247, 0.1)" : "rgba(59, 130, 246, 0.1)",
+                                    color: isWalkIn ? "rgb(192, 132, 252)" : "rgb(96, 165, 250)",
+                                    border: isWalkIn ? "1px solid rgba(168, 85, 247, 0.2)" : "1px solid rgba(59, 130, 246, 0.2)",
+                                  }
+                            }
                           >
-                            {isWalkIn ? "🚶‍♂️ Walk-In" : "📞 Cold Call"}
+                            {lead.acquisitionType === "DM"
+                              ? "💬 Instagram DM"
+                              : isWalkIn
+                                ? "🚶‍♂️ Walk-In"
+                                : "📞 Cold Call"}
                           </span>
                         </div>
                       </td>

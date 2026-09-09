@@ -15,6 +15,31 @@ datasource db {
 enum AcquisitionType {
   CALL
   WALK_IN
+  DM
+}
+
+enum OutreachChannel {
+  INSTAGRAM_DM
+  PHONE
+}
+
+enum OutreachTone {
+  CASUAL_VIENNESE
+  PROFESSIONAL_DU
+  FORMAL_SIE
+}
+
+enum DmDraftStatus {
+  DRAFT
+  SENT
+  SKIPPED
+}
+
+enum OutreachOutcome {
+  NO_REPLY
+  REPLIED_POSITIVE
+  REPLIED_NEGATIVE
+  BLOCKED
 }
 
 enum LeadStatus {
@@ -154,6 +179,7 @@ model Lead {
   tasks        Task[]
   callRecordings CallRecording[]
   scoutResults ScoutResult[]
+  dmDrafts     DmDraft[]
 
   @@index([status])
   @@index([acquisitionType])
@@ -192,6 +218,7 @@ model User {
   scoutSessions  ScoutSession[]
   callRecordings CallRecording[]
   aiChats        AiChatMessage[]
+  dmDrafts       DmDraft[]
 }
 
 model Interaction {
@@ -209,6 +236,7 @@ model Interaction {
 
   @@index([leadId, createdAt])
   @@index([createdById, createdAt])
+  @@index([callRecordingId], map: "idx_interaction_callrecordingid")
 }
 
 model WebsiteAudit {
@@ -240,6 +268,7 @@ model WebsiteAudit {
   createdBy User @relation(fields: [createdById], references: [id], onDelete: Restrict)
 
   @@index([leadId, createdAt])
+  @@index([createdById], map: "idx_websiteaudit_createdbyid")
 }
 
 model ScoringWeight {
@@ -421,9 +450,11 @@ model ScoutResult {
   googleMapsUrl String?
   googleRating  Float?
   reviewCount   Int?
-  industry      String?
-  hasTreatwell  Boolean  @default(false)
-  importedAt    DateTime?
+  industry        String?
+  hasTreatwell    Boolean  @default(false)
+  instagramHandle String?
+  followerCount   Int?
+  importedAt      DateTime?
   rawData       Json?
   createdAt     DateTime @default(now())
 
@@ -476,4 +507,32 @@ model AiChatMessage {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
+}
+
+// ============================================================
+// Outreach — generierte Nachrichten-Entwürfe (NEU)
+// ============================================================
+
+model DmDraft {
+  id             String           @id @default(cuid())
+  leadId         String
+  channel        OutreachChannel  @default(INSTAGRAM_DM)
+  tone           OutreachTone     @default(CASUAL_VIENNESE)
+  variantIndex   Int              @default(0)
+  sequenceStep   Int              @default(0)
+  anchor         String?
+  bodyGenerated  String           @db.Text
+  bodyEdited     String?          @db.Text
+  status         DmDraftStatus    @default(DRAFT)
+  outcome        OutreachOutcome?
+  sentAt         DateTime?
+  createdById    String           @db.Uuid
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  lead      Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  createdBy User @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([leadId, createdAt])
+  @@index([createdById, status])
 }

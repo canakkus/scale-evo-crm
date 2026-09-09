@@ -65,6 +65,13 @@ export type ScoutResult = {
   };
   audit: AuditResult | null;
   contacts: { phone: string | null; email: string | null; instagram: string | null };
+  instagramProfile: {
+    status: ScoutStepStatus;
+    /** Nur gesetzt, wenn eindeutig — sonst entscheidet der Nutzer. */
+    handle: string | null;
+    source: "website" | "search" | null;
+    candidates: Array<{ handle: string; url: string; title: string; confidence: "high" | "medium" | "low" }>;
+  };
   leadDraft: {
     companyName: string;
     industry: string | null;

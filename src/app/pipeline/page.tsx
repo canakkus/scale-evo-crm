@@ -13,7 +13,7 @@ export default async function PipelinePage() {
           Pipeline Kanban Board
         </h1>
         <p className="mt-1 text-xs" style={{ color: "var(--text-2)" }}>
-          Verwalte den Fortschritt deiner Leads über alle Stufen hinweg von 'Neu' bis 'Gewonnen'.
+          Verwalte den Fortschritt deiner Leads über alle Stufen hinweg von &bdquo;Neu&ldquo; bis &bdquo;Gewonnen&ldquo;.
         </p>
       </div>
 

@@ -138,7 +138,19 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Use Fixed Location (from Settings)
-  const useFixedLocation = useCallback(() => {
+  // Reihenfolge ist wichtig: applyDefaultLocation wird unten von
+  // applyFixedLocation aufgerufen und muss vorher deklariert sein.
+  // (Vorher hiessen beide "use..." und wurden dadurch faelschlich als
+  // React-Hooks behandelt — inklusive Zugriff vor der Deklaration.)
+  const applyDefaultLocation = useCallback(() => {
+    setMode("default");
+    setCoords(DEFAULT_VIENNA_COORDS);
+    setAddress("Stephansplatz, 1010 Wien");
+    setLabel("Stephansplatz, 1010 Wien (Standard)");
+    localStorage.setItem(STORAGE_KEY_MODE, "default");
+  }, []);
+
+  const applyFixedLocation = useCallback(() => {
     if (fixedCoords && fixedAddress) {
       setMode("fixed");
       setCoords(fixedCoords);
@@ -146,18 +158,9 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
       setLabel(`${fixedAddress}`);
       localStorage.setItem(STORAGE_KEY_MODE, "fixed");
     } else {
-      useDefaultLocation();
+      applyDefaultLocation();
     }
-  }, [fixedCoords, fixedAddress]);
-
-  // Use Default Vienna center
-  const useDefaultLocation = useCallback(() => {
-    setMode("default");
-    setCoords(DEFAULT_VIENNA_COORDS);
-    setAddress("Stephansplatz, 1010 Wien");
-    setLabel("Stephansplatz, 1010 Wien (Standard)");
-    localStorage.setItem(STORAGE_KEY_MODE, "default");
-  }, []);
+  }, [fixedCoords, fixedAddress, applyDefaultLocation]);
 
   // Save new Fixed Location to Settings API & DB
   const saveFixedLocation = useCallback(
@@ -219,8 +222,8 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
         showPrompt,
         showSettingsHint,
         requestLiveLocation,
-        useFixedLocation,
-        useDefaultLocation,
+        useFixedLocation: applyFixedLocation,
+        useDefaultLocation: applyDefaultLocation,
         saveFixedLocation,
         dismissPrompt,
         closeSettingsHint,

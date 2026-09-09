@@ -114,7 +114,7 @@ export async function PATCH(
     }
 
     // Enrichment logic if googleMapsUrl is provided or updated
-    let enrichedData: any = {};
+    const enrichedData: any = {};
     if (data.googleMapsUrl && data.googleMapsUrl !== existingLead.googleMapsUrl) {
       const place = await getPlaceDetailsFromUrl(data.googleMapsUrl, data.companyName || existingLead.companyName);
       if (place) {

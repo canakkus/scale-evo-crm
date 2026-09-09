@@ -1,7 +1,7 @@
 import { WebPresence } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { mapPlaceToSuggestion, type PlaceSuggestion, type RawPlace } from "@/lib/places";
-import { normalizePhone, normalizeUrl } from "@/lib/utils";
+import { normalizeInstagramHandle, normalizePhone, normalizeUrl } from "@/lib/utils";
 import {
   type LeadScoutOptions,
   type LeadScoutResponse,
@@ -10,7 +10,7 @@ import {
 } from "@/lib/lead-scout-types";
 import { findDuplicates } from "./dedup";
 import { searchTreatwell } from "./treatwell";
-import { searchFirstExternalUrl } from "./web-search";
+import { searchFirstExternalUrl, searchInstagramProfiles } from "./web-search";
 import { WebsiteAuditProvider } from "./audit/website-provider";
 import type { AuditResult } from "./audit/types";
 import { calculateDistanceKm } from "@/lib/distance";
@@ -226,6 +226,34 @@ async function scoutVenue(venue: TreatwellVenue, options: LeadScoutOptions, lead
   const email = rawEmail && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(rawEmail) ? rawEmail : null;
   const instagram = audit?.extracted.instagram ? normalizeUrl(audit.extracted.instagram) : null;
 
+  // Instagram-Profil bestimmen. Erste Wahl ist der Link von der eigenen
+  // Website (verlaesslich). Fehlt der, wird ueber die Suchmaschinen gesucht —
+  // bewusst nicht ueber Instagram selbst. Mehrdeutige Treffer werden NICHT
+  // automatisch uebernommen, sondern in der UI zur Auswahl gestellt.
+  const websiteHandle = normalizeInstagramHandle(instagram);
+  let instagramProfile: ScoutResult["instagramProfile"] = websiteHandle
+    ? {
+        status: "ok",
+        handle: websiteHandle,
+        source: "website",
+        candidates: [],
+      }
+    : { status: "fail", handle: null, source: null, candidates: [] };
+
+  if (!websiteHandle) {
+    try {
+      const candidates = await searchInstagramProfiles(venue.name, options.city);
+      const best = candidates[0];
+      if (best?.confidence === "high") {
+        instagramProfile = { status: "ok", handle: best.handle, source: "search", candidates };
+      } else if (candidates.length > 0) {
+        instagramProfile = { status: "warn", handle: null, source: "search", candidates };
+      }
+    } catch {
+      instagramProfile = { status: "skip", handle: null, source: null, candidates: [] };
+    }
+  }
+
   const matches = findScoutDuplicates(
     venue,
     {
@@ -307,6 +335,7 @@ async function scoutVenue(venue: TreatwellVenue, options: LeadScoutOptions, lead
     menu,
     audit,
     contacts: { phone, email, instagram },
+    instagramProfile,
     leadDraft: {
       companyName: venue.name,
       industry: options.category,
@@ -321,7 +350,7 @@ async function scoutVenue(venue: TreatwellVenue, options: LeadScoutOptions, lead
       treatwellUrl: normalizeUrl(venue.treatwellUrl),
       phone: normalizePhone(phone),
       email,
-      instagram,
+      instagram: instagram ?? (instagramProfile.handle ? `https://www.instagram.com/${instagramProfile.handle}` : null),
       googleMapsUrl: place?.googleMapsUri ? normalizeUrl(place.googleMapsUri) : null,
       googleRating: place?.rating ?? null,
       googleReviewCount: place?.reviewCount ?? null,
@@ -441,6 +470,7 @@ export async function runLeadScout(options: LeadScoutOptions, userId: string): P
           reviewCount: r.venue.reviewCount,
           industry: options.category,
           hasTreatwell: Boolean(r.venue.treatwellUrl),
+          instagramHandle: r.instagramProfile.handle,
           rawData: JSON.parse(JSON.stringify(r)),
         })),
       },

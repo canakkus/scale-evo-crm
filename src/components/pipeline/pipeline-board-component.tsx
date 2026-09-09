@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   CALL_PIPELINE_STATUSES,
+  DM_PIPELINE_STATUSES,
+  DM_NEXT_STATUS,
   WALK_IN_PIPELINE_STATUSES,
   CALL_NEXT_STATUS,
   WALK_IN_NEXT_STATUS,
@@ -67,8 +69,13 @@ export function PipelineBoardComponent() {
     () => leads.filter((l) => l.acquisitionType === "WALK_IN"),
     [leads]
   );
+  const dmLeads = useMemo(
+    () => leads.filter((l) => l.acquisitionType === "DM"),
+    [leads]
+  );
 
-  const activeLeads = activeTab === "CALL" ? coldCallLeads : walkInLeads;
+  const activeLeads =
+    activeTab === "CALL" ? coldCallLeads : activeTab === "WALK_IN" ? walkInLeads : dmLeads;
 
   // Filter leads by search query if present
   const displayedLeads = useMemo(() => {
@@ -83,8 +90,14 @@ export function PipelineBoardComponent() {
     );
   }, [activeLeads, searchQuery]);
 
-  const activeColumns = activeTab === "CALL" ? CALL_PIPELINE_STATUSES : WALK_IN_PIPELINE_STATUSES;
-  const activeNextMap = activeTab === "CALL" ? CALL_NEXT_STATUS : WALK_IN_NEXT_STATUS;
+  const activeColumns =
+    activeTab === "CALL"
+      ? CALL_PIPELINE_STATUSES
+      : activeTab === "WALK_IN"
+        ? WALK_IN_PIPELINE_STATUSES
+        : DM_PIPELINE_STATUSES;
+  const activeNextMap =
+    activeTab === "CALL" ? CALL_NEXT_STATUS : activeTab === "WALK_IN" ? WALK_IN_NEXT_STATUS : DM_NEXT_STATUS;
 
   async function handleAdvanceStatus(leadId: string, currentStatus: LeadStatus) {
     const next = activeNextMap[currentStatus];
@@ -237,6 +250,32 @@ export function PipelineBoardComponent() {
               }}
             >
               {walkInLeads.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("DM")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+              activeTab === "DM"
+                ? "shadow-md scale-[1.02]"
+                : "opacity-75 hover:opacity-100 hover:text-[var(--text)]"
+            }`}
+            style={{
+              background: activeTab === "DM" ? "var(--accent)" : "transparent",
+              color: activeTab === "DM" ? "var(--bg)" : "var(--text-2)",
+            }}
+          >
+            <span className="text-sm">💬</span>
+            <span>Instagram DM</span>
+            <span
+              className="px-2 py-0.5 rounded-full text-[10px] font-bold"
+              style={{
+                background: activeTab === "DM" ? "rgba(0,0,0,0.2)" : "var(--surface-3)",
+                color: activeTab === "DM" ? "var(--bg)" : "var(--text-3)",
+              }}
+            >
+              {dmLeads.length}
             </span>
           </button>
         </div>

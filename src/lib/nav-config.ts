@@ -11,6 +11,7 @@ export const DEFAULT_NAV_ITEMS: NavItemConfig[] = [
   { href: "/lead-scout", label: "Lead Scout", visible: true },
   { href: "/restaurant-scout", label: "Restaurant Scout", visible: true },
   { href: "/cold-calls", label: "Cold Calls", visible: true },
+  { href: "/outreach", label: "Outreach", visible: true },
   { href: "/follow-ups", label: "Follow-ups", visible: true },
   { href: "/journal", label: "Journal", visible: true },
   { href: "/tasks", label: "Tasks", visible: true },

@@ -53,7 +53,7 @@ export default function FollowUpsPage() {
           <div className="p-12 text-center text-xs space-y-2" style={{ color: "var(--text-3)" }}>
             <CalendarClock className="w-8 h-8 mx-auto" />
             <p className="font-semibold text-sm" style={{ color: "var(--text)" }}>Keine anstehenden Follow-ups</p>
-            <p>Du hast aktuell keine Leads im Status 'Follow-up'.</p>
+            <p>Du hast aktuell keine Leads im Status &bdquo;Follow-up&ldquo;.</p>
           </div>
         ) : (
           <div className="divide-y" style={{ borderColor: "var(--border)" }}>
@@ -71,7 +71,7 @@ export default function FollowUpsPage() {
                   </p>
                   {lead.notes && (
                     <p className="text-xs italic pt-1" style={{ color: "var(--text-3)" }}>
-                      "{lead.notes}"
+                      &bdquo;{lead.notes}&ldquo;
                     </p>
                   )}
                 </div>

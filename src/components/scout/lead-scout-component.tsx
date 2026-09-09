@@ -4,6 +4,7 @@ import { useCallback, useState, useEffect } from "react";
 import Link from "next/link";
 import {
   AlertTriangle,
+  AtSign,
   CalendarClock,
   Check,
   ExternalLink,
@@ -85,7 +86,7 @@ function ResultCard({
   added: boolean;
   adding: boolean;
 }) {
-  const { venue, duplicate, maps, website, menu, audit, contacts } = result;
+  const { venue, duplicate, maps, website, menu, audit, contacts, instagramProfile } = result;
   const isDuplicate = duplicate.matches.some((match) => match.confidence === "high");
   const possibleDuplicate = duplicate.matches.length > 0 && !isDuplicate;
 
@@ -177,7 +178,7 @@ function ResultCard({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-5">
         <div className="rounded-lg border p-3" style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}>
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--text-3)" }}>Duplikat-Check</span>
@@ -222,6 +223,45 @@ function ResultCard({
             </a>
           ) : (
             <p className="mt-1 text-xs" style={{ color: "var(--status-lost-tx)" }}>Keine Website</p>
+          )}
+        </div>
+
+        <div className="rounded-lg border p-3" style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}>
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--text-3)" }}>Instagram</span>
+            <StepBadge status={instagramProfile?.status ?? "skip"} labels={{ fail: "Keins" }} />
+          </div>
+          {instagramProfile?.handle ? (
+            <a
+              href={`https://www.instagram.com/${instagramProfile.handle}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-1 flex items-center gap-1 truncate font-mono text-xs font-semibold underline"
+              style={{ color: "var(--status-contacted-tx)" }}
+            >
+              <AtSign className="w-3 h-3 shrink-0" />
+              {instagramProfile.handle}
+            </a>
+          ) : instagramProfile?.candidates?.length ? (
+            <div className="mt-1 space-y-1">
+              <p className="text-[11px]" style={{ color: "var(--status-planned-tx)" }}>
+                Mehrdeutig — bitte prüfen:
+              </p>
+              {instagramProfile.candidates.slice(0, 3).map((candidate) => (
+                <a
+                  key={candidate.handle}
+                  href={candidate.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block truncate font-mono text-[11px] underline"
+                  style={{ color: "var(--text-2)" }}
+                >
+                  @{candidate.handle}
+                </a>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-1 text-xs" style={{ color: "var(--text-3)" }}>Kein Profil gefunden</p>
           )}
         </div>
 

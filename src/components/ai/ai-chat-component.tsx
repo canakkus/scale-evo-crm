@@ -41,7 +41,7 @@ function renderMarkdown(text: string) {
   const lines = text.split("\n");
 
   return lines.map((line, index) => {
-    let content = line;
+    const content = line;
 
     // Check if line is a header
     const isHeader = content.startsWith("###") || content.startsWith("##") || content.startsWith("#");
@@ -85,6 +85,8 @@ export function AiChatComponent() {
   const [initialLoading, setInitialLoading] = useState(true);
 
   const bottomRef = useRef<HTMLDivElement>(null);
+  // Zaehler statt Date.now(): waehrend des Renderings muss alles rein bleiben.
+  const tempIdCounter = useRef(0);
 
   const fetchChat = async () => {
     try {
@@ -112,7 +114,7 @@ export function AiChatComponent() {
     const query = textToSend || input;
     if (!query.trim() || loading) return;
 
-    const userMessage = { id: "temp-" + Date.now(), role: "USER", content: query.trim() };
+    const userMessage = { id: `temp-${++tempIdCounter.current}`, role: "USER", content: query.trim() };
     setMessages((prev) => [...prev, userMessage]);
     if (!textToSend) setInput("");
     setLoading(true);
