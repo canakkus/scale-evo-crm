@@ -5,18 +5,10 @@ import { createSessionToken } from "@/lib/session";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 
-// Server-side hashed credentials for Lucario (never sent to client)
-const LUCARIO_USERNAME = "lucario";
-const LUCARIO_EMAIL = "lucario@scaleevo.at";
-const LUCARIO_UUID = "7f8a9b0c-1d2e-4f3a-8b9c-0d1e2f3a4b5c";
-
-// Password hash computed with SHA-256 + salt
-// Salted hash of "Pudorf12AMK"
-const AUTH_SALT = "scale_evo_crm_auth_salt_2026";
-const EXPECTED_PWD_HASH = crypto
-  .createHash("sha256")
-  .update(`Pudorf12AMK:${AUTH_SALT}`)
-  .digest("hex");
+// Server-side hashed credentials for Lucario (loaded from environment variables)
+const LUCARIO_USERNAME = (process.env.LUCARIO_AUTH_USERNAME || "lucario").toLowerCase();
+const LUCARIO_EMAIL = (process.env.LUCARIO_AUTH_EMAIL || "lucario@scaleevo.at").toLowerCase();
+const LUCARIO_UUID = process.env.LUCARIO_AUTH_UUID || "7f8a9b0c-1d2e-4f3a-8b9c-0d1e2f3a4b5c";
 
 export async function POST(request: Request) {
   try {
@@ -31,20 +23,29 @@ export async function POST(request: Request) {
       );
     }
 
-    // 1. Check Lucario Credentials Server-Side
+    // 1. Check Lucario Credentials Server-Side (configured via environment variables)
+    const lucarioPassword = process.env.LUCARIO_AUTH_PASSWORD;
+    const authSalt = process.env.AUTH_SALT || process.env.SESSION_SECRET || "scale_evo_crm_default_salt";
+
     if (
-      identifier === LUCARIO_USERNAME ||
-      identifier === LUCARIO_EMAIL ||
-      identifier === "lucas" ||
-      identifier === "lucario@scale-evo.at"
+      (identifier === LUCARIO_USERNAME ||
+        identifier === LUCARIO_EMAIL ||
+        identifier === "lucas" ||
+        identifier === "lucario@scale-evo.at") &&
+      lucarioPassword
     ) {
       const inputHash = crypto
         .createHash("sha256")
-        .update(`${password}:${AUTH_SALT}`)
+        .update(`${password}:${authSalt}`)
+        .digest("hex");
+
+      const expectedHash = crypto
+        .createHash("sha256")
+        .update(`${lucarioPassword}:${authSalt}`)
         .digest("hex");
 
       const inputBuf = Buffer.from(inputHash);
-      const expectedBuf = Buffer.from(EXPECTED_PWD_HASH);
+      const expectedBuf = Buffer.from(expectedHash);
 
       const isValid =
         inputBuf.length === expectedBuf.length &&

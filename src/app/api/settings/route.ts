@@ -10,7 +10,8 @@ export async function GET() {
     }
 
     const email = (authUser.email || "").toLowerCase();
-    const isCan = email === "canakkus378@gmail.com";
+    const adminEmail = (process.env.ADMIN_EMAIL || "").toLowerCase();
+    const isPrimaryAdmin = adminEmail ? email === adminEmail : false;
 
     // Find or create user record in Prisma
     let dbUser = await prisma.user.findFirst({
@@ -28,7 +29,7 @@ export async function GET() {
           id: authUser.id,
           email: authUser.email || "user@scaleevo.at",
           displayName: authUser.user_metadata?.displayName || email.split("@")[0],
-          restaurantScoutEnabled: isCan ? false : true,
+          restaurantScoutEnabled: isPrimaryAdmin ? false : true,
         },
       });
     }
@@ -41,7 +42,7 @@ export async function GET() {
     }
 
     const allowedEmails = process.env.LOCALCRM_ALLOWED_USER_EMAILS || "";
-    const restaurantScoutEnabled = dbUser ? dbUser.restaurantScoutEnabled : (isCan ? false : true);
+    const restaurantScoutEnabled = dbUser ? dbUser.restaurantScoutEnabled : (isPrimaryAdmin ? false : true);
 
     return NextResponse.json({
       settings,
@@ -75,6 +76,8 @@ export async function PATCH(request: Request) {
 
     const body = await request.json();
     const email = (authUser.email || "").toLowerCase();
+    const adminEmail = (process.env.ADMIN_EMAIL || "").toLowerCase();
+    const isPrimaryAdmin = adminEmail ? email === adminEmail : false;
 
     // Find user
     let dbUser = await prisma.user.findFirst({
@@ -92,7 +95,7 @@ export async function PATCH(request: Request) {
           id: authUser.id,
           email: authUser.email || "user@scaleevo.at",
           displayName: authUser.user_metadata?.displayName || email.split("@")[0],
-          restaurantScoutEnabled: email === "canakkus378@gmail.com" ? false : true,
+          restaurantScoutEnabled: isPrimaryAdmin ? false : true,
         },
       });
     }

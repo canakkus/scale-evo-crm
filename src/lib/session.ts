@@ -1,7 +1,13 @@
-const SESSION_SECRET =
-  process.env.SESSION_SECRET ||
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
-  "scale-evo-crm-lucario-secure-key-2026";
+function getSessionSecret(): string {
+  const secret = process.env.SESSION_SECRET || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  if (!secret) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("SESSION_SECRET environment variable is missing in production.");
+    }
+    return "dev-local-session-secret-change-in-production";
+  }
+  return secret;
+}
 
 export interface SessionPayload {
   id: string;
@@ -29,7 +35,7 @@ async function getHmacKey(): Promise<CryptoKey> {
   const enc = new TextEncoder();
   return crypto.subtle.importKey(
     "raw",
-    enc.encode(SESSION_SECRET),
+    enc.encode(getSessionSecret()),
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign", "verify"]
