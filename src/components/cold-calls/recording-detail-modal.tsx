@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { X, Sparkles, Calendar, User, FileText, CheckCircle2, AlertTriangle, Activity } from "lucide-react";
 import { timeAgo } from "@/lib/utils";
 import { CustomAudioPlayer } from "@/components/ui/custom-audio-player";
@@ -10,6 +11,16 @@ type RecordingDetailModalProps = {
 };
 
 export function RecordingDetailModal({ recording, onClose }: RecordingDetailModalProps) {
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    if (recording) {
+      window.addEventListener("keydown", handleKeyDown);
+    }
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [recording, onClose]);
+
   if (!recording) return null;
 
   const sentimentStyles: Record<string, { bg: string; tx: string; label: string }> = {
@@ -54,7 +65,7 @@ export function RecordingDetailModal({ recording, onClose }: RecordingDetailModa
           <div className="p-4 rounded-xl border space-y-3" style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}>
             <h3 className="text-xs font-semibold flex items-center gap-2" style={{ color: "var(--status-warm-tx)" }}>
               <Sparkles className="w-4 h-4" />
-              Gemini AI Zusammenfassung
+              Zusammenfassung
             </h3>
             <p className="text-xs leading-relaxed" style={{ color: "var(--text)" }}>
               {recording.aiSummary || "Keine Zusammenfassung vorhanden."}
@@ -125,7 +136,7 @@ export function RecordingDetailModal({ recording, onClose }: RecordingDetailModa
             <div className="space-y-2">
               <h4 className="text-xs font-semibold flex items-center gap-1.5" style={{ color: "var(--accent)" }}>
                 <FileText className="w-4 h-4" />
-                Call-Aufnahme abspielen
+                Audio
               </h4>
               <CustomAudioPlayer
                 src={`/api/cold-calls/recordings/${recording.id}/audio`}
@@ -144,7 +155,7 @@ export function RecordingDetailModal({ recording, onClose }: RecordingDetailModa
             <div className="p-4 rounded-xl border space-y-3" style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}>
               <h4 className="text-xs font-semibold flex items-center gap-1.5" style={{ color: "var(--status-warm-tx)" }}>
                 <Sparkles className="w-4 h-4" />
-                Rhetorik- & Sprechstil-Analyse
+                Rhetorik
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
                 <div className="space-y-0.5">
@@ -181,7 +192,7 @@ export function RecordingDetailModal({ recording, onClose }: RecordingDetailModa
           <div className="space-y-2">
             <h3 className="text-xs font-semibold flex items-center gap-1.5" style={{ color: "var(--text-2)" }}>
               <FileText className="w-4 h-4" />
-              Vollständige Transkription
+              Transkript
             </h3>
             <div
               className="p-4 rounded-xl border text-xs leading-relaxed max-h-60 overflow-y-auto whitespace-pre-wrap font-mono"

@@ -127,7 +127,8 @@ export function Sidebar() {
       {/* Mobile/Tablet Backdrop Overlay */}
       {mobileOpen && (
         <div
-          className="md:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-xs animate-fade-in"
+          className="md:hidden fixed inset-0 z-40 animate-fade-in"
+          style={{ background: "var(--overlay)", backdropFilter: "var(--overlay-blur)", WebkitBackdropFilter: "var(--overlay-blur)" }}
           onClick={() => setMobileOpen(false)}
         />
       )}
@@ -309,7 +310,10 @@ export function Sidebar() {
 
       {/* Confirmation Modal: Really Logout? */}
       {showLogoutConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-fade-in">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in"
+          style={{ background: "var(--overlay)", backdropFilter: "var(--overlay-blur)", WebkitBackdropFilter: "var(--overlay-blur)" }}
+        >
           <div
             className="w-full max-w-sm rounded-2xl border p-6 space-y-5 shadow-2xl animate-scale-up"
             style={{ background: "var(--surface)", borderColor: "var(--border)" }}

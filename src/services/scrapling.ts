@@ -2,12 +2,12 @@ import { spawn } from "child_process";
 import path from "path";
 
 export async function runScrapling(action: string, payload: any): Promise<any> {
-  const pythonBin = process.env.PYTHON_BIN || path.join(process.cwd(), ".venv/bin/python3");
-  const scriptPath = path.join(process.cwd(), "scrapers/scrapling_scrapers.py");
+  const pythonBin = process.env.PYTHON_BIN || `${process.cwd()}/.venv/bin/python3`;
+  const scriptPath = `${process.cwd()}/scrapers/scrapling_scrapers.py`;
   const input = JSON.stringify({ action, payload });
 
   return new Promise((resolve, reject) => {
-    const child = spawn(pythonBin, [scriptPath]);
+    const child = spawn(/*turbopackIgnore: true*/ pythonBin, [scriptPath]);
     let stdout = "";
     let stderr = "";
 

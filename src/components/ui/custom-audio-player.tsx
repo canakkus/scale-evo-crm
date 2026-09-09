@@ -47,6 +47,15 @@ export function CustomAudioPlayer({
   const [hoverPosition, setHoverPosition] = useState(0);
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
   const [showVolumeSlider, setShowVolumeSlider] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(false);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setReducedMotion(mediaQuery.matches);
+    const handler = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
+    mediaQuery.addEventListener("change", handler);
+    return () => mediaQuery.removeEventListener("change", handler);
+  }, []);
 
   // Format seconds to mm:ss or hh:mm:ss
   const formatTime = (timeInSeconds: number) => {
@@ -242,7 +251,7 @@ export function CustomAudioPlayer({
                   height: isPlaying ? `${Math.max(20, (height + idx * 10) % 100)}%` : "20%",
                   background: isPlaying ? "var(--status-warm-tx)" : "var(--text-3)",
                   opacity: isPlaying ? 0.9 : 0.4,
-                  animation: isPlaying ? `pulse 0.8s ease-in-out infinite alternate ${idx * 0.15}s` : "none",
+                  animation: isPlaying && !reducedMotion ? `pulse 0.8s ease-in-out infinite alternate ${idx * 0.15}s` : "none",
                 }}
               />
             ))}

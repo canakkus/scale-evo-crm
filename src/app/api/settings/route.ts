@@ -10,6 +10,7 @@ export async function GET() {
     }
 
     const email = (authUser.email || "").toLowerCase();
+    const isCan = email === "canakkus378@gmail.com";
     const adminEmail = (process.env.ADMIN_EMAIL || "").toLowerCase();
     const isPrimaryAdmin = adminEmail ? email === adminEmail : false;
 
