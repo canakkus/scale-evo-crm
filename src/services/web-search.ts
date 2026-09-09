@@ -47,72 +47,21 @@ function pickResult(links: Array<{ title: string; href: string }>, venueName: st
   return null;
 }
 
-async function searchDuckDuckGo(query: string): Promise<Array<{ title: string; href: string }> | null> {
-  const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 8000);
-  try {
-    const response = await fetch(url, {
-      headers: { "User-Agent": USER_AGENT, Accept: "text/html" },
-      signal: controller.signal,
-      cache: "no-store",
-    });
-    if (!response.ok) return null;
-    const html = await response.text();
-    const $ = cheerio.load(html);
-    return $(".result")
-      .map((_, element) => {
-        const link = $(element).find(".result__a").first();
-        return { title: link.text().trim(), href: link.attr("href") ?? "" };
-      })
-      .get();
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-async function searchBing(query: string): Promise<Array<{ title: string; href: string }> | null> {
-  const url = `https://www.bing.com/search?q=${encodeURIComponent(query)}&count=10&setlang=de`;
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 8000);
-  try {
-    const response = await fetch(url, {
-      headers: { "User-Agent": USER_AGENT, "Accept-Language": "de-DE,de;q=0.9" },
-      signal: controller.signal,
-      cache: "no-store",
-    });
-    if (!response.ok) return null;
-    const html = await response.text();
-    const $ = cheerio.load(html);
-    const links: Array<{ title: string; href: string }> = [];
-    $("li.b_algo h2 a, h2 a, a[href^='http']").each((_, element) => {
-      const href = $(element).attr("href") ?? "";
-      const title = $(element).text().trim();
-      if (!href || !title) return;
-      if (/bing\.com|microsoft|msn|go\.microsoft|bingj\.com/i.test(href)) return;
-      links.push({ title: title.slice(0, 120), href });
-    });
-    return links;
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(timeout);
-  }
-}
+import { runScrapling } from "./scrapling";
 
 export async function searchFirstExternalUrl(
   query: string,
   options: { venueName?: string } = {},
 ): Promise<string | null> {
   const venueName = options.venueName ?? query.split(" website")[0] ?? query;
-  const sources = [searchDuckDuckGo, searchBing];
-  for (const source of sources) {
-    const links = await source(query);
-    if (!links || links.length === 0) continue;
-    const found = pickResult(links, venueName);
-    if (found) return found;
+  try {
+    const res = await runScrapling("websearch", { query });
+    if (res.links && Array.isArray(res.links)) {
+      const found = pickResult(res.links, venueName);
+      if (found) return found;
+    }
+  } catch (error) {
+    console.error("Scrapling websearch error:", error);
   }
   return null;
 }

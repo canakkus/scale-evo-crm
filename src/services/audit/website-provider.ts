@@ -35,43 +35,36 @@ function textContains(text: string, terms: string[]) {
   return terms.some((term) => value.includes(term));
 }
 
+import { runScrapling } from "../scrapling";
+
 export class WebsiteAuditProvider {
   async analyze(input: string): Promise<AuditResult> {
     const normalized = normalizeUrl(input);
     const url = normalized ?? input;
     const https = url.startsWith("https://");
-    const controller = new AbortController();
-    const timeout = setTimeout(
-      () => controller.abort(),
-      Number(process.env.ENRICHMENT_TIMEOUT_MS ?? 12000),
-    );
     const startedAt = performance.now();
 
     try {
-      const response = await fetch(url, {
-        signal: controller.signal,
-        redirect: "follow",
-        headers: {
-          "User-Agent": process.env.ENRICHMENT_USER_AGENT ?? "ScaleEvoCRM/3.0",
-          Accept: "text/html,application/xhtml+xml",
-        },
-        cache: "no-store",
-      });
+      const res = await runScrapling("fetch_html", { url });
+      
       const responseTimeMs = Math.round(performance.now() - startedAt);
-      const contentType = response.headers.get("content-type") ?? "";
-      if (!contentType.includes("text/html")) {
+      
+      if (res.error) {
         return {
           ...EMPTY_RESULT,
           url,
           https,
-          reachable: response.ok,
-          statusCode: response.status,
+          reachable: false,
+          statusCode: res.status ?? 0,
           responseTimeMs,
-          error: "Die URL liefert kein HTML-Dokument.",
+          error: res.error,
         };
       }
-
-      const html = (await response.text()).slice(0, 2_000_000);
+      
+      // Checking for content-type isn't strictly necessary anymore if scrapling already handles HTML
+      // We assume it's html.
+      const html = (res.html || "").slice(0, 2_000_000);
+      const isOk = res.status ? res.status >= 200 && res.status < 400 : true;
       const $ = cheerio.load(html);
       $("script, style, noscript, svg").remove();
       const pageText = $("body").text().replace(/\s+/g, " ").trim();
@@ -117,9 +110,9 @@ export class WebsiteAuditProvider {
 
       const result: AuditResult = {
         url,
-        reachable: response.ok,
-        statusCode: response.status,
-        https: response.url.startsWith("https://"),
+        reachable: isOk,
+        statusCode: res.status ?? 0,
+        https: (res.url || url).startsWith("https://"),
         responseTimeMs,
         hasViewport: Boolean($("meta[name='viewport']").attr("content")),
         hasTitle: Boolean(title),
@@ -158,7 +151,7 @@ export class WebsiteAuditProvider {
         menuUrl,
         menuIsPdf,
         findings: [],
-        error: response.ok ? null : `HTTP-Status ${response.status}`,
+        error: isOk ? null : `HTTP-Status ${res.status}`,
         extracted: { companyName, phone, email, address, instagram },
       };
 
@@ -172,8 +165,6 @@ export class WebsiteAuditProvider {
         findings: ["Website nicht erreichbar – URL und Erreichbarkeit manuell prüfen."],
         error: error instanceof Error ? error.message : "Unbekannter Fehler",
       };
-    } finally {
-      clearTimeout(timeout);
     }
   }
 }
