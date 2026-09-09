@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { ensureDbUser } from "@/lib/outreach-user";
 import { normalizeInstagramHandle, instagramProfileUrl } from "@/lib/utils";
 import { searchInstagramProfiles } from "@/services/web-search";
-import { InstagramProfileProvider } from "@/services/instagram/profile-provider";
+import { fetchInstagramProfile } from "@/services/instagram/resolve-provider";
 import { scoreInstagramProfile } from "@/services/instagram/score";
 
 /**
@@ -40,7 +40,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       handle = best.handle;
     }
 
-    const profile = await new InstagramProfileProvider().fetchProfile(handle);
+    const profile = await fetchInstagramProfile(handle);
     const scored = scoreInstagramProfile(profile, {
       industry: lead.industry,
       city: lead.city,

@@ -16,7 +16,8 @@
     "db:seed": "prisma db seed",
     "db:setup": "prisma generate && prisma migrate deploy && prisma db seed",
     "users:provision": "tsx scripts/provision-users.ts",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "instagram:check": "tsx scripts/check-instagram-graph.ts"
   },
   "prisma": {
     "seed": "node --import tsx prisma/seed.ts"

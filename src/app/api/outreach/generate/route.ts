@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getOptionalUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ensureDbUser } from "@/lib/outreach-user";
-import { InstagramProfileProvider } from "@/services/instagram/profile-provider";
+import { fetchInstagramProfile } from "@/services/instagram/resolve-provider";
 import { scoreInstagramProfile } from "@/services/instagram/score";
 import {
   deriveAnchors,
@@ -37,7 +37,7 @@ export async function POST(request: Request) {
     // Profil best-effort laden — schlaegt das fehl, arbeiten wir mit dem,
     // was am Lead schon bekannt ist, statt abzubrechen.
     const profile = lead.instagram
-      ? await new InstagramProfileProvider().fetchProfile(lead.instagram)
+      ? await fetchInstagramProfile(lead.instagram)
       : null;
 
     const scored = profile
