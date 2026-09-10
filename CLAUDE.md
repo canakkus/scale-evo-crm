@@ -102,6 +102,11 @@
 - **Credentials Security:** Server-side verification with salted SHA-256 hashes.
 - **User Status:** Subtle avatar badge and user indicator at the bottom of the sidebar and settings profile card.
 
+### 8. Scrapling Scraper Backend (`scrapers/scrapling_scrapers.py`, `src/services/scrapling.ts`)
+- **Architecture:** Replaces legacy Node.js/Cheerio scrapers with an undetected Python **Scrapling** backend to bypass Cloudflare & antibot protections.
+- **Node-to-Python Bridge:** `src/services/scrapling.ts` spawns the Python wrapper and communicates via JSON over stdin/stdout. (Paths are interpolated to bypass Next.js Turbopack tracing).
+- **Modules Covered:** DuckDuckGo/Bing web searches (`web-search.ts`), Treatwell JSON-LD extraction (`treatwell.ts`), and Website HTML auditing (`website-provider.ts`).
+
 ---
 
 ## ⚠️ Important Gotchas
