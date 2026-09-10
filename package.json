@@ -15,9 +15,10 @@
     "db:migrate": "prisma migrate dev",
     "db:seed": "prisma db seed",
     "db:setup": "prisma generate && prisma migrate deploy && prisma db seed",
-    "users:provision": "tsx scripts/provision-users.ts",
+    "users:provision": "tsx --env-file-if-exists=.env scripts/provision-users.ts",
     "postinstall": "prisma generate",
-    "instagram:check": "tsx scripts/check-instagram-graph.ts"
+    "instagram:check": "tsx --env-file-if-exists=.env scripts/check-instagram-graph.ts",
+    "instagram:setup": "tsx --env-file-if-exists=.env scripts/setup-instagram-graph.ts"
   },
   "prisma": {
     "seed": "node --import tsx prisma/seed.ts"
