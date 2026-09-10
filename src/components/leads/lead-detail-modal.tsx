@@ -30,6 +30,8 @@ import {
   Radio,
   Check,
   Copy,
+  Maximize,
+  Minimize,
 } from "lucide-react";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { CustomAudioPlayer } from "@/components/ui/custom-audio-player";
@@ -46,6 +48,7 @@ type LeadDetailModalProps = {
 export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalProps) {
   const [lead, setLead] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [notesText, setNotesText] = useState("");
   const [savingNotes, setSavingNotes] = useState(false);
   const [checkingMenu, setCheckingMenu] = useState(false);
@@ -383,8 +386,8 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/40 backdrop-blur-sm animate-fade-in">
-      <div className="w-full max-w-6xl max-h-[90vh] flex flex-col rounded-2xl shadow-2xl overflow-hidden border" style={{ background: "var(--bg)", borderColor: "var(--border)" }}>
+    <div className={`fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-fade-in ${isFullscreen ? 'p-0' : 'p-4 sm:p-6'}`}>
+      <div className={`w-full flex flex-col shadow-2xl overflow-hidden border ${isFullscreen ? 'h-full rounded-none max-w-none border-none' : 'max-w-6xl max-h-[90vh] rounded-2xl'}`} style={{ background: "var(--bg)", borderColor: "var(--border)" }}>
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b shrink-0" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
           <div className="flex items-center gap-3">
@@ -393,13 +396,22 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
             </h2>
             {lead && <StatusBadge status={lead.status} />}
           </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg transition-colors hover:bg-[var(--surface-3)]"
-            style={{ color: "var(--text-2)" }}
-          >
-            <X className="w-6 h-6" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setIsFullscreen(!isFullscreen)}
+              className="p-1.5 rounded-lg transition-colors hover:bg-[var(--surface-3)]"
+              style={{ color: "var(--text-2)" }}
+            >
+              {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
+            </button>
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-lg transition-colors hover:bg-[var(--surface-3)]"
+              style={{ color: "var(--text-2)" }}
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
         </div>
 
       {loading || !lead ? (
@@ -455,7 +467,7 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                         color: lead.acquisitionType === "WALK_IN" ? "rgb(192, 132, 252)" : "rgb(96, 165, 250)",
                       }}
                     >
-                      {lead.acquisitionType === "WALK_IN" ? "🚶‍♂️ Walk-In" : "📞 Cold Call"}
+                      {lead.acquisitionType === "WALK_IN" ? "Walk-In" : "Cold Call"}
                     </span>
                   </div>
                 </div>
@@ -757,8 +769,8 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                       value={editAcquisitionType}
                       onChange={(e) => setEditAcquisitionType(e.target.value)}
                     >
-                      <option value="CALL">📞 Cold Call</option>
-                      <option value="WALK_IN">🚶‍♂️ Walk-In</option>
+                      <option value="CALL">Cold Call</option>
+                      <option value="WALK_IN">Walk-In</option>
                     </select>
                   </div>
 

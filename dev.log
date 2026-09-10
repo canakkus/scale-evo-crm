@@ -1,0 +1,964 @@
+
+> scale-evo-crm@0.1.0 dev
+> next dev
+
+▲ Next.js 16.3.2 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.0.197:3000
+- Environments: .env.local, .env
+✓ Ready in 252ms
+⚠ Warning: Next.js ignored package-lock.json in /Users/can because it is outside the current Git repository (/Users/can/Neues Hell yeah CRM).
+ To use this directory, set `turbopack.root` in your Next.js config.
+
+✓ Running next.config.ts took 19ms
+
+ GET /settings 200 in 1135ms (next.js: 84ms, proxy.ts: 804ms, application-code: 248ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."displayName", "public"."User"."active", "public"."User"."restaurantScoutEnabled", "public"."User"."sidebarConfig", "public"."User"."baseAddress", "public"."User"."baseLatitude", "public"."User"."baseLongitude", "public"."User"."preferredLocationMode", "public"."User"."workClockStartedAt", "public"."User"."createdAt", "public"."User"."updatedAt" FROM "public"."User" WHERE ("public"."User"."id" = $1 OR "public"."User"."email" ILIKE $2) LIMIT $3 OFFSET $4
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."AISettings"."id", "public"."AISettings"."enabled", "public"."AISettings"."geminiEnabled", "public"."AISettings"."groqEnabled", "public"."AISettings"."maxAutomaticAttempts", "public"."AISettings"."cooldownSeconds", "public"."AISettings"."updatedAt" FROM "public"."AISettings" WHERE 1=1 LIMIT $1 OFFSET $2
+prisma:query COMMIT
+ GET /api/settings 200 in 1117ms (next.js: 34ms, proxy.ts: 122ms, application-code: 960ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."displayName", "public"."User"."active", "public"."User"."restaurantScoutEnabled", "public"."User"."sidebarConfig", "public"."User"."baseAddress", "public"."User"."baseLatitude", "public"."User"."baseLongitude", "public"."User"."preferredLocationMode", "public"."User"."workClockStartedAt", "public"."User"."createdAt", "public"."User"."updatedAt" FROM "public"."User" WHERE ("public"."User"."id" = $1 OR "public"."User"."email" ILIKE $2) LIMIT $3 OFFSET $4
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."AISettings"."id", "public"."AISettings"."enabled", "public"."AISettings"."geminiEnabled", "public"."AISettings"."groqEnabled", "public"."AISettings"."maxAutomaticAttempts", "public"."AISettings"."cooldownSeconds", "public"."AISettings"."updatedAt" FROM "public"."AISettings" WHERE 1=1 LIMIT $1 OFFSET $2
+prisma:query COMMIT
+ GET /api/settings 200 in 609ms (next.js: 4ms, proxy.ts: 193ms, application-code: 412ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."displayName", "public"."User"."active", "public"."User"."restaurantScoutEnabled", "public"."User"."sidebarConfig", "public"."User"."baseAddress", "public"."User"."baseLatitude", "public"."User"."baseLongitude", "public"."User"."preferredLocationMode", "public"."User"."workClockStartedAt", "public"."User"."createdAt", "public"."User"."updatedAt" FROM "public"."User" WHERE ("public"."User"."id" = $1 OR "public"."User"."email" ILIKE $2) LIMIT $3 OFFSET $4
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."AISettings"."id", "public"."AISettings"."enabled", "public"."AISettings"."geminiEnabled", "public"."AISettings"."groqEnabled", "public"."AISettings"."maxAutomaticAttempts", "public"."AISettings"."cooldownSeconds", "public"."AISettings"."updatedAt" FROM "public"."AISettings" WHERE 1=1 LIMIT $1 OFFSET $2
+prisma:query COMMIT
+ GET /api/settings 200 in 648ms (next.js: 3ms, proxy.ts: 168ms, application-code: 477ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."displayName", "public"."User"."active", "public"."User"."restaurantScoutEnabled", "public"."User"."sidebarConfig", "public"."User"."baseAddress", "public"."User"."baseLatitude", "public"."User"."baseLongitude", "public"."User"."preferredLocationMode", "public"."User"."workClockStartedAt", "public"."User"."createdAt", "public"."User"."updatedAt" FROM "public"."User" WHERE ("public"."User"."id" = $1 OR "public"."User"."email" ILIKE $2) LIMIT $3 OFFSET $4
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."AISettings"."id", "public"."AISettings"."enabled", "public"."AISettings"."geminiEnabled", "public"."AISettings"."groqEnabled", "public"."AISettings"."maxAutomaticAttempts", "public"."AISettings"."cooldownSeconds", "public"."AISettings"."updatedAt" FROM "public"."AISettings" WHERE 1=1 LIMIT $1 OFFSET $2
+prisma:query COMMIT
+ GET /api/settings 200 in 612ms (next.js: 4ms, proxy.ts: 109ms, application-code: 499ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."displayName", "public"."User"."active", "public"."User"."restaurantScoutEnabled", "public"."User"."sidebarConfig", "public"."User"."baseAddress", "public"."User"."baseLatitude", "public"."User"."baseLongitude", "public"."User"."preferredLocationMode", "public"."User"."workClockStartedAt", "public"."User"."createdAt", "public"."User"."updatedAt" FROM "public"."User" WHERE ("public"."User"."id" = $1 OR "public"."User"."email" ILIKE $2) LIMIT $3 OFFSET $4
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."AISettings"."id", "public"."AISettings"."enabled", "public"."AISettings"."geminiEnabled", "public"."AISettings"."groqEnabled", "public"."AISettings"."maxAutomaticAttempts", "public"."AISettings"."cooldownSeconds", "public"."AISettings"."updatedAt" FROM "public"."AISettings" WHERE 1=1 LIMIT $1 OFFSET $2
+prisma:query COMMIT
+ GET /api/settings 200 in 595ms (next.js: 1.9ms, proxy.ts: 107ms, application-code: 487ms)
+[places] API key present: true, length: 40
+ GET /api/places 200 in 325ms (next.js: 99ms, proxy.ts: 98ms, application-code: 127ms)
+[places] API key present: true, length: 40
+ GET /api/places 200 in 150ms (next.js: 1.6ms, proxy.ts: 70ms, application-code: 78ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."displayName", "public"."User"."active", "public"."User"."restaurantScoutEnabled", "public"."User"."sidebarConfig", "public"."User"."baseAddress", "public"."User"."baseLatitude", "public"."User"."baseLongitude", "public"."User"."preferredLocationMode", "public"."User"."workClockStartedAt", "public"."User"."createdAt", "public"."User"."updatedAt" FROM "public"."User" WHERE ("public"."User"."id" = $1 OR "public"."User"."email" ILIKE $2) LIMIT $3 OFFSET $4
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."AISettings"."id", "public"."AISettings"."enabled", "public"."AISettings"."geminiEnabled", "public"."AISettings"."groqEnabled", "public"."AISettings"."maxAutomaticAttempts", "public"."AISettings"."cooldownSeconds", "public"."AISettings"."updatedAt" FROM "public"."AISettings" WHERE 1=1 LIMIT $1 OFFSET $2
+prisma:query COMMIT
+ GET /api/settings 200 in 917ms (next.js: 1.5ms, proxy.ts: 415ms, application-code: 501ms)
+prisma:query SELECT 1
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."Lead"."id" FROM "public"."Lead" WHERE ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) OFFSET $3) AS "sub"
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."Lead"."id" FROM "public"."Lead" WHERE (("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) AND "public"."Lead"."status" IN (CAST($3::text AS "public"."LeadStatus"),CAST($4::text AS "public"."LeadStatus"),CAST($5::text AS "public"."LeadStatus"),CAST($6::text AS "public"."LeadStatus"),CAST($7::text AS "public"."LeadStatus"))) OFFSET $8) AS "sub"
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."Lead"."id" FROM "public"."Lead" WHERE (("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) AND "public"."Lead"."status" = CAST($3::text AS "public"."LeadStatus")) OFFSET $4) AS "sub"
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."Lead"."id" FROM "public"."Lead" WHERE (("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) AND "public"."Lead"."status" = CAST($3::text AS "public"."LeadStatus")) OFFSET $4) AS "sub"
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."CallRecording"."id" FROM "public"."CallRecording" WHERE "public"."CallRecording"."createdById" = $1 OFFSET $2) AS "sub"
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+ GET /leads 200 in 254ms (next.js: 23ms, proxy.ts: 56ms, application-code: 174ms)
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."Task"."id" FROM "public"."Task" WHERE ("public"."Task"."userId" = $1 AND "public"."Task"."status" = CAST($2::text AS "public"."TaskStatus")) OFFSET $3) AS "sub"
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."companyName", "public"."Lead"."industry", "public"."Lead"."city", "public"."Lead"."status"::text, "public"."Lead"."score", "public"."Lead"."createdAt" FROM "public"."Lead" WHERE ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) ORDER BY "public"."Lead"."createdAt" DESC LIMIT $3 OFFSET $4
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."companyName", "public"."Lead"."phone", "public"."Lead"."nextFollowUpAt", "public"."Lead"."city" FROM "public"."Lead" WHERE (("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) AND "public"."Lead"."status" = CAST($3::text AS "public"."LeadStatus")) ORDER BY "public"."Lead"."nextFollowUpAt" ASC LIMIT $4 OFFSET $5
+prisma:query COMMIT
+ GET / 200 in 1568ms (next.js: 17ms, proxy.ts: 193ms, application-code: 1358ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."Lead"."id" FROM "public"."Lead" WHERE ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) OFFSET $3) AS "sub"
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."companyName", "public"."Lead"."industry", "public"."Lead"."address", "public"."Lead"."city", "public"."Lead"."webPresence"::text, "public"."Lead"."website", "public"."Lead"."treatwellUrl", "public"."Lead"."phone", "public"."Lead"."email", "public"."Lead"."instagram", "public"."Lead"."googleMapsUrl", "public"."Lead"."googleRating", "public"."Lead"."googleReviewCount", "public"."Lead"."contactPerson", "public"."Lead"."preferredContactMethod"::text, "public"."Lead"."contactNote", "public"."Lead"."notes", "public"."Lead"."richNotes", "public"."Lead"."source", "public"."Lead"."lastContactAt", "public"."Lead"."nextFollowUpAt", "public"."Lead"."status"::text, "public"."Lead"."priority"::text, "public"."Lead"."score", "public"."Lead"."scoreReasons", "public"."Lead"."opportunityTags", "public"."Lead"."interestingReason", "public"."Lead"."enrichmentStatus", "public"."Lead"."hasMenu", "public"."Lead"."menuUrl", "public"."Lead"."menuSnippet", "public"."Lead"."menuCheckedAt", "public"."Lead"."acquisitionType"::text, "public"."Lead"."nfcDemoUrl", "public"."Lead"."addedAt", "public"."Lead"."createdAt", "public"."Lead"."updatedAt", "public"."Lead"."createdById", "public"."Lead"."assignedToId", COALESCE("aggr_selection_0_Interaction"."_aggr_count_interactions", 0) AS "_aggr_count_interactions", COALESCE("aggr_selection_1_WebsiteAudit"."_aggr_count_audits", 0) AS "_aggr_count_audits", COALESCE("aggr_selection_2_Task"."_aggr_count_tasks", 0) AS "_aggr_count_tasks" FROM "public"."Lead" LEFT JOIN (SELECT "public"."Interaction"."leadId", COUNT(*) AS "_aggr_count_interactions" FROM "public"."Interaction" WHERE 1=1 GROUP BY "public"."Interaction"."leadId") AS "aggr_selection_0_Interaction" ON ("public"."Lead"."id" = "aggr_selection_0_Interaction"."leadId") LEFT JOIN (SELECT "public"."WebsiteAudit"."leadId", COUNT(*) AS "_aggr_count_audits" FROM "public"."WebsiteAudit" WHERE 1=1 GROUP BY "public"."WebsiteAudit"."leadId") AS "aggr_selection_1_WebsiteAudit" ON ("public"."Lead"."id" = "aggr_selection_1_WebsiteAudit"."leadId") LEFT JOIN (SELECT "public"."Task"."leadId", COUNT(*) AS "_aggr_count_tasks" FROM "public"."Task" WHERE 1=1 GROUP BY "public"."Task"."leadId") AS "aggr_selection_2_Task" ON ("public"."Lead"."id" = "aggr_selection_2_Task"."leadId") WHERE ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) ORDER BY "public"."Lead"."updatedAt" DESC LIMIT $3 OFFSET $4
+prisma:query SELECT "public"."User"."id", "public"."User"."displayName", "public"."User"."email" FROM "public"."User" WHERE "public"."User"."id" IN ($1) OFFSET $2
+prisma:query SELECT "public"."User"."id", "public"."User"."displayName", "public"."User"."email" FROM "public"."User" WHERE "public"."User"."id" IN ($1) OFFSET $2
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."industry" FROM "public"."Lead" WHERE ("public"."Lead"."industry" IS NOT NULL AND ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2)) OFFSET $3
+prisma:query COMMIT
+ GET /api/leads?page=1&limit=20 200 in 934ms (next.js: 26ms, proxy.ts: 67ms, application-code: 841ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."companyName", "public"."Lead"."industry", "public"."Lead"."address", "public"."Lead"."city", "public"."Lead"."webPresence"::text, "public"."Lead"."website", "public"."Lead"."treatwellUrl", "public"."Lead"."phone", "public"."Lead"."email", "public"."Lead"."instagram", "public"."Lead"."googleMapsUrl", "public"."Lead"."googleRating", "public"."Lead"."googleReviewCount", "public"."Lead"."contactPerson", "public"."Lead"."preferredContactMethod"::text, "public"."Lead"."contactNote", "public"."Lead"."notes", "public"."Lead"."richNotes", "public"."Lead"."source", "public"."Lead"."lastContactAt", "public"."Lead"."nextFollowUpAt", "public"."Lead"."status"::text, "public"."Lead"."priority"::text, "public"."Lead"."score", "public"."Lead"."scoreReasons", "public"."Lead"."opportunityTags", "public"."Lead"."interestingReason", "public"."Lead"."enrichmentStatus", "public"."Lead"."hasMenu", "public"."Lead"."menuUrl", "public"."Lead"."menuSnippet", "public"."Lead"."menuCheckedAt", "public"."Lead"."acquisitionType"::text, "public"."Lead"."nfcDemoUrl", "public"."Lead"."addedAt", "public"."Lead"."createdAt", "public"."Lead"."updatedAt", "public"."Lead"."createdById", "public"."Lead"."assignedToId", COALESCE("aggr_selection_0_Interaction"."_aggr_count_interactions", 0) AS "_aggr_count_interactions", COALESCE("aggr_selection_1_WebsiteAudit"."_aggr_count_audits", 0) AS "_aggr_count_audits", COALESCE("aggr_selection_2_Task"."_aggr_count_tasks", 0) AS "_aggr_count_tasks" FROM "public"."Lead" LEFT JOIN (SELECT "public"."Interaction"."leadId", COUNT(*) AS "_aggr_count_interactions" FROM "public"."Interaction" WHERE 1=1 GROUP BY "public"."Interaction"."leadId") AS "aggr_selection_0_Interaction" ON ("public"."Lead"."id" = "aggr_selection_0_Interaction"."leadId") LEFT JOIN (SELECT "public"."WebsiteAudit"."leadId", COUNT(*) AS "_aggr_count_audits" FROM "public"."WebsiteAudit" WHERE 1=1 GROUP BY "public"."WebsiteAudit"."leadId") AS "aggr_selection_1_WebsiteAudit" ON ("public"."Lead"."id" = "aggr_selection_1_WebsiteAudit"."leadId") LEFT JOIN (SELECT "public"."Task"."leadId", COUNT(*) AS "_aggr_count_tasks" FROM "public"."Task" WHERE 1=1 GROUP BY "public"."Task"."leadId") AS "aggr_selection_2_Task" ON ("public"."Lead"."id" = "aggr_selection_2_Task"."leadId") WHERE ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) ORDER BY "public"."Lead"."updatedAt" DESC LIMIT $3 OFFSET $4
+prisma:query SELECT "public"."User"."id", "public"."User"."displayName", "public"."User"."email" FROM "public"."User" WHERE "public"."User"."id" IN ($1) OFFSET $2
+prisma:query SELECT "public"."User"."id", "public"."User"."displayName", "public"."User"."email" FROM "public"."User" WHERE "public"."User"."id" IN ($1) OFFSET $2
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."Lead"."id" FROM "public"."Lead" WHERE ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) OFFSET $3) AS "sub"
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."industry" FROM "public"."Lead" WHERE ("public"."Lead"."industry" IS NOT NULL AND ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2)) OFFSET $3
+prisma:query COMMIT
+ GET /api/leads?page=1&limit=20 200 in 795ms (next.js: 1.1ms, proxy.ts: 97ms, application-code: 697ms)
+ GET /lead-scout 200 in 348ms (next.js: 161ms, proxy.ts: 109ms, application-code: 79ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."ScoutSession"."id", "public"."ScoutSession"."name", "public"."ScoutSession"."searchQuery", "public"."ScoutSession"."city", "public"."ScoutSession"."filters", "public"."ScoutSession"."resultCount", "public"."ScoutSession"."createdAt" FROM "public"."ScoutSession" WHERE "public"."ScoutSession"."createdById" = $1 ORDER BY "public"."ScoutSession"."createdAt" DESC LIMIT $2 OFFSET $3
+prisma:query COMMIT
+ GET /api/scout/sessions 200 in 422ms (next.js: 83ms, proxy.ts: 52ms, application-code: 288ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."ScoutSession"."id", "public"."ScoutSession"."name", "public"."ScoutSession"."searchQuery", "public"."ScoutSession"."city", "public"."ScoutSession"."filters", "public"."ScoutSession"."resultCount", "public"."ScoutSession"."createdAt" FROM "public"."ScoutSession" WHERE "public"."ScoutSession"."createdById" = $1 ORDER BY "public"."ScoutSession"."createdAt" DESC LIMIT $2 OFFSET $3
+prisma:query COMMIT
+ GET /api/scout/sessions 200 in 332ms (next.js: 3ms, proxy.ts: 55ms, application-code: 274ms)
+prisma:query SELECT 1
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."Lead"."id" FROM "public"."Lead" WHERE ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) OFFSET $3) AS "sub"
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."Lead"."id" FROM "public"."Lead" WHERE (("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) AND "public"."Lead"."status" IN (CAST($3::text AS "public"."LeadStatus"),CAST($4::text AS "public"."LeadStatus"),CAST($5::text AS "public"."LeadStatus"),CAST($6::text AS "public"."LeadStatus"),CAST($7::text AS "public"."LeadStatus"))) OFFSET $8) AS "sub"
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."Lead"."id" FROM "public"."Lead" WHERE (("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) AND "public"."Lead"."status" = CAST($3::text AS "public"."LeadStatus")) OFFSET $4) AS "sub"
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."Lead"."id" FROM "public"."Lead" WHERE (("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) AND "public"."Lead"."status" = CAST($3::text AS "public"."LeadStatus")) OFFSET $4) AS "sub"
+prisma:query COMMIT
+ GET /leads 200 in 194ms (next.js: 8ms, proxy.ts: 123ms, application-code: 63ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."CallRecording"."id" FROM "public"."CallRecording" WHERE "public"."CallRecording"."createdById" = $1 OFFSET $2) AS "sub"
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."Task"."id" FROM "public"."Task" WHERE ("public"."Task"."userId" = $1 AND "public"."Task"."status" = CAST($2::text AS "public"."TaskStatus")) OFFSET $3) AS "sub"
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."companyName", "public"."Lead"."industry", "public"."Lead"."city", "public"."Lead"."status"::text, "public"."Lead"."score", "public"."Lead"."createdAt" FROM "public"."Lead" WHERE ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) ORDER BY "public"."Lead"."createdAt" DESC LIMIT $3 OFFSET $4
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."companyName", "public"."Lead"."phone", "public"."Lead"."nextFollowUpAt", "public"."Lead"."city" FROM "public"."Lead" WHERE (("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) AND "public"."Lead"."status" = CAST($3::text AS "public"."LeadStatus")) ORDER BY "public"."Lead"."nextFollowUpAt" ASC LIMIT $4 OFFSET $5
+prisma:query COMMIT
+ GET / 200 in 1557ms (next.js: 8ms, proxy.ts: 129ms, application-code: 1420ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."companyName", "public"."Lead"."industry", "public"."Lead"."address", "public"."Lead"."city", "public"."Lead"."webPresence"::text, "public"."Lead"."website", "public"."Lead"."treatwellUrl", "public"."Lead"."phone", "public"."Lead"."email", "public"."Lead"."instagram", "public"."Lead"."googleMapsUrl", "public"."Lead"."googleRating", "public"."Lead"."googleReviewCount", "public"."Lead"."contactPerson", "public"."Lead"."preferredContactMethod"::text, "public"."Lead"."contactNote", "public"."Lead"."notes", "public"."Lead"."richNotes", "public"."Lead"."source", "public"."Lead"."lastContactAt", "public"."Lead"."nextFollowUpAt", "public"."Lead"."status"::text, "public"."Lead"."priority"::text, "public"."Lead"."score", "public"."Lead"."scoreReasons", "public"."Lead"."opportunityTags", "public"."Lead"."interestingReason", "public"."Lead"."enrichmentStatus", "public"."Lead"."hasMenu", "public"."Lead"."menuUrl", "public"."Lead"."menuSnippet", "public"."Lead"."menuCheckedAt", "public"."Lead"."acquisitionType"::text, "public"."Lead"."nfcDemoUrl", "public"."Lead"."addedAt", "public"."Lead"."createdAt", "public"."Lead"."updatedAt", "public"."Lead"."createdById", "public"."Lead"."assignedToId", COALESCE("aggr_selection_0_Interaction"."_aggr_count_interactions", 0) AS "_aggr_count_interactions", COALESCE("aggr_selection_1_WebsiteAudit"."_aggr_count_audits", 0) AS "_aggr_count_audits", COALESCE("aggr_selection_2_Task"."_aggr_count_tasks", 0) AS "_aggr_count_tasks" FROM "public"."Lead" LEFT JOIN (SELECT "public"."Interaction"."leadId", COUNT(*) AS "_aggr_count_interactions" FROM "public"."Interaction" WHERE 1=1 GROUP BY "public"."Interaction"."leadId") AS "aggr_selection_0_Interaction" ON ("public"."Lead"."id" = "aggr_selection_0_Interaction"."leadId") LEFT JOIN (SELECT "public"."WebsiteAudit"."leadId", COUNT(*) AS "_aggr_count_audits" FROM "public"."WebsiteAudit" WHERE 1=1 GROUP BY "public"."WebsiteAudit"."leadId") AS "aggr_selection_1_WebsiteAudit" ON ("public"."Lead"."id" = "aggr_selection_1_WebsiteAudit"."leadId") LEFT JOIN (SELECT "public"."Task"."leadId", COUNT(*) AS "_aggr_count_tasks" FROM "public"."Task" WHERE 1=1 GROUP BY "public"."Task"."leadId") AS "aggr_selection_2_Task" ON ("public"."Lead"."id" = "aggr_selection_2_Task"."leadId") WHERE ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) ORDER BY "public"."Lead"."updatedAt" DESC LIMIT $3 OFFSET $4
+prisma:query SELECT "public"."User"."id", "public"."User"."displayName", "public"."User"."email" FROM "public"."User" WHERE "public"."User"."id" IN ($1) OFFSET $2
+prisma:query SELECT "public"."User"."id", "public"."User"."displayName", "public"."User"."email" FROM "public"."User" WHERE "public"."User"."id" IN ($1) OFFSET $2
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."Lead"."id" FROM "public"."Lead" WHERE ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) OFFSET $3) AS "sub"
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."industry" FROM "public"."Lead" WHERE ("public"."Lead"."industry" IS NOT NULL AND ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2)) OFFSET $3
+prisma:query COMMIT
+ GET /api/leads?page=1&limit=20 200 in 941ms (next.js: 4ms, proxy.ts: 153ms, application-code: 784ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."Lead"."id" FROM "public"."Lead" WHERE ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) OFFSET $3) AS "sub"
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."companyName", "public"."Lead"."industry", "public"."Lead"."address", "public"."Lead"."city", "public"."Lead"."webPresence"::text, "public"."Lead"."website", "public"."Lead"."treatwellUrl", "public"."Lead"."phone", "public"."Lead"."email", "public"."Lead"."instagram", "public"."Lead"."googleMapsUrl", "public"."Lead"."googleRating", "public"."Lead"."googleReviewCount", "public"."Lead"."contactPerson", "public"."Lead"."preferredContactMethod"::text, "public"."Lead"."contactNote", "public"."Lead"."notes", "public"."Lead"."richNotes", "public"."Lead"."source", "public"."Lead"."lastContactAt", "public"."Lead"."nextFollowUpAt", "public"."Lead"."status"::text, "public"."Lead"."priority"::text, "public"."Lead"."score", "public"."Lead"."scoreReasons", "public"."Lead"."opportunityTags", "public"."Lead"."interestingReason", "public"."Lead"."enrichmentStatus", "public"."Lead"."hasMenu", "public"."Lead"."menuUrl", "public"."Lead"."menuSnippet", "public"."Lead"."menuCheckedAt", "public"."Lead"."acquisitionType"::text, "public"."Lead"."nfcDemoUrl", "public"."Lead"."addedAt", "public"."Lead"."createdAt", "public"."Lead"."updatedAt", "public"."Lead"."createdById", "public"."Lead"."assignedToId", COALESCE("aggr_selection_0_Interaction"."_aggr_count_interactions", 0) AS "_aggr_count_interactions", COALESCE("aggr_selection_1_WebsiteAudit"."_aggr_count_audits", 0) AS "_aggr_count_audits", COALESCE("aggr_selection_2_Task"."_aggr_count_tasks", 0) AS "_aggr_count_tasks" FROM "public"."Lead" LEFT JOIN (SELECT "public"."Interaction"."leadId", COUNT(*) AS "_aggr_count_interactions" FROM "public"."Interaction" WHERE 1=1 GROUP BY "public"."Interaction"."leadId") AS "aggr_selection_0_Interaction" ON ("public"."Lead"."id" = "aggr_selection_0_Interaction"."leadId") LEFT JOIN (SELECT "public"."WebsiteAudit"."leadId", COUNT(*) AS "_aggr_count_audits" FROM "public"."WebsiteAudit" WHERE 1=1 GROUP BY "public"."WebsiteAudit"."leadId") AS "aggr_selection_1_WebsiteAudit" ON ("public"."Lead"."id" = "aggr_selection_1_WebsiteAudit"."leadId") LEFT JOIN (SELECT "public"."Task"."leadId", COUNT(*) AS "_aggr_count_tasks" FROM "public"."Task" WHERE 1=1 GROUP BY "public"."Task"."leadId") AS "aggr_selection_2_Task" ON ("public"."Lead"."id" = "aggr_selection_2_Task"."leadId") WHERE ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) ORDER BY "public"."Lead"."updatedAt" DESC LIMIT $3 OFFSET $4
+prisma:query SELECT "public"."User"."id", "public"."User"."displayName", "public"."User"."email" FROM "public"."User" WHERE "public"."User"."id" IN ($1) OFFSET $2
+prisma:query SELECT "public"."User"."id", "public"."User"."displayName", "public"."User"."email" FROM "public"."User" WHERE "public"."User"."id" IN ($1) OFFSET $2
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."industry" FROM "public"."Lead" WHERE ("public"."Lead"."industry" IS NOT NULL AND ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2)) OFFSET $3
+prisma:query COMMIT
+ GET /api/leads?page=1&limit=20 200 in 860ms (next.js: 4ms, proxy.ts: 51ms, application-code: 805ms)
+prisma:query SELECT 1
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."companyName", "public"."Lead"."industry", "public"."Lead"."address", "public"."Lead"."city", "public"."Lead"."webPresence"::text, "public"."Lead"."website", "public"."Lead"."treatwellUrl", "public"."Lead"."phone", "public"."Lead"."email", "public"."Lead"."instagram", "public"."Lead"."googleMapsUrl", "public"."Lead"."googleRating", "public"."Lead"."googleReviewCount", "public"."Lead"."contactPerson", "public"."Lead"."preferredContactMethod"::text, "public"."Lead"."contactNote", "public"."Lead"."notes", "public"."Lead"."richNotes", "public"."Lead"."source", "public"."Lead"."lastContactAt", "public"."Lead"."nextFollowUpAt", "public"."Lead"."status"::text, "public"."Lead"."priority"::text, "public"."Lead"."score", "public"."Lead"."scoreReasons", "public"."Lead"."opportunityTags", "public"."Lead"."interestingReason", "public"."Lead"."enrichmentStatus", "public"."Lead"."hasMenu", "public"."Lead"."menuUrl", "public"."Lead"."menuSnippet", "public"."Lead"."menuCheckedAt", "public"."Lead"."acquisitionType"::text, "public"."Lead"."nfcDemoUrl", "public"."Lead"."addedAt", "public"."Lead"."createdAt", "public"."Lead"."updatedAt", "public"."Lead"."createdById", "public"."Lead"."assignedToId", COALESCE("aggr_selection_0_Interaction"."_aggr_count_interactions", 0) AS "_aggr_count_interactions", COALESCE("aggr_selection_1_WebsiteAudit"."_aggr_count_audits", 0) AS "_aggr_count_audits", COALESCE("aggr_selection_2_Task"."_aggr_count_tasks", 0) AS "_aggr_count_tasks" FROM "public"."Lead" LEFT JOIN (SELECT "public"."Interaction"."leadId", COUNT(*) AS "_aggr_count_interactions" FROM "public"."Interaction" WHERE 1=1 GROUP BY "public"."Interaction"."leadId") AS "aggr_selection_0_Interaction" ON ("public"."Lead"."id" = "aggr_selection_0_Interaction"."leadId") LEFT JOIN (SELECT "public"."WebsiteAudit"."leadId", COUNT(*) AS "_aggr_count_audits" FROM "public"."WebsiteAudit" WHERE 1=1 GROUP BY "public"."WebsiteAudit"."leadId") AS "aggr_selection_1_WebsiteAudit" ON ("public"."Lead"."id" = "aggr_selection_1_WebsiteAudit"."leadId") LEFT JOIN (SELECT "public"."Task"."leadId", COUNT(*) AS "_aggr_count_tasks" FROM "public"."Task" WHERE 1=1 GROUP BY "public"."Task"."leadId") AS "aggr_selection_2_Task" ON ("public"."Lead"."id" = "aggr_selection_2_Task"."leadId") WHERE (("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) AND "public"."Lead"."acquisitionType" = CAST($3::text AS "public"."AcquisitionType")) ORDER BY "public"."Lead"."updatedAt" DESC LIMIT $4 OFFSET $5
+prisma:query SELECT "public"."User"."id", "public"."User"."displayName", "public"."User"."email" FROM "public"."User" WHERE "public"."User"."id" IN ($1) OFFSET $2
+prisma:query SELECT "public"."User"."id", "public"."User"."displayName", "public"."User"."email" FROM "public"."User" WHERE "public"."User"."id" IN ($1) OFFSET $2
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."Lead"."id" FROM "public"."Lead" WHERE (("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) AND "public"."Lead"."acquisitionType" = CAST($3::text AS "public"."AcquisitionType")) OFFSET $4) AS "sub"
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."industry" FROM "public"."Lead" WHERE ("public"."Lead"."industry" IS NOT NULL AND ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2)) OFFSET $3
+prisma:query COMMIT
+ GET /api/leads?acquisitionType=CALL&page=1&limit=20 200 in 946ms (next.js: 4ms, proxy.ts: 229ms, application-code: 713ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."Lead"."id" FROM "public"."Lead" WHERE ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) OFFSET $3) AS "sub"
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."companyName", "public"."Lead"."industry", "public"."Lead"."address", "public"."Lead"."city", "public"."Lead"."webPresence"::text, "public"."Lead"."website", "public"."Lead"."treatwellUrl", "public"."Lead"."phone", "public"."Lead"."email", "public"."Lead"."instagram", "public"."Lead"."googleMapsUrl", "public"."Lead"."googleRating", "public"."Lead"."googleReviewCount", "public"."Lead"."contactPerson", "public"."Lead"."preferredContactMethod"::text, "public"."Lead"."contactNote", "public"."Lead"."notes", "public"."Lead"."richNotes", "public"."Lead"."source", "public"."Lead"."lastContactAt", "public"."Lead"."nextFollowUpAt", "public"."Lead"."status"::text, "public"."Lead"."priority"::text, "public"."Lead"."score", "public"."Lead"."scoreReasons", "public"."Lead"."opportunityTags", "public"."Lead"."interestingReason", "public"."Lead"."enrichmentStatus", "public"."Lead"."hasMenu", "public"."Lead"."menuUrl", "public"."Lead"."menuSnippet", "public"."Lead"."menuCheckedAt", "public"."Lead"."acquisitionType"::text, "public"."Lead"."nfcDemoUrl", "public"."Lead"."addedAt", "public"."Lead"."createdAt", "public"."Lead"."updatedAt", "public"."Lead"."createdById", "public"."Lead"."assignedToId", COALESCE("aggr_selection_0_Interaction"."_aggr_count_interactions", 0) AS "_aggr_count_interactions", COALESCE("aggr_selection_1_WebsiteAudit"."_aggr_count_audits", 0) AS "_aggr_count_audits", COALESCE("aggr_selection_2_Task"."_aggr_count_tasks", 0) AS "_aggr_count_tasks" FROM "public"."Lead" LEFT JOIN (SELECT "public"."Interaction"."leadId", COUNT(*) AS "_aggr_count_interactions" FROM "public"."Interaction" WHERE 1=1 GROUP BY "public"."Interaction"."leadId") AS "aggr_selection_0_Interaction" ON ("public"."Lead"."id" = "aggr_selection_0_Interaction"."leadId") LEFT JOIN (SELECT "public"."WebsiteAudit"."leadId", COUNT(*) AS "_aggr_count_audits" FROM "public"."WebsiteAudit" WHERE 1=1 GROUP BY "public"."WebsiteAudit"."leadId") AS "aggr_selection_1_WebsiteAudit" ON ("public"."Lead"."id" = "aggr_selection_1_WebsiteAudit"."leadId") LEFT JOIN (SELECT "public"."Task"."leadId", COUNT(*) AS "_aggr_count_tasks" FROM "public"."Task" WHERE 1=1 GROUP BY "public"."Task"."leadId") AS "aggr_selection_2_Task" ON ("public"."Lead"."id" = "aggr_selection_2_Task"."leadId") WHERE ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) ORDER BY "public"."Lead"."updatedAt" DESC LIMIT $3 OFFSET $4
+prisma:query SELECT "public"."User"."id", "public"."User"."displayName", "public"."User"."email" FROM "public"."User" WHERE "public"."User"."id" IN ($1) OFFSET $2
+prisma:query SELECT "public"."User"."id", "public"."User"."displayName", "public"."User"."email" FROM "public"."User" WHERE "public"."User"."id" IN ($1) OFFSET $2
+prisma:query COMMIT
+ GET /lead-scout 200 in 171ms (next.js: 6ms, proxy.ts: 89ms, application-code: 76ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."industry" FROM "public"."Lead" WHERE ("public"."Lead"."industry" IS NOT NULL AND ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2)) OFFSET $3
+prisma:query COMMIT
+ GET /api/leads?page=1&limit=20 200 in 835ms (next.js: 2ms, proxy.ts: 88ms, application-code: 745ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."ScoutSession"."id", "public"."ScoutSession"."name", "public"."ScoutSession"."searchQuery", "public"."ScoutSession"."city", "public"."ScoutSession"."filters", "public"."ScoutSession"."resultCount", "public"."ScoutSession"."createdAt" FROM "public"."ScoutSession" WHERE "public"."ScoutSession"."createdById" = $1 ORDER BY "public"."ScoutSession"."createdAt" DESC LIMIT $2 OFFSET $3
+prisma:query COMMIT
+ GET /api/scout/sessions 200 in 320ms (next.js: 4ms, proxy.ts: 130ms, application-code: 185ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."ScoutSession"."id", "public"."ScoutSession"."name", "public"."ScoutSession"."searchQuery", "public"."ScoutSession"."city", "public"."ScoutSession"."filters", "public"."ScoutSession"."resultCount", "public"."ScoutSession"."createdAt" FROM "public"."ScoutSession" WHERE "public"."ScoutSession"."createdById" = $1 ORDER BY "public"."ScoutSession"."createdAt" DESC LIMIT $2 OFFSET $3
+prisma:query COMMIT
+ GET /api/scout/sessions 200 in 360ms (next.js: 1.5ms, proxy.ts: 81ms, application-code: 277ms)
+prisma:query SELECT 1
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."companyName", "public"."Lead"."industry", "public"."Lead"."address", "public"."Lead"."city", "public"."Lead"."webPresence"::text, "public"."Lead"."website", "public"."Lead"."treatwellUrl", "public"."Lead"."phone", "public"."Lead"."email", "public"."Lead"."instagram", "public"."Lead"."googleMapsUrl", "public"."Lead"."googleRating", "public"."Lead"."googleReviewCount", "public"."Lead"."contactPerson", "public"."Lead"."preferredContactMethod"::text, "public"."Lead"."contactNote", "public"."Lead"."notes", "public"."Lead"."richNotes", "public"."Lead"."source", "public"."Lead"."lastContactAt", "public"."Lead"."nextFollowUpAt", "public"."Lead"."status"::text, "public"."Lead"."priority"::text, "public"."Lead"."score", "public"."Lead"."scoreReasons", "public"."Lead"."opportunityTags", "public"."Lead"."interestingReason", "public"."Lead"."enrichmentStatus", "public"."Lead"."hasMenu", "public"."Lead"."menuUrl", "public"."Lead"."menuSnippet", "public"."Lead"."menuCheckedAt", "public"."Lead"."acquisitionType"::text, "public"."Lead"."nfcDemoUrl", "public"."Lead"."addedAt", "public"."Lead"."createdAt", "public"."Lead"."updatedAt", "public"."Lead"."createdById", "public"."Lead"."assignedToId" FROM "public"."Lead" WHERE ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) OFFSET $3
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."displayName", "public"."User"."active", "public"."User"."restaurantScoutEnabled", "public"."User"."sidebarConfig", "public"."User"."baseAddress", "public"."User"."baseLatitude", "public"."User"."baseLongitude", "public"."User"."preferredLocationMode", "public"."User"."workClockStartedAt", "public"."User"."createdAt", "public"."User"."updatedAt" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query INSERT INTO "public"."ScoutSession" ("id","name","searchQuery","city","radiusKm","filters","resultCount","createdById","createdAt","updatedAt") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING "public"."ScoutSession"."id"
+prisma:query INSERT INTO "public"."ScoutResult" ("id","sessionId","companyName","address","city","phone","website","googleMapsUrl","googleRating","reviewCount","industry","hasTreatwell","rawData","createdAt") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14), ($15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28), ($29,$30,$31,$32,$33,$34,$35,$36,$37,$38,$39,$40,$41,$42), ($43,$44,$45,$46,$47,$48,$49,$50,$51,$52,$53,$54,$55,$56)
+prisma:query SELECT "public"."ScoutSession"."id", "public"."ScoutSession"."name", "public"."ScoutSession"."searchQuery", "public"."ScoutSession"."city", "public"."ScoutSession"."radiusKm", "public"."ScoutSession"."filters", "public"."ScoutSession"."resultCount", "public"."ScoutSession"."createdById", "public"."ScoutSession"."createdAt", "public"."ScoutSession"."updatedAt" FROM "public"."ScoutSession" WHERE "public"."ScoutSession"."id" = $1 LIMIT $2 OFFSET $3
+prisma:query COMMIT
+ POST /api/lead-scout 200 in 7.7s (next.js: 214ms, proxy.ts: 241ms, application-code: 7.3s)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."ScoutSession"."id", "public"."ScoutSession"."name", "public"."ScoutSession"."searchQuery", "public"."ScoutSession"."city", "public"."ScoutSession"."filters", "public"."ScoutSession"."resultCount", "public"."ScoutSession"."createdAt" FROM "public"."ScoutSession" WHERE "public"."ScoutSession"."createdById" = $1 ORDER BY "public"."ScoutSession"."createdAt" DESC LIMIT $2 OFFSET $3
+ GET /api/scout/sessions 200 in 386ms (next.js: 16ms, proxy.ts: 108ms, application-code: 262ms)
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."Lead"."id" FROM "public"."Lead" WHERE (("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) AND "public"."Lead"."status" IN (CAST($3::text AS "public"."LeadStatus"),CAST($4::text AS "public"."LeadStatus"),CAST($5::text AS "public"."LeadStatus"),CAST($6::text AS "public"."LeadStatus"),CAST($7::text AS "public"."LeadStatus"))) OFFSET $8) AS "sub"
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."Lead"."id" FROM "public"."Lead" WHERE ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) OFFSET $3) AS "sub"
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."Lead"."id" FROM "public"."Lead" WHERE (("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) AND "public"."Lead"."status" = CAST($3::text AS "public"."LeadStatus")) OFFSET $4) AS "sub"
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."Lead"."id" FROM "public"."Lead" WHERE (("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) AND "public"."Lead"."status" = CAST($3::text AS "public"."LeadStatus")) OFFSET $4) AS "sub"
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."CallRecording"."id" FROM "public"."CallRecording" WHERE "public"."CallRecording"."createdById" = $1 OFFSET $2) AS "sub"
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."Task"."id" FROM "public"."Task" WHERE ("public"."Task"."userId" = $1 AND "public"."Task"."status" = CAST($2::text AS "public"."TaskStatus")) OFFSET $3) AS "sub"
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."companyName", "public"."Lead"."industry", "public"."Lead"."city", "public"."Lead"."status"::text, "public"."Lead"."score", "public"."Lead"."createdAt" FROM "public"."Lead" WHERE ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) ORDER BY "public"."Lead"."createdAt" DESC LIMIT $3 OFFSET $4
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."companyName", "public"."Lead"."phone", "public"."Lead"."nextFollowUpAt", "public"."Lead"."city" FROM "public"."Lead" WHERE (("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) AND "public"."Lead"."status" = CAST($3::text AS "public"."LeadStatus")) ORDER BY "public"."Lead"."nextFollowUpAt" ASC LIMIT $4 OFFSET $5
+prisma:query COMMIT
+prisma:query BEGIN
+ GET / 200 in 1927ms (next.js: 13ms, proxy.ts: 246ms, application-code: 1668ms)
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."displayName", "public"."User"."active", "public"."User"."restaurantScoutEnabled", "public"."User"."sidebarConfig", "public"."User"."baseAddress", "public"."User"."baseLatitude", "public"."User"."baseLongitude", "public"."User"."preferredLocationMode", "public"."User"."workClockStartedAt", "public"."User"."createdAt", "public"."User"."updatedAt" FROM "public"."User" WHERE ("public"."User"."id" = $1 OR "public"."User"."email" ILIKE $2) LIMIT $3 OFFSET $4
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."AISettings"."id", "public"."AISettings"."enabled", "public"."AISettings"."geminiEnabled", "public"."AISettings"."groqEnabled", "public"."AISettings"."maxAutomaticAttempts", "public"."AISettings"."cooldownSeconds", "public"."AISettings"."updatedAt" FROM "public"."AISettings" WHERE 1=1 LIMIT $1 OFFSET $2
+prisma:query COMMIT
+ GET /api/settings 200 in 1591ms (next.js: 1.6ms, proxy.ts: 49ms, application-code: 1541ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."displayName", "public"."User"."active", "public"."User"."restaurantScoutEnabled", "public"."User"."sidebarConfig", "public"."User"."baseAddress", "public"."User"."baseLatitude", "public"."User"."baseLongitude", "public"."User"."preferredLocationMode", "public"."User"."workClockStartedAt", "public"."User"."createdAt", "public"."User"."updatedAt" FROM "public"."User" WHERE ("public"."User"."id" = $1 OR "public"."User"."email" ILIKE $2) LIMIT $3 OFFSET $4
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."AISettings"."id", "public"."AISettings"."enabled", "public"."AISettings"."geminiEnabled", "public"."AISettings"."groqEnabled", "public"."AISettings"."maxAutomaticAttempts", "public"."AISettings"."cooldownSeconds", "public"."AISettings"."updatedAt" FROM "public"."AISettings" WHERE 1=1 LIMIT $1 OFFSET $2
+prisma:query COMMIT
+ GET /api/settings 200 in 488ms (next.js: 3ms, proxy.ts: 61ms, application-code: 423ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."displayName", "public"."User"."active", "public"."User"."restaurantScoutEnabled", "public"."User"."sidebarConfig", "public"."User"."baseAddress", "public"."User"."baseLatitude", "public"."User"."baseLongitude", "public"."User"."preferredLocationMode", "public"."User"."workClockStartedAt", "public"."User"."createdAt", "public"."User"."updatedAt" FROM "public"."User" WHERE ("public"."User"."id" = $1 OR "public"."User"."email" ILIKE $2) LIMIT $3 OFFSET $4
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."AISettings"."id", "public"."AISettings"."enabled", "public"."AISettings"."geminiEnabled", "public"."AISettings"."groqEnabled", "public"."AISettings"."maxAutomaticAttempts", "public"."AISettings"."cooldownSeconds", "public"."AISettings"."updatedAt" FROM "public"."AISettings" WHERE 1=1 LIMIT $1 OFFSET $2
+prisma:query COMMIT
+ GET /api/settings 200 in 454ms (next.js: 3ms, proxy.ts: 62ms, application-code: 389ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."displayName", "public"."User"."active", "public"."User"."restaurantScoutEnabled", "public"."User"."sidebarConfig", "public"."User"."baseAddress", "public"."User"."baseLatitude", "public"."User"."baseLongitude", "public"."User"."preferredLocationMode", "public"."User"."workClockStartedAt", "public"."User"."createdAt", "public"."User"."updatedAt" FROM "public"."User" WHERE ("public"."User"."id" = $1 OR "public"."User"."email" ILIKE $2) LIMIT $3 OFFSET $4
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."AISettings"."id", "public"."AISettings"."enabled", "public"."AISettings"."geminiEnabled", "public"."AISettings"."groqEnabled", "public"."AISettings"."maxAutomaticAttempts", "public"."AISettings"."cooldownSeconds", "public"."AISettings"."updatedAt" FROM "public"."AISettings" WHERE 1=1 LIMIT $1 OFFSET $2
+prisma:query COMMIT
+ GET /api/settings 200 in 437ms (next.js: 2ms, proxy.ts: 52ms, application-code: 383ms)
+ GET /lead-scout 200 in 297ms (next.js: 10ms, proxy.ts: 108ms, application-code: 179ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."ScoutSession"."id", "public"."ScoutSession"."name", "public"."ScoutSession"."searchQuery", "public"."ScoutSession"."city", "public"."ScoutSession"."filters", "public"."ScoutSession"."resultCount", "public"."ScoutSession"."createdAt" FROM "public"."ScoutSession" WHERE "public"."ScoutSession"."createdById" = $1 ORDER BY "public"."ScoutSession"."createdAt" DESC LIMIT $2 OFFSET $3
+prisma:query COMMIT
+ GET /api/scout/sessions 200 in 356ms (next.js: 6ms, proxy.ts: 55ms, application-code: 295ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."ScoutSession"."id", "public"."ScoutSession"."name", "public"."ScoutSession"."searchQuery", "public"."ScoutSession"."city", "public"."ScoutSession"."filters", "public"."ScoutSession"."resultCount", "public"."ScoutSession"."createdAt" FROM "public"."ScoutSession" WHERE "public"."ScoutSession"."createdById" = $1 ORDER BY "public"."ScoutSession"."createdAt" DESC LIMIT $2 OFFSET $3
+prisma:query COMMIT
+ GET /api/scout/sessions 200 in 245ms (next.js: 3ms, proxy.ts: 62ms, application-code: 180ms)
+prisma:query SELECT 1
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."Lead"."id" FROM "public"."Lead" WHERE ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) OFFSET $3) AS "sub"
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."Lead"."id" FROM "public"."Lead" WHERE (("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) AND "public"."Lead"."status" IN (CAST($3::text AS "public"."LeadStatus"),CAST($4::text AS "public"."LeadStatus"),CAST($5::text AS "public"."LeadStatus"),CAST($6::text AS "public"."LeadStatus"),CAST($7::text AS "public"."LeadStatus"))) OFFSET $8) AS "sub"
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."Lead"."id" FROM "public"."Lead" WHERE (("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) AND "public"."Lead"."status" = CAST($3::text AS "public"."LeadStatus")) OFFSET $4) AS "sub"
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."Lead"."id" FROM "public"."Lead" WHERE (("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) AND "public"."Lead"."status" = CAST($3::text AS "public"."LeadStatus")) OFFSET $4) AS "sub"
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."CallRecording"."id" FROM "public"."CallRecording" WHERE "public"."CallRecording"."createdById" = $1 OFFSET $2) AS "sub"
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."Task"."id" FROM "public"."Task" WHERE ("public"."Task"."userId" = $1 AND "public"."Task"."status" = CAST($2::text AS "public"."TaskStatus")) OFFSET $3) AS "sub"
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."companyName", "public"."Lead"."industry", "public"."Lead"."city", "public"."Lead"."status"::text, "public"."Lead"."score", "public"."Lead"."createdAt" FROM "public"."Lead" WHERE ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) ORDER BY "public"."Lead"."createdAt" DESC LIMIT $3 OFFSET $4
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."companyName", "public"."Lead"."phone", "public"."Lead"."nextFollowUpAt", "public"."Lead"."city" FROM "public"."Lead" WHERE (("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) AND "public"."Lead"."status" = CAST($3::text AS "public"."LeadStatus")) ORDER BY "public"."Lead"."nextFollowUpAt" ASC LIMIT $4 OFFSET $5
+prisma:query COMMIT
+ GET / 200 in 1560ms (next.js: 12ms, proxy.ts: 115ms, application-code: 1433ms)
+ GET /settings 200 in 132ms (next.js: 13ms, proxy.ts: 108ms, application-code: 10ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."displayName", "public"."User"."active", "public"."User"."restaurantScoutEnabled", "public"."User"."sidebarConfig", "public"."User"."baseAddress", "public"."User"."baseLatitude", "public"."User"."baseLongitude", "public"."User"."preferredLocationMode", "public"."User"."workClockStartedAt", "public"."User"."createdAt", "public"."User"."updatedAt" FROM "public"."User" WHERE ("public"."User"."id" = $1 OR "public"."User"."email" ILIKE $2) LIMIT $3 OFFSET $4
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."AISettings"."id", "public"."AISettings"."enabled", "public"."AISettings"."geminiEnabled", "public"."AISettings"."groqEnabled", "public"."AISettings"."maxAutomaticAttempts", "public"."AISettings"."cooldownSeconds", "public"."AISettings"."updatedAt" FROM "public"."AISettings" WHERE 1=1 LIMIT $1 OFFSET $2
+prisma:query COMMIT
+ GET /api/settings 200 in 467ms (next.js: 4ms, proxy.ts: 52ms, application-code: 410ms)
+[places] API key present: true, length: 40
+ GET /api/places 200 in 116ms (next.js: 3ms, proxy.ts: 63ms, application-code: 50ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."displayName", "public"."User"."active", "public"."User"."restaurantScoutEnabled", "public"."User"."sidebarConfig", "public"."User"."baseAddress", "public"."User"."baseLatitude", "public"."User"."baseLongitude", "public"."User"."preferredLocationMode", "public"."User"."workClockStartedAt", "public"."User"."createdAt", "public"."User"."updatedAt" FROM "public"."User" WHERE ("public"."User"."id" = $1 OR "public"."User"."email" ILIKE $2) LIMIT $3 OFFSET $4
+[places] API key present: true, length: 40
+ GET /api/places 200 in 124ms (next.js: 3ms, proxy.ts: 48ms, application-code: 72ms)
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."AISettings"."id", "public"."AISettings"."enabled", "public"."AISettings"."geminiEnabled", "public"."AISettings"."groqEnabled", "public"."AISettings"."maxAutomaticAttempts", "public"."AISettings"."cooldownSeconds", "public"."AISettings"."updatedAt" FROM "public"."AISettings" WHERE 1=1 LIMIT $1 OFFSET $2
+prisma:query COMMIT
+ GET /api/settings 200 in 468ms (next.js: 3ms, proxy.ts: 72ms, application-code: 393ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."Lead"."id" FROM "public"."Lead" WHERE ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) OFFSET $3) AS "sub"
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."Lead"."id" FROM "public"."Lead" WHERE (("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) AND "public"."Lead"."status" IN (CAST($3::text AS "public"."LeadStatus"),CAST($4::text AS "public"."LeadStatus"),CAST($5::text AS "public"."LeadStatus"),CAST($6::text AS "public"."LeadStatus"),CAST($7::text AS "public"."LeadStatus"))) OFFSET $8) AS "sub"
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."Lead"."id" FROM "public"."Lead" WHERE (("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) AND "public"."Lead"."status" = CAST($3::text AS "public"."LeadStatus")) OFFSET $4) AS "sub"
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."Lead"."id" FROM "public"."Lead" WHERE (("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) AND "public"."Lead"."status" = CAST($3::text AS "public"."LeadStatus")) OFFSET $4) AS "sub"
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."CallRecording"."id" FROM "public"."CallRecording" WHERE "public"."CallRecording"."createdById" = $1 OFFSET $2) AS "sub"
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."Task"."id" FROM "public"."Task" WHERE ("public"."Task"."userId" = $1 AND "public"."Task"."status" = CAST($2::text AS "public"."TaskStatus")) OFFSET $3) AS "sub"
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."companyName", "public"."Lead"."industry", "public"."Lead"."city", "public"."Lead"."status"::text, "public"."Lead"."score", "public"."Lead"."createdAt" FROM "public"."Lead" WHERE ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) ORDER BY "public"."Lead"."createdAt" DESC LIMIT $3 OFFSET $4
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."companyName", "public"."Lead"."phone", "public"."Lead"."nextFollowUpAt", "public"."Lead"."city" FROM "public"."Lead" WHERE (("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) AND "public"."Lead"."status" = CAST($3::text AS "public"."LeadStatus")) ORDER BY "public"."Lead"."nextFollowUpAt" ASC LIMIT $4 OFFSET $5
+prisma:query COMMIT
+ GET / 200 in 2.1s (next.js: 108ms, proxy.ts: 226ms, application-code: 1783ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."displayName", "public"."User"."active", "public"."User"."restaurantScoutEnabled", "public"."User"."sidebarConfig", "public"."User"."baseAddress", "public"."User"."baseLatitude", "public"."User"."baseLongitude", "public"."User"."preferredLocationMode", "public"."User"."workClockStartedAt", "public"."User"."createdAt", "public"."User"."updatedAt" FROM "public"."User" WHERE ("public"."User"."id" = $1 OR "public"."User"."email" ILIKE $2) LIMIT $3 OFFSET $4
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."AISettings"."id", "public"."AISettings"."enabled", "public"."AISettings"."geminiEnabled", "public"."AISettings"."groqEnabled", "public"."AISettings"."maxAutomaticAttempts", "public"."AISettings"."cooldownSeconds", "public"."AISettings"."updatedAt" FROM "public"."AISettings" WHERE 1=1 LIMIT $1 OFFSET $2
+prisma:query COMMIT
+ GET /api/settings 200 in 1676ms (next.js: 7ms, proxy.ts: 79ms, application-code: 1590ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."displayName", "public"."User"."active", "public"."User"."restaurantScoutEnabled", "public"."User"."sidebarConfig", "public"."User"."baseAddress", "public"."User"."baseLatitude", "public"."User"."baseLongitude", "public"."User"."preferredLocationMode", "public"."User"."workClockStartedAt", "public"."User"."createdAt", "public"."User"."updatedAt" FROM "public"."User" WHERE ("public"."User"."id" = $1 OR "public"."User"."email" ILIKE $2) LIMIT $3 OFFSET $4
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."AISettings"."id", "public"."AISettings"."enabled", "public"."AISettings"."geminiEnabled", "public"."AISettings"."groqEnabled", "public"."AISettings"."maxAutomaticAttempts", "public"."AISettings"."cooldownSeconds", "public"."AISettings"."updatedAt" FROM "public"."AISettings" WHERE 1=1 LIMIT $1 OFFSET $2
+prisma:query COMMIT
+ GET /api/settings 200 in 479ms (next.js: 1.6ms, proxy.ts: 73ms, application-code: 404ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."displayName", "public"."User"."active", "public"."User"."restaurantScoutEnabled", "public"."User"."sidebarConfig", "public"."User"."baseAddress", "public"."User"."baseLatitude", "public"."User"."baseLongitude", "public"."User"."preferredLocationMode", "public"."User"."workClockStartedAt", "public"."User"."createdAt", "public"."User"."updatedAt" FROM "public"."User" WHERE ("public"."User"."id" = $1 OR "public"."User"."email" ILIKE $2) LIMIT $3 OFFSET $4
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."AISettings"."id", "public"."AISettings"."enabled", "public"."AISettings"."geminiEnabled", "public"."AISettings"."groqEnabled", "public"."AISettings"."maxAutomaticAttempts", "public"."AISettings"."cooldownSeconds", "public"."AISettings"."updatedAt" FROM "public"."AISettings" WHERE 1=1 LIMIT $1 OFFSET $2
+prisma:query COMMIT
+ GET /api/settings 200 in 467ms (next.js: 4ms, proxy.ts: 52ms, application-code: 411ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."displayName", "public"."User"."active", "public"."User"."restaurantScoutEnabled", "public"."User"."sidebarConfig", "public"."User"."baseAddress", "public"."User"."baseLatitude", "public"."User"."baseLongitude", "public"."User"."preferredLocationMode", "public"."User"."workClockStartedAt", "public"."User"."createdAt", "public"."User"."updatedAt" FROM "public"."User" WHERE ("public"."User"."id" = $1 OR "public"."User"."email" ILIKE $2) LIMIT $3 OFFSET $4
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."AISettings"."id", "public"."AISettings"."enabled", "public"."AISettings"."geminiEnabled", "public"."AISettings"."groqEnabled", "public"."AISettings"."maxAutomaticAttempts", "public"."AISettings"."cooldownSeconds", "public"."AISettings"."updatedAt" FROM "public"."AISettings" WHERE 1=1 LIMIT $1 OFFSET $2
+prisma:query COMMIT
+ GET /api/settings 200 in 494ms (next.js: 3ms, proxy.ts: 86ms, application-code: 405ms)
+ GET /leads 200 in 319ms (next.js: 27ms, proxy.ts: 185ms, application-code: 107ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."companyName", "public"."Lead"."industry", "public"."Lead"."address", "public"."Lead"."city", "public"."Lead"."webPresence"::text, "public"."Lead"."website", "public"."Lead"."treatwellUrl", "public"."Lead"."phone", "public"."Lead"."email", "public"."Lead"."instagram", "public"."Lead"."googleMapsUrl", "public"."Lead"."googleRating", "public"."Lead"."googleReviewCount", "public"."Lead"."contactPerson", "public"."Lead"."preferredContactMethod"::text, "public"."Lead"."contactNote", "public"."Lead"."notes", "public"."Lead"."richNotes", "public"."Lead"."source", "public"."Lead"."lastContactAt", "public"."Lead"."nextFollowUpAt", "public"."Lead"."status"::text, "public"."Lead"."priority"::text, "public"."Lead"."score", "public"."Lead"."scoreReasons", "public"."Lead"."opportunityTags", "public"."Lead"."interestingReason", "public"."Lead"."enrichmentStatus", "public"."Lead"."hasMenu", "public"."Lead"."menuUrl", "public"."Lead"."menuSnippet", "public"."Lead"."menuCheckedAt", "public"."Lead"."acquisitionType"::text, "public"."Lead"."nfcDemoUrl", "public"."Lead"."addedAt", "public"."Lead"."createdAt", "public"."Lead"."updatedAt", "public"."Lead"."createdById", "public"."Lead"."assignedToId", COALESCE("aggr_selection_0_Interaction"."_aggr_count_interactions", 0) AS "_aggr_count_interactions", COALESCE("aggr_selection_1_WebsiteAudit"."_aggr_count_audits", 0) AS "_aggr_count_audits", COALESCE("aggr_selection_2_Task"."_aggr_count_tasks", 0) AS "_aggr_count_tasks" FROM "public"."Lead" LEFT JOIN (SELECT "public"."Interaction"."leadId", COUNT(*) AS "_aggr_count_interactions" FROM "public"."Interaction" WHERE 1=1 GROUP BY "public"."Interaction"."leadId") AS "aggr_selection_0_Interaction" ON ("public"."Lead"."id" = "aggr_selection_0_Interaction"."leadId") LEFT JOIN (SELECT "public"."WebsiteAudit"."leadId", COUNT(*) AS "_aggr_count_audits" FROM "public"."WebsiteAudit" WHERE 1=1 GROUP BY "public"."WebsiteAudit"."leadId") AS "aggr_selection_1_WebsiteAudit" ON ("public"."Lead"."id" = "aggr_selection_1_WebsiteAudit"."leadId") LEFT JOIN (SELECT "public"."Task"."leadId", COUNT(*) AS "_aggr_count_tasks" FROM "public"."Task" WHERE 1=1 GROUP BY "public"."Task"."leadId") AS "aggr_selection_2_Task" ON ("public"."Lead"."id" = "aggr_selection_2_Task"."leadId") WHERE ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) ORDER BY "public"."Lead"."updatedAt" DESC LIMIT $3 OFFSET $4
+prisma:query SELECT "public"."User"."id", "public"."User"."displayName", "public"."User"."email" FROM "public"."User" WHERE "public"."User"."id" IN ($1) OFFSET $2
+prisma:query SELECT "public"."User"."id", "public"."User"."displayName", "public"."User"."email" FROM "public"."User" WHERE "public"."User"."id" IN ($1) OFFSET $2
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."Lead"."id" FROM "public"."Lead" WHERE ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) OFFSET $3) AS "sub"
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."industry" FROM "public"."Lead" WHERE ("public"."Lead"."industry" IS NOT NULL AND ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2)) OFFSET $3
+prisma:query COMMIT
+ GET /api/leads?page=1&limit=20 200 in 840ms (next.js: 10ms, proxy.ts: 69ms, application-code: 761ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."companyName", "public"."Lead"."industry", "public"."Lead"."address", "public"."Lead"."city", "public"."Lead"."webPresence"::text, "public"."Lead"."website", "public"."Lead"."treatwellUrl", "public"."Lead"."phone", "public"."Lead"."email", "public"."Lead"."instagram", "public"."Lead"."googleMapsUrl", "public"."Lead"."googleRating", "public"."Lead"."googleReviewCount", "public"."Lead"."contactPerson", "public"."Lead"."preferredContactMethod"::text, "public"."Lead"."contactNote", "public"."Lead"."notes", "public"."Lead"."richNotes", "public"."Lead"."source", "public"."Lead"."lastContactAt", "public"."Lead"."nextFollowUpAt", "public"."Lead"."status"::text, "public"."Lead"."priority"::text, "public"."Lead"."score", "public"."Lead"."scoreReasons", "public"."Lead"."opportunityTags", "public"."Lead"."interestingReason", "public"."Lead"."enrichmentStatus", "public"."Lead"."hasMenu", "public"."Lead"."menuUrl", "public"."Lead"."menuSnippet", "public"."Lead"."menuCheckedAt", "public"."Lead"."acquisitionType"::text, "public"."Lead"."nfcDemoUrl", "public"."Lead"."addedAt", "public"."Lead"."createdAt", "public"."Lead"."updatedAt", "public"."Lead"."createdById", "public"."Lead"."assignedToId", COALESCE("aggr_selection_0_Interaction"."_aggr_count_interactions", 0) AS "_aggr_count_interactions", COALESCE("aggr_selection_1_WebsiteAudit"."_aggr_count_audits", 0) AS "_aggr_count_audits", COALESCE("aggr_selection_2_Task"."_aggr_count_tasks", 0) AS "_aggr_count_tasks" FROM "public"."Lead" LEFT JOIN (SELECT "public"."Interaction"."leadId", COUNT(*) AS "_aggr_count_interactions" FROM "public"."Interaction" WHERE 1=1 GROUP BY "public"."Interaction"."leadId") AS "aggr_selection_0_Interaction" ON ("public"."Lead"."id" = "aggr_selection_0_Interaction"."leadId") LEFT JOIN (SELECT "public"."WebsiteAudit"."leadId", COUNT(*) AS "_aggr_count_audits" FROM "public"."WebsiteAudit" WHERE 1=1 GROUP BY "public"."WebsiteAudit"."leadId") AS "aggr_selection_1_WebsiteAudit" ON ("public"."Lead"."id" = "aggr_selection_1_WebsiteAudit"."leadId") LEFT JOIN (SELECT "public"."Task"."leadId", COUNT(*) AS "_aggr_count_tasks" FROM "public"."Task" WHERE 1=1 GROUP BY "public"."Task"."leadId") AS "aggr_selection_2_Task" ON ("public"."Lead"."id" = "aggr_selection_2_Task"."leadId") WHERE ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) ORDER BY "public"."Lead"."updatedAt" DESC LIMIT $3 OFFSET $4
+prisma:query SELECT "public"."User"."id", "public"."User"."displayName", "public"."User"."email" FROM "public"."User" WHERE "public"."User"."id" IN ($1) OFFSET $2
+prisma:query SELECT "public"."User"."id", "public"."User"."displayName", "public"."User"."email" FROM "public"."User" WHERE "public"."User"."id" IN ($1) OFFSET $2
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."Lead"."id" FROM "public"."Lead" WHERE ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) OFFSET $3) AS "sub"
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."industry" FROM "public"."Lead" WHERE ("public"."Lead"."industry" IS NOT NULL AND ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2)) OFFSET $3
+prisma:query COMMIT
+ GET /api/leads?page=1&limit=20 200 in 708ms (next.js: 3ms, proxy.ts: 54ms, application-code: 651ms)
+prisma:query SELECT 1
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."companyName", "public"."Lead"."industry", "public"."Lead"."address", "public"."Lead"."city", "public"."Lead"."webPresence"::text, "public"."Lead"."website", "public"."Lead"."treatwellUrl", "public"."Lead"."phone", "public"."Lead"."email", "public"."Lead"."instagram", "public"."Lead"."googleMapsUrl", "public"."Lead"."googleRating", "public"."Lead"."googleReviewCount", "public"."Lead"."contactPerson", "public"."Lead"."preferredContactMethod"::text, "public"."Lead"."contactNote", "public"."Lead"."notes", "public"."Lead"."richNotes", "public"."Lead"."source", "public"."Lead"."lastContactAt", "public"."Lead"."nextFollowUpAt", "public"."Lead"."status"::text, "public"."Lead"."priority"::text, "public"."Lead"."score", "public"."Lead"."scoreReasons", "public"."Lead"."opportunityTags", "public"."Lead"."interestingReason", "public"."Lead"."enrichmentStatus", "public"."Lead"."hasMenu", "public"."Lead"."menuUrl", "public"."Lead"."menuSnippet", "public"."Lead"."menuCheckedAt", "public"."Lead"."acquisitionType"::text, "public"."Lead"."nfcDemoUrl", "public"."Lead"."addedAt", "public"."Lead"."createdAt", "public"."Lead"."updatedAt", "public"."Lead"."createdById", "public"."Lead"."assignedToId", COALESCE("aggr_selection_0_Interaction"."_aggr_count_interactions", 0) AS "_aggr_count_interactions", COALESCE("aggr_selection_1_WebsiteAudit"."_aggr_count_audits", 0) AS "_aggr_count_audits", COALESCE("aggr_selection_2_Task"."_aggr_count_tasks", 0) AS "_aggr_count_tasks" FROM "public"."Lead" LEFT JOIN (SELECT "public"."Interaction"."leadId", COUNT(*) AS "_aggr_count_interactions" FROM "public"."Interaction" WHERE 1=1 GROUP BY "public"."Interaction"."leadId") AS "aggr_selection_0_Interaction" ON ("public"."Lead"."id" = "aggr_selection_0_Interaction"."leadId") LEFT JOIN (SELECT "public"."WebsiteAudit"."leadId", COUNT(*) AS "_aggr_count_audits" FROM "public"."WebsiteAudit" WHERE 1=1 GROUP BY "public"."WebsiteAudit"."leadId") AS "aggr_selection_1_WebsiteAudit" ON ("public"."Lead"."id" = "aggr_selection_1_WebsiteAudit"."leadId") LEFT JOIN (SELECT "public"."Task"."leadId", COUNT(*) AS "_aggr_count_tasks" FROM "public"."Task" WHERE 1=1 GROUP BY "public"."Task"."leadId") AS "aggr_selection_2_Task" ON ("public"."Lead"."id" = "aggr_selection_2_Task"."leadId") WHERE (("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) AND ("public"."Lead"."companyName" ILIKE $3 OR "public"."Lead"."city" ILIKE $4 OR "public"."Lead"."contactPerson" ILIKE $5 OR "public"."Lead"."phone" ILIKE $6)) ORDER BY "public"."Lead"."updatedAt" DESC LIMIT $7 OFFSET $8
+prisma:query SELECT "public"."User"."id", "public"."User"."displayName", "public"."User"."email" FROM "public"."User" WHERE "public"."User"."id" IN ($1) OFFSET $2
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."Lead"."id" FROM "public"."Lead" WHERE (("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) AND ("public"."Lead"."companyName" ILIKE $3 OR "public"."Lead"."city" ILIKE $4 OR "public"."Lead"."contactPerson" ILIKE $5 OR "public"."Lead"."phone" ILIKE $6)) OFFSET $7) AS "sub"
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."industry" FROM "public"."Lead" WHERE ("public"."Lead"."industry" IS NOT NULL AND ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2)) OFFSET $3
+prisma:query COMMIT
+ GET /api/leads?search=d&page=1&limit=20 200 in 843ms (next.js: 1.0ms, proxy.ts: 106ms, application-code: 736ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."companyName", "public"."Lead"."industry", "public"."Lead"."address", "public"."Lead"."city", "public"."Lead"."webPresence"::text, "public"."Lead"."website", "public"."Lead"."treatwellUrl", "public"."Lead"."phone", "public"."Lead"."email", "public"."Lead"."instagram", "public"."Lead"."googleMapsUrl", "public"."Lead"."googleRating", "public"."Lead"."googleReviewCount", "public"."Lead"."contactPerson", "public"."Lead"."preferredContactMethod"::text, "public"."Lead"."contactNote", "public"."Lead"."notes", "public"."Lead"."richNotes", "public"."Lead"."source", "public"."Lead"."lastContactAt", "public"."Lead"."nextFollowUpAt", "public"."Lead"."status"::text, "public"."Lead"."priority"::text, "public"."Lead"."score", "public"."Lead"."scoreReasons", "public"."Lead"."opportunityTags", "public"."Lead"."interestingReason", "public"."Lead"."enrichmentStatus", "public"."Lead"."hasMenu", "public"."Lead"."menuUrl", "public"."Lead"."menuSnippet", "public"."Lead"."menuCheckedAt", "public"."Lead"."acquisitionType"::text, "public"."Lead"."nfcDemoUrl", "public"."Lead"."addedAt", "public"."Lead"."createdAt", "public"."Lead"."updatedAt", "public"."Lead"."createdById", "public"."Lead"."assignedToId", COALESCE("aggr_selection_0_Interaction"."_aggr_count_interactions", 0) AS "_aggr_count_interactions", COALESCE("aggr_selection_1_WebsiteAudit"."_aggr_count_audits", 0) AS "_aggr_count_audits", COALESCE("aggr_selection_2_Task"."_aggr_count_tasks", 0) AS "_aggr_count_tasks" FROM "public"."Lead" LEFT JOIN (SELECT "public"."Interaction"."leadId", COUNT(*) AS "_aggr_count_interactions" FROM "public"."Interaction" WHERE 1=1 GROUP BY "public"."Interaction"."leadId") AS "aggr_selection_0_Interaction" ON ("public"."Lead"."id" = "aggr_selection_0_Interaction"."leadId") LEFT JOIN (SELECT "public"."WebsiteAudit"."leadId", COUNT(*) AS "_aggr_count_audits" FROM "public"."WebsiteAudit" WHERE 1=1 GROUP BY "public"."WebsiteAudit"."leadId") AS "aggr_selection_1_WebsiteAudit" ON ("public"."Lead"."id" = "aggr_selection_1_WebsiteAudit"."leadId") LEFT JOIN (SELECT "public"."Task"."leadId", COUNT(*) AS "_aggr_count_tasks" FROM "public"."Task" WHERE 1=1 GROUP BY "public"."Task"."leadId") AS "aggr_selection_2_Task" ON ("public"."Lead"."id" = "aggr_selection_2_Task"."leadId") WHERE (("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) AND ("public"."Lead"."companyName" ILIKE $3 OR "public"."Lead"."city" ILIKE $4 OR "public"."Lead"."contactPerson" ILIKE $5 OR "public"."Lead"."phone" ILIKE $6)) ORDER BY "public"."Lead"."updatedAt" DESC LIMIT $7 OFFSET $8
+prisma:query SELECT "public"."User"."id", "public"."User"."displayName", "public"."User"."email" FROM "public"."User" WHERE "public"."User"."id" IN ($1) OFFSET $2
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."Lead"."id" FROM "public"."Lead" WHERE (("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) AND ("public"."Lead"."companyName" ILIKE $3 OR "public"."Lead"."city" ILIKE $4 OR "public"."Lead"."contactPerson" ILIKE $5 OR "public"."Lead"."phone" ILIKE $6)) OFFSET $7) AS "sub"
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."industry" FROM "public"."Lead" WHERE ("public"."Lead"."industry" IS NOT NULL AND ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2)) OFFSET $3
+prisma:query COMMIT
+ GET /api/leads?search=dr&page=1&limit=20 200 in 1141ms (next.js: 3ms, proxy.ts: 114ms, application-code: 1024ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."companyName", "public"."Lead"."industry", "public"."Lead"."address", "public"."Lead"."city", "public"."Lead"."webPresence"::text, "public"."Lead"."website", "public"."Lead"."treatwellUrl", "public"."Lead"."phone", "public"."Lead"."email", "public"."Lead"."instagram", "public"."Lead"."googleMapsUrl", "public"."Lead"."googleRating", "public"."Lead"."googleReviewCount", "public"."Lead"."contactPerson", "public"."Lead"."preferredContactMethod"::text, "public"."Lead"."contactNote", "public"."Lead"."notes", "public"."Lead"."richNotes", "public"."Lead"."source", "public"."Lead"."lastContactAt", "public"."Lead"."nextFollowUpAt", "public"."Lead"."status"::text, "public"."Lead"."priority"::text, "public"."Lead"."score", "public"."Lead"."scoreReasons", "public"."Lead"."opportunityTags", "public"."Lead"."interestingReason", "public"."Lead"."enrichmentStatus", "public"."Lead"."hasMenu", "public"."Lead"."menuUrl", "public"."Lead"."menuSnippet", "public"."Lead"."menuCheckedAt", "public"."Lead"."acquisitionType"::text, "public"."Lead"."nfcDemoUrl", "public"."Lead"."addedAt", "public"."Lead"."createdAt", "public"."Lead"."updatedAt", "public"."Lead"."createdById", "public"."Lead"."assignedToId", COALESCE("aggr_selection_0_Interaction"."_aggr_count_interactions", 0) AS "_aggr_count_interactions", COALESCE("aggr_selection_1_WebsiteAudit"."_aggr_count_audits", 0) AS "_aggr_count_audits", COALESCE("aggr_selection_2_Task"."_aggr_count_tasks", 0) AS "_aggr_count_tasks" FROM "public"."Lead" LEFT JOIN (SELECT "public"."Interaction"."leadId", COUNT(*) AS "_aggr_count_interactions" FROM "public"."Interaction" WHERE 1=1 GROUP BY "public"."Interaction"."leadId") AS "aggr_selection_0_Interaction" ON ("public"."Lead"."id" = "aggr_selection_0_Interaction"."leadId") LEFT JOIN (SELECT "public"."WebsiteAudit"."leadId", COUNT(*) AS "_aggr_count_audits" FROM "public"."WebsiteAudit" WHERE 1=1 GROUP BY "public"."WebsiteAudit"."leadId") AS "aggr_selection_1_WebsiteAudit" ON ("public"."Lead"."id" = "aggr_selection_1_WebsiteAudit"."leadId") LEFT JOIN (SELECT "public"."Task"."leadId", COUNT(*) AS "_aggr_count_tasks" FROM "public"."Task" WHERE 1=1 GROUP BY "public"."Task"."leadId") AS "aggr_selection_2_Task" ON ("public"."Lead"."id" = "aggr_selection_2_Task"."leadId") WHERE (("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) AND ("public"."Lead"."companyName" ILIKE $3 OR "public"."Lead"."city" ILIKE $4 OR "public"."Lead"."contactPerson" ILIKE $5 OR "public"."Lead"."phone" ILIKE $6)) ORDER BY "public"."Lead"."updatedAt" DESC LIMIT $7 OFFSET $8
+prisma:query SELECT "public"."User"."id", "public"."User"."displayName", "public"."User"."email" FROM "public"."User" WHERE "public"."User"."id" IN ($1) OFFSET $2
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."Lead"."id" FROM "public"."Lead" WHERE (("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) AND ("public"."Lead"."companyName" ILIKE $3 OR "public"."Lead"."city" ILIKE $4 OR "public"."Lead"."contactPerson" ILIKE $5 OR "public"."Lead"."phone" ILIKE $6)) OFFSET $7) AS "sub"
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."industry" FROM "public"."Lead" WHERE ("public"."Lead"."industry" IS NOT NULL AND ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2)) OFFSET $3
+prisma:query COMMIT
+ GET /api/leads?search=dre&page=1&limit=20 200 in 1506ms (next.js: 3ms, proxy.ts: 55ms, application-code: 1448ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."companyName", "public"."Lead"."industry", "public"."Lead"."address", "public"."Lead"."city", "public"."Lead"."webPresence"::text, "public"."Lead"."website", "public"."Lead"."treatwellUrl", "public"."Lead"."phone", "public"."Lead"."email", "public"."Lead"."instagram", "public"."Lead"."googleMapsUrl", "public"."Lead"."googleRating", "public"."Lead"."googleReviewCount", "public"."Lead"."contactPerson", "public"."Lead"."preferredContactMethod"::text, "public"."Lead"."contactNote", "public"."Lead"."notes", "public"."Lead"."richNotes", "public"."Lead"."source", "public"."Lead"."lastContactAt", "public"."Lead"."nextFollowUpAt", "public"."Lead"."status"::text, "public"."Lead"."priority"::text, "public"."Lead"."score", "public"."Lead"."scoreReasons", "public"."Lead"."opportunityTags", "public"."Lead"."interestingReason", "public"."Lead"."enrichmentStatus", "public"."Lead"."hasMenu", "public"."Lead"."menuUrl", "public"."Lead"."menuSnippet", "public"."Lead"."menuCheckedAt", "public"."Lead"."acquisitionType"::text, "public"."Lead"."nfcDemoUrl", "public"."Lead"."addedAt", "public"."Lead"."createdAt", "public"."Lead"."updatedAt", "public"."Lead"."createdById", "public"."Lead"."assignedToId", COALESCE("aggr_selection_0_Interaction"."_aggr_count_interactions", 0) AS "_aggr_count_interactions", COALESCE("aggr_selection_1_WebsiteAudit"."_aggr_count_audits", 0) AS "_aggr_count_audits", COALESCE("aggr_selection_2_Task"."_aggr_count_tasks", 0) AS "_aggr_count_tasks" FROM "public"."Lead" LEFT JOIN (SELECT "public"."Interaction"."leadId", COUNT(*) AS "_aggr_count_interactions" FROM "public"."Interaction" WHERE 1=1 GROUP BY "public"."Interaction"."leadId") AS "aggr_selection_0_Interaction" ON ("public"."Lead"."id" = "aggr_selection_0_Interaction"."leadId") LEFT JOIN (SELECT "public"."WebsiteAudit"."leadId", COUNT(*) AS "_aggr_count_audits" FROM "public"."WebsiteAudit" WHERE 1=1 GROUP BY "public"."WebsiteAudit"."leadId") AS "aggr_selection_1_WebsiteAudit" ON ("public"."Lead"."id" = "aggr_selection_1_WebsiteAudit"."leadId") LEFT JOIN (SELECT "public"."Task"."leadId", COUNT(*) AS "_aggr_count_tasks" FROM "public"."Task" WHERE 1=1 GROUP BY "public"."Task"."leadId") AS "aggr_selection_2_Task" ON ("public"."Lead"."id" = "aggr_selection_2_Task"."leadId") WHERE (("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) AND ("public"."Lead"."companyName" ILIKE $3 OR "public"."Lead"."city" ILIKE $4 OR "public"."Lead"."contactPerson" ILIKE $5 OR "public"."Lead"."phone" ILIKE $6)) ORDER BY "public"."Lead"."updatedAt" DESC LIMIT $7 OFFSET $8
+prisma:query SELECT "public"."User"."id", "public"."User"."displayName", "public"."User"."email" FROM "public"."User" WHERE "public"."User"."id" IN ($1) OFFSET $2
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."Lead"."id" FROM "public"."Lead" WHERE (("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) AND ("public"."Lead"."companyName" ILIKE $3 OR "public"."Lead"."city" ILIKE $4 OR "public"."Lead"."contactPerson" ILIKE $5 OR "public"."Lead"."phone" ILIKE $6)) OFFSET $7) AS "sub"
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."industry" FROM "public"."Lead" WHERE ("public"."Lead"."industry" IS NOT NULL AND ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2)) OFFSET $3
+prisma:query COMMIT
+ GET /api/leads?search=dres&page=1&limit=20 200 in 1834ms (next.js: 3ms, proxy.ts: 69ms, application-code: 1761ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."companyName", "public"."Lead"."industry", "public"."Lead"."address", "public"."Lead"."city", "public"."Lead"."webPresence"::text, "public"."Lead"."website", "public"."Lead"."treatwellUrl", "public"."Lead"."phone", "public"."Lead"."email", "public"."Lead"."instagram", "public"."Lead"."googleMapsUrl", "public"."Lead"."googleRating", "public"."Lead"."googleReviewCount", "public"."Lead"."contactPerson", "public"."Lead"."preferredContactMethod"::text, "public"."Lead"."contactNote", "public"."Lead"."notes", "public"."Lead"."richNotes", "public"."Lead"."source", "public"."Lead"."lastContactAt", "public"."Lead"."nextFollowUpAt", "public"."Lead"."status"::text, "public"."Lead"."priority"::text, "public"."Lead"."score", "public"."Lead"."scoreReasons", "public"."Lead"."opportunityTags", "public"."Lead"."interestingReason", "public"."Lead"."enrichmentStatus", "public"."Lead"."hasMenu", "public"."Lead"."menuUrl", "public"."Lead"."menuSnippet", "public"."Lead"."menuCheckedAt", "public"."Lead"."acquisitionType"::text, "public"."Lead"."nfcDemoUrl", "public"."Lead"."addedAt", "public"."Lead"."createdAt", "public"."Lead"."updatedAt", "public"."Lead"."createdById", "public"."Lead"."assignedToId", COALESCE("aggr_selection_0_Interaction"."_aggr_count_interactions", 0) AS "_aggr_count_interactions", COALESCE("aggr_selection_1_WebsiteAudit"."_aggr_count_audits", 0) AS "_aggr_count_audits", COALESCE("aggr_selection_2_Task"."_aggr_count_tasks", 0) AS "_aggr_count_tasks" FROM "public"."Lead" LEFT JOIN (SELECT "public"."Interaction"."leadId", COUNT(*) AS "_aggr_count_interactions" FROM "public"."Interaction" WHERE 1=1 GROUP BY "public"."Interaction"."leadId") AS "aggr_selection_0_Interaction" ON ("public"."Lead"."id" = "aggr_selection_0_Interaction"."leadId") LEFT JOIN (SELECT "public"."WebsiteAudit"."leadId", COUNT(*) AS "_aggr_count_audits" FROM "public"."WebsiteAudit" WHERE 1=1 GROUP BY "public"."WebsiteAudit"."leadId") AS "aggr_selection_1_WebsiteAudit" ON ("public"."Lead"."id" = "aggr_selection_1_WebsiteAudit"."leadId") LEFT JOIN (SELECT "public"."Task"."leadId", COUNT(*) AS "_aggr_count_tasks" FROM "public"."Task" WHERE 1=1 GROUP BY "public"."Task"."leadId") AS "aggr_selection_2_Task" ON ("public"."Lead"."id" = "aggr_selection_2_Task"."leadId") WHERE (("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) AND ("public"."Lead"."companyName" ILIKE $3 OR "public"."Lead"."city" ILIKE $4 OR "public"."Lead"."contactPerson" ILIKE $5 OR "public"."Lead"."phone" ILIKE $6)) ORDER BY "public"."Lead"."updatedAt" DESC LIMIT $7 OFFSET $8
+prisma:query SELECT "public"."User"."id", "public"."User"."displayName", "public"."User"."email" FROM "public"."User" WHERE "public"."User"."id" IN ($1) OFFSET $2
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."Lead"."id" FROM "public"."Lead" WHERE (("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) AND ("public"."Lead"."companyName" ILIKE $3 OR "public"."Lead"."city" ILIKE $4 OR "public"."Lead"."contactPerson" ILIKE $5 OR "public"."Lead"."phone" ILIKE $6)) OFFSET $7) AS "sub"
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."industry" FROM "public"."Lead" WHERE ("public"."Lead"."industry" IS NOT NULL AND ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2)) OFFSET $3
+prisma:query COMMIT
+ GET /api/leads?search=dress&page=1&limit=20 200 in 2.2s (next.js: 4ms, proxy.ts: 85ms, application-code: 2.1s)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."companyName", "public"."Lead"."industry", "public"."Lead"."address", "public"."Lead"."city", "public"."Lead"."webPresence"::text, "public"."Lead"."website", "public"."Lead"."treatwellUrl", "public"."Lead"."phone", "public"."Lead"."email", "public"."Lead"."instagram", "public"."Lead"."googleMapsUrl", "public"."Lead"."googleRating", "public"."Lead"."googleReviewCount", "public"."Lead"."contactPerson", "public"."Lead"."preferredContactMethod"::text, "public"."Lead"."contactNote", "public"."Lead"."notes", "public"."Lead"."richNotes", "public"."Lead"."source", "public"."Lead"."lastContactAt", "public"."Lead"."nextFollowUpAt", "public"."Lead"."status"::text, "public"."Lead"."priority"::text, "public"."Lead"."score", "public"."Lead"."scoreReasons", "public"."Lead"."opportunityTags", "public"."Lead"."interestingReason", "public"."Lead"."enrichmentStatus", "public"."Lead"."hasMenu", "public"."Lead"."menuUrl", "public"."Lead"."menuSnippet", "public"."Lead"."menuCheckedAt", "public"."Lead"."acquisitionType"::text, "public"."Lead"."nfcDemoUrl", "public"."Lead"."addedAt", "public"."Lead"."createdAt", "public"."Lead"."updatedAt", "public"."Lead"."createdById", "public"."Lead"."assignedToId", COALESCE("aggr_selection_0_Interaction"."_aggr_count_interactions", 0) AS "_aggr_count_interactions", COALESCE("aggr_selection_1_WebsiteAudit"."_aggr_count_audits", 0) AS "_aggr_count_audits", COALESCE("aggr_selection_2_Task"."_aggr_count_tasks", 0) AS "_aggr_count_tasks" FROM "public"."Lead" LEFT JOIN (SELECT "public"."Interaction"."leadId", COUNT(*) AS "_aggr_count_interactions" FROM "public"."Interaction" WHERE 1=1 GROUP BY "public"."Interaction"."leadId") AS "aggr_selection_0_Interaction" ON ("public"."Lead"."id" = "aggr_selection_0_Interaction"."leadId") LEFT JOIN (SELECT "public"."WebsiteAudit"."leadId", COUNT(*) AS "_aggr_count_audits" FROM "public"."WebsiteAudit" WHERE 1=1 GROUP BY "public"."WebsiteAudit"."leadId") AS "aggr_selection_1_WebsiteAudit" ON ("public"."Lead"."id" = "aggr_selection_1_WebsiteAudit"."leadId") LEFT JOIN (SELECT "public"."Task"."leadId", COUNT(*) AS "_aggr_count_tasks" FROM "public"."Task" WHERE 1=1 GROUP BY "public"."Task"."leadId") AS "aggr_selection_2_Task" ON ("public"."Lead"."id" = "aggr_selection_2_Task"."leadId") WHERE (("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) AND ("public"."Lead"."companyName" ILIKE $3 OR "public"."Lead"."city" ILIKE $4 OR "public"."Lead"."contactPerson" ILIKE $5 OR "public"."Lead"."phone" ILIKE $6)) ORDER BY "public"."Lead"."updatedAt" DESC LIMIT $7 OFFSET $8
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."Lead"."id" FROM "public"."Lead" WHERE (("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) AND ("public"."Lead"."companyName" ILIKE $3 OR "public"."Lead"."city" ILIKE $4 OR "public"."Lead"."contactPerson" ILIKE $5 OR "public"."Lead"."phone" ILIKE $6)) OFFSET $7) AS "sub"
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."industry" FROM "public"."Lead" WHERE ("public"."Lead"."industry" IS NOT NULL AND ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2)) OFFSET $3
+prisma:query COMMIT
+ GET /api/leads?search=dresso&page=1&limit=20 200 in 1563ms (next.js: 3ms, proxy.ts: 135ms, application-code: 1425ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."companyName", "public"."Lead"."industry", "public"."Lead"."address", "public"."Lead"."city", "public"."Lead"."webPresence"::text, "public"."Lead"."website", "public"."Lead"."treatwellUrl", "public"."Lead"."phone", "public"."Lead"."email", "public"."Lead"."instagram", "public"."Lead"."googleMapsUrl", "public"."Lead"."googleRating", "public"."Lead"."googleReviewCount", "public"."Lead"."contactPerson", "public"."Lead"."preferredContactMethod"::text, "public"."Lead"."contactNote", "public"."Lead"."notes", "public"."Lead"."richNotes", "public"."Lead"."source", "public"."Lead"."lastContactAt", "public"."Lead"."nextFollowUpAt", "public"."Lead"."status"::text, "public"."Lead"."priority"::text, "public"."Lead"."score", "public"."Lead"."scoreReasons", "public"."Lead"."opportunityTags", "public"."Lead"."interestingReason", "public"."Lead"."enrichmentStatus", "public"."Lead"."hasMenu", "public"."Lead"."menuUrl", "public"."Lead"."menuSnippet", "public"."Lead"."menuCheckedAt", "public"."Lead"."acquisitionType"::text, "public"."Lead"."nfcDemoUrl", "public"."Lead"."addedAt", "public"."Lead"."createdAt", "public"."Lead"."updatedAt", "public"."Lead"."createdById", "public"."Lead"."assignedToId", COALESCE("aggr_selection_0_Interaction"."_aggr_count_interactions", 0) AS "_aggr_count_interactions", COALESCE("aggr_selection_1_WebsiteAudit"."_aggr_count_audits", 0) AS "_aggr_count_audits", COALESCE("aggr_selection_2_Task"."_aggr_count_tasks", 0) AS "_aggr_count_tasks" FROM "public"."Lead" LEFT JOIN (SELECT "public"."Interaction"."leadId", COUNT(*) AS "_aggr_count_interactions" FROM "public"."Interaction" WHERE 1=1 GROUP BY "public"."Interaction"."leadId") AS "aggr_selection_0_Interaction" ON ("public"."Lead"."id" = "aggr_selection_0_Interaction"."leadId") LEFT JOIN (SELECT "public"."WebsiteAudit"."leadId", COUNT(*) AS "_aggr_count_audits" FROM "public"."WebsiteAudit" WHERE 1=1 GROUP BY "public"."WebsiteAudit"."leadId") AS "aggr_selection_1_WebsiteAudit" ON ("public"."Lead"."id" = "aggr_selection_1_WebsiteAudit"."leadId") LEFT JOIN (SELECT "public"."Task"."leadId", COUNT(*) AS "_aggr_count_tasks" FROM "public"."Task" WHERE 1=1 GROUP BY "public"."Task"."leadId") AS "aggr_selection_2_Task" ON ("public"."Lead"."id" = "aggr_selection_2_Task"."leadId") WHERE (("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) AND ("public"."Lead"."companyName" ILIKE $3 OR "public"."Lead"."city" ILIKE $4 OR "public"."Lead"."contactPerson" ILIKE $5 OR "public"."Lead"."phone" ILIKE $6)) ORDER BY "public"."Lead"."updatedAt" DESC LIMIT $7 OFFSET $8
+prisma:query SELECT "public"."User"."id", "public"."User"."displayName", "public"."User"."email" FROM "public"."User" WHERE "public"."User"."id" IN ($1) OFFSET $2
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."Lead"."id" FROM "public"."Lead" WHERE (("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) AND ("public"."Lead"."companyName" ILIKE $3 OR "public"."Lead"."city" ILIKE $4 OR "public"."Lead"."contactPerson" ILIKE $5 OR "public"."Lead"."phone" ILIKE $6)) OFFSET $7) AS "sub"
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."industry" FROM "public"."Lead" WHERE ("public"."Lead"."industry" IS NOT NULL AND ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2)) OFFSET $3
+prisma:query COMMIT
+ GET /api/leads?search=dress&page=1&limit=20 200 in 914ms (next.js: 5ms, proxy.ts: 63ms, application-code: 845ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."CallRecording"."id", "public"."CallRecording"."leadId", "public"."CallRecording"."createdById", "public"."CallRecording"."fileName", "public"."CallRecording"."fileSize", "public"."CallRecording"."durationSeconds", "public"."CallRecording"."storageUrl", "public"."CallRecording"."transcription", "public"."CallRecording"."aiSummary", "public"."CallRecording"."aiNextSteps", "public"."CallRecording"."aiSentiment", "public"."CallRecording"."aiExtractedData", "public"."CallRecording"."aiFeedback", "public"."CallRecording"."status"::text, "public"."CallRecording"."error", "public"."CallRecording"."createdAt", "public"."CallRecording"."updatedAt" FROM "public"."CallRecording" WHERE ("public"."CallRecording"."createdById" = $1 AND "public"."CallRecording"."leadId" = $2) ORDER BY "public"."CallRecording"."createdAt" DESC OFFSET $3
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."companyName", "public"."Lead"."status"::text, "public"."Lead"."phone" FROM "public"."Lead" WHERE "public"."Lead"."id" IN ($1) OFFSET $2
+prisma:query SELECT "public"."User"."id", "public"."User"."displayName" FROM "public"."User" WHERE "public"."User"."id" IN ($1) OFFSET $2
+prisma:query SELECT "public"."AudioFile"."id", "public"."AudioFile"."recordingId" FROM "public"."AudioFile" WHERE "public"."AudioFile"."recordingId" IN ($1) OFFSET $2
+prisma:query COMMIT
+ GET /api/cold-calls/recordings?leadId=cmtbhpv7f0016jr041ojwkyai 200 in 743ms (next.js: 214ms, proxy.ts: 67ms, application-code: 462ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."companyName", "public"."Lead"."industry", "public"."Lead"."address", "public"."Lead"."city", "public"."Lead"."webPresence"::text, "public"."Lead"."website", "public"."Lead"."treatwellUrl", "public"."Lead"."phone", "public"."Lead"."email", "public"."Lead"."instagram", "public"."Lead"."googleMapsUrl", "public"."Lead"."googleRating", "public"."Lead"."googleReviewCount", "public"."Lead"."contactPerson", "public"."Lead"."preferredContactMethod"::text, "public"."Lead"."contactNote", "public"."Lead"."notes", "public"."Lead"."richNotes", "public"."Lead"."source", "public"."Lead"."lastContactAt", "public"."Lead"."nextFollowUpAt", "public"."Lead"."status"::text, "public"."Lead"."priority"::text, "public"."Lead"."score", "public"."Lead"."scoreReasons", "public"."Lead"."opportunityTags", "public"."Lead"."interestingReason", "public"."Lead"."enrichmentStatus", "public"."Lead"."hasMenu", "public"."Lead"."menuUrl", "public"."Lead"."menuSnippet", "public"."Lead"."menuCheckedAt", "public"."Lead"."acquisitionType"::text, "public"."Lead"."nfcDemoUrl", "public"."Lead"."addedAt", "public"."Lead"."createdAt", "public"."Lead"."updatedAt", "public"."Lead"."createdById", "public"."Lead"."assignedToId" FROM "public"."Lead" WHERE ("public"."Lead"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."User"."id", "public"."User"."displayName", "public"."User"."email" FROM "public"."User" WHERE "public"."User"."id" IN ($1) OFFSET $2
+prisma:query SELECT "public"."Interaction"."id", "public"."Interaction"."leadId", "public"."Interaction"."type"::text, "public"."Interaction"."note", "public"."Interaction"."createdAt", "public"."Interaction"."createdById", "public"."Interaction"."callRecordingId" FROM "public"."Interaction" WHERE "public"."Interaction"."leadId" IN ($1) ORDER BY "public"."Interaction"."createdAt" DESC OFFSET $2
+prisma:query SELECT "public"."User"."id", "public"."User"."displayName" FROM "public"."User" WHERE "public"."User"."id" IN ($1) OFFSET $2
+prisma:query SELECT "public"."WebsiteAudit"."id", "public"."WebsiteAudit"."leadId", "public"."WebsiteAudit"."url", "public"."WebsiteAudit"."reachable", "public"."WebsiteAudit"."statusCode", "public"."WebsiteAudit"."https", "public"."WebsiteAudit"."responseTimeMs", "public"."WebsiteAudit"."hasViewport", "public"."WebsiteAudit"."hasTitle", "public"."WebsiteAudit"."hasMetaDescription", "public"."WebsiteAudit"."hasImprint", "public"."WebsiteAudit"."hasPrivacy", "public"."WebsiteAudit"."hasConsent", "public"."WebsiteAudit"."hasContact", "public"."WebsiteAudit"."hasPhone", "public"."WebsiteAudit"."hasEmail", "public"."WebsiteAudit"."hasSocials", "public"."WebsiteAudit"."hasCta", "public"."WebsiteAudit"."hasBooking", "public"."WebsiteAudit"."findings", "public"."WebsiteAudit"."error", "public"."WebsiteAudit"."createdAt", "public"."WebsiteAudit"."createdById" FROM "public"."WebsiteAudit" WHERE "public"."WebsiteAudit"."leadId" IN ($1) ORDER BY "public"."WebsiteAudit"."createdAt" DESC LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Task"."id", "public"."Task"."title", "public"."Task"."description", "public"."Task"."status"::text, "public"."Task"."priority"::text, "public"."Task"."category"::text, "public"."Task"."dueAt", "public"."Task"."completedAt", "public"."Task"."leadId", "public"."Task"."userId", "public"."Task"."aiGenerated", "public"."Task"."createdAt", "public"."Task"."updatedAt" FROM "public"."Task" WHERE "public"."Task"."leadId" IN ($1) ORDER BY "public"."Task"."createdAt" DESC OFFSET $2
+prisma:query SELECT "public"."CallRecording"."id", "public"."CallRecording"."leadId", "public"."CallRecording"."createdById", "public"."CallRecording"."fileName", "public"."CallRecording"."fileSize", "public"."CallRecording"."durationSeconds", "public"."CallRecording"."storageUrl", "public"."CallRecording"."transcription", "public"."CallRecording"."aiSummary", "public"."CallRecording"."aiNextSteps", "public"."CallRecording"."aiSentiment", "public"."CallRecording"."aiExtractedData", "public"."CallRecording"."aiFeedback", "public"."CallRecording"."status"::text, "public"."CallRecording"."error", "public"."CallRecording"."createdAt", "public"."CallRecording"."updatedAt" FROM "public"."CallRecording" WHERE "public"."CallRecording"."leadId" IN ($1) ORDER BY "public"."CallRecording"."createdAt" DESC OFFSET $2
+prisma:query COMMIT
+ GET /api/leads/cmtbhpv7f0016jr041ojwkyai 200 in 1353ms (next.js: 696ms, proxy.ts: 73ms, application-code: 584ms)
+[browser] Uncaught TypeError: mediaQuery.addEventListener is not a function
+    at CustomAudioPlayer.useEffect (src/components/ui/custom-audio-player.tsx:56:16)
+    at <unknown> (src/components/leads/lead-detail-modal.tsx:1198:39)
+    at Array.map (<anonymous>)
+    at LeadDetailModal (src/components/leads/lead-detail-modal.tsx:1160:37)
+    at LeadsTable (src/components/leads/leads-table.tsx:590:7)
+    at LeadsPage (src/app/leads/page.tsx:22:7)
+  54 |     setReducedMotion(mediaQuery.matches);
+  55 |     const handler = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
+> 56 |     mediaQuery.addEventListener("change", handler);
+     |                ^
+  57 |     return () => mediaQuery.removeEventListener("change", handler);
+  58 |   }, []);
+  59 |
+prisma:query SELECT 1
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."AudioFile"."id", "public"."AudioFile"."recordingId", "public"."AudioFile"."data", "public"."AudioFile"."mimeType", "public"."AudioFile"."createdAt" FROM "public"."AudioFile" WHERE ("public"."AudioFile"."recordingId" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query COMMIT
+ GET /api/cold-calls/recordings/cmtbhxewh0018jr041vwulpip/audio 206 in 1378ms (next.js: 503ms, proxy.ts: 156ms, application-code: 719ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."AudioFile"."id", "public"."AudioFile"."recordingId", "public"."AudioFile"."data", "public"."AudioFile"."mimeType", "public"."AudioFile"."createdAt" FROM "public"."AudioFile" WHERE ("public"."AudioFile"."recordingId" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query COMMIT
+ GET /api/cold-calls/recordings/cmtbhxewh0018jr041vwulpip/audio 206 in 434ms (next.js: 9ms, proxy.ts: 71ms, application-code: 354ms)
+ GET /leads? 200 in 343ms (next.js: 6ms, proxy.ts: 134ms, application-code: 203ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."displayName", "public"."User"."active", "public"."User"."restaurantScoutEnabled", "public"."User"."sidebarConfig", "public"."User"."baseAddress", "public"."User"."baseLatitude", "public"."User"."baseLongitude", "public"."User"."preferredLocationMode", "public"."User"."workClockStartedAt", "public"."User"."createdAt", "public"."User"."updatedAt" FROM "public"."User" WHERE ("public"."User"."id" = $1 OR "public"."User"."email" ILIKE $2) LIMIT $3 OFFSET $4
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."companyName", "public"."Lead"."industry", "public"."Lead"."address", "public"."Lead"."city", "public"."Lead"."webPresence"::text, "public"."Lead"."website", "public"."Lead"."treatwellUrl", "public"."Lead"."phone", "public"."Lead"."email", "public"."Lead"."instagram", "public"."Lead"."googleMapsUrl", "public"."Lead"."googleRating", "public"."Lead"."googleReviewCount", "public"."Lead"."contactPerson", "public"."Lead"."preferredContactMethod"::text, "public"."Lead"."contactNote", "public"."Lead"."notes", "public"."Lead"."richNotes", "public"."Lead"."source", "public"."Lead"."lastContactAt", "public"."Lead"."nextFollowUpAt", "public"."Lead"."status"::text, "public"."Lead"."priority"::text, "public"."Lead"."score", "public"."Lead"."scoreReasons", "public"."Lead"."opportunityTags", "public"."Lead"."interestingReason", "public"."Lead"."enrichmentStatus", "public"."Lead"."hasMenu", "public"."Lead"."menuUrl", "public"."Lead"."menuSnippet", "public"."Lead"."menuCheckedAt", "public"."Lead"."acquisitionType"::text, "public"."Lead"."nfcDemoUrl", "public"."Lead"."addedAt", "public"."Lead"."createdAt", "public"."Lead"."updatedAt", "public"."Lead"."createdById", "public"."Lead"."assignedToId", COALESCE("aggr_selection_0_Interaction"."_aggr_count_interactions", 0) AS "_aggr_count_interactions", COALESCE("aggr_selection_1_WebsiteAudit"."_aggr_count_audits", 0) AS "_aggr_count_audits", COALESCE("aggr_selection_2_Task"."_aggr_count_tasks", 0) AS "_aggr_count_tasks" FROM "public"."Lead" LEFT JOIN (SELECT "public"."Interaction"."leadId", COUNT(*) AS "_aggr_count_interactions" FROM "public"."Interaction" WHERE 1=1 GROUP BY "public"."Interaction"."leadId") AS "aggr_selection_0_Interaction" ON ("public"."Lead"."id" = "aggr_selection_0_Interaction"."leadId") LEFT JOIN (SELECT "public"."WebsiteAudit"."leadId", COUNT(*) AS "_aggr_count_audits" FROM "public"."WebsiteAudit" WHERE 1=1 GROUP BY "public"."WebsiteAudit"."leadId") AS "aggr_selection_1_WebsiteAudit" ON ("public"."Lead"."id" = "aggr_selection_1_WebsiteAudit"."leadId") LEFT JOIN (SELECT "public"."Task"."leadId", COUNT(*) AS "_aggr_count_tasks" FROM "public"."Task" WHERE 1=1 GROUP BY "public"."Task"."leadId") AS "aggr_selection_2_Task" ON ("public"."Lead"."id" = "aggr_selection_2_Task"."leadId") WHERE ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) ORDER BY "public"."Lead"."updatedAt" DESC LIMIT $3 OFFSET $4
+prisma:query SELECT "public"."User"."id", "public"."User"."displayName", "public"."User"."email" FROM "public"."User" WHERE "public"."User"."id" IN ($1) OFFSET $2
+prisma:query SELECT "public"."User"."id", "public"."User"."displayName", "public"."User"."email" FROM "public"."User" WHERE "public"."User"."id" IN ($1) OFFSET $2
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."Lead"."id" FROM "public"."Lead" WHERE ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) OFFSET $3) AS "sub"
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."industry" FROM "public"."Lead" WHERE ("public"."Lead"."industry" IS NOT NULL AND ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2)) OFFSET $3
+prisma:query COMMIT
+ GET /api/leads?page=1&limit=20 200 in 892ms (next.js: 0.9ms, proxy.ts: 47ms, application-code: 844ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."AISettings"."id", "public"."AISettings"."enabled", "public"."AISettings"."geminiEnabled", "public"."AISettings"."groqEnabled", "public"."AISettings"."maxAutomaticAttempts", "public"."AISettings"."cooldownSeconds", "public"."AISettings"."updatedAt" FROM "public"."AISettings" WHERE 1=1 LIMIT $1 OFFSET $2
+prisma:query COMMIT
+ GET /api/settings 200 in 1027ms (next.js: 1.4ms, proxy.ts: 47ms, application-code: 978ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."companyName", "public"."Lead"."industry", "public"."Lead"."address", "public"."Lead"."city", "public"."Lead"."webPresence"::text, "public"."Lead"."website", "public"."Lead"."treatwellUrl", "public"."Lead"."phone", "public"."Lead"."email", "public"."Lead"."instagram", "public"."Lead"."googleMapsUrl", "public"."Lead"."googleRating", "public"."Lead"."googleReviewCount", "public"."Lead"."contactPerson", "public"."Lead"."preferredContactMethod"::text, "public"."Lead"."contactNote", "public"."Lead"."notes", "public"."Lead"."richNotes", "public"."Lead"."source", "public"."Lead"."lastContactAt", "public"."Lead"."nextFollowUpAt", "public"."Lead"."status"::text, "public"."Lead"."priority"::text, "public"."Lead"."score", "public"."Lead"."scoreReasons", "public"."Lead"."opportunityTags", "public"."Lead"."interestingReason", "public"."Lead"."enrichmentStatus", "public"."Lead"."hasMenu", "public"."Lead"."menuUrl", "public"."Lead"."menuSnippet", "public"."Lead"."menuCheckedAt", "public"."Lead"."acquisitionType"::text, "public"."Lead"."nfcDemoUrl", "public"."Lead"."addedAt", "public"."Lead"."createdAt", "public"."Lead"."updatedAt", "public"."Lead"."createdById", "public"."Lead"."assignedToId", COALESCE("aggr_selection_0_Interaction"."_aggr_count_interactions", 0) AS "_aggr_count_interactions", COALESCE("aggr_selection_1_WebsiteAudit"."_aggr_count_audits", 0) AS "_aggr_count_audits", COALESCE("aggr_selection_2_Task"."_aggr_count_tasks", 0) AS "_aggr_count_tasks" FROM "public"."Lead" LEFT JOIN (SELECT "public"."Interaction"."leadId", COUNT(*) AS "_aggr_count_interactions" FROM "public"."Interaction" WHERE 1=1 GROUP BY "public"."Interaction"."leadId") AS "aggr_selection_0_Interaction" ON ("public"."Lead"."id" = "aggr_selection_0_Interaction"."leadId") LEFT JOIN (SELECT "public"."WebsiteAudit"."leadId", COUNT(*) AS "_aggr_count_audits" FROM "public"."WebsiteAudit" WHERE 1=1 GROUP BY "public"."WebsiteAudit"."leadId") AS "aggr_selection_1_WebsiteAudit" ON ("public"."Lead"."id" = "aggr_selection_1_WebsiteAudit"."leadId") LEFT JOIN (SELECT "public"."Task"."leadId", COUNT(*) AS "_aggr_count_tasks" FROM "public"."Task" WHERE 1=1 GROUP BY "public"."Task"."leadId") AS "aggr_selection_2_Task" ON ("public"."Lead"."id" = "aggr_selection_2_Task"."leadId") WHERE ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) ORDER BY "public"."Lead"."updatedAt" DESC LIMIT $3 OFFSET $4
+prisma:query SELECT "public"."User"."id", "public"."User"."displayName", "public"."User"."email" FROM "public"."User" WHERE "public"."User"."id" IN ($1) OFFSET $2
+prisma:query SELECT "public"."User"."id", "public"."User"."displayName", "public"."User"."email" FROM "public"."User" WHERE "public"."User"."id" IN ($1) OFFSET $2
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."Lead"."id" FROM "public"."Lead" WHERE ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) OFFSET $3) AS "sub"
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."industry" FROM "public"."Lead" WHERE ("public"."Lead"."industry" IS NOT NULL AND ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2)) OFFSET $3
+prisma:query COMMIT
+ GET /api/leads?page=1&limit=20 200 in 706ms (next.js: 3ms, proxy.ts: 53ms, application-code: 650ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."displayName", "public"."User"."active", "public"."User"."restaurantScoutEnabled", "public"."User"."sidebarConfig", "public"."User"."baseAddress", "public"."User"."baseLatitude", "public"."User"."baseLongitude", "public"."User"."preferredLocationMode", "public"."User"."workClockStartedAt", "public"."User"."createdAt", "public"."User"."updatedAt" FROM "public"."User" WHERE ("public"."User"."id" = $1 OR "public"."User"."email" ILIKE $2) LIMIT $3 OFFSET $4
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."AISettings"."id", "public"."AISettings"."enabled", "public"."AISettings"."geminiEnabled", "public"."AISettings"."groqEnabled", "public"."AISettings"."maxAutomaticAttempts", "public"."AISettings"."cooldownSeconds", "public"."AISettings"."updatedAt" FROM "public"."AISettings" WHERE 1=1 LIMIT $1 OFFSET $2
+prisma:query COMMIT
+ GET /api/settings 200 in 917ms (next.js: 3ms, proxy.ts: 46ms, application-code: 869ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."CallRecording"."id", "public"."CallRecording"."leadId", "public"."CallRecording"."createdById", "public"."CallRecording"."fileName", "public"."CallRecording"."fileSize", "public"."CallRecording"."durationSeconds", "public"."CallRecording"."storageUrl", "public"."CallRecording"."transcription", "public"."CallRecording"."aiSummary", "public"."CallRecording"."aiNextSteps", "public"."CallRecording"."aiSentiment", "public"."CallRecording"."aiExtractedData", "public"."CallRecording"."aiFeedback", "public"."CallRecording"."status"::text, "public"."CallRecording"."error", "public"."CallRecording"."createdAt", "public"."CallRecording"."updatedAt" FROM "public"."CallRecording" WHERE ("public"."CallRecording"."createdById" = $1 AND "public"."CallRecording"."leadId" = $2) ORDER BY "public"."CallRecording"."createdAt" DESC OFFSET $3
+prisma:query COMMIT
+ GET /api/cold-calls/recordings?leadId=cmtsfbchm0001ld046t1g5ucb 200 in 366ms (next.js: 3ms, proxy.ts: 53ms, application-code: 309ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."companyName", "public"."Lead"."industry", "public"."Lead"."address", "public"."Lead"."city", "public"."Lead"."webPresence"::text, "public"."Lead"."website", "public"."Lead"."treatwellUrl", "public"."Lead"."phone", "public"."Lead"."email", "public"."Lead"."instagram", "public"."Lead"."googleMapsUrl", "public"."Lead"."googleRating", "public"."Lead"."googleReviewCount", "public"."Lead"."contactPerson", "public"."Lead"."preferredContactMethod"::text, "public"."Lead"."contactNote", "public"."Lead"."notes", "public"."Lead"."richNotes", "public"."Lead"."source", "public"."Lead"."lastContactAt", "public"."Lead"."nextFollowUpAt", "public"."Lead"."status"::text, "public"."Lead"."priority"::text, "public"."Lead"."score", "public"."Lead"."scoreReasons", "public"."Lead"."opportunityTags", "public"."Lead"."interestingReason", "public"."Lead"."enrichmentStatus", "public"."Lead"."hasMenu", "public"."Lead"."menuUrl", "public"."Lead"."menuSnippet", "public"."Lead"."menuCheckedAt", "public"."Lead"."acquisitionType"::text, "public"."Lead"."nfcDemoUrl", "public"."Lead"."addedAt", "public"."Lead"."createdAt", "public"."Lead"."updatedAt", "public"."Lead"."createdById", "public"."Lead"."assignedToId" FROM "public"."Lead" WHERE ("public"."Lead"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."User"."id", "public"."User"."displayName", "public"."User"."email" FROM "public"."User" WHERE "public"."User"."id" IN ($1) OFFSET $2
+prisma:query SELECT "public"."Interaction"."id", "public"."Interaction"."leadId", "public"."Interaction"."type"::text, "public"."Interaction"."note", "public"."Interaction"."createdAt", "public"."Interaction"."createdById", "public"."Interaction"."callRecordingId" FROM "public"."Interaction" WHERE "public"."Interaction"."leadId" IN ($1) ORDER BY "public"."Interaction"."createdAt" DESC OFFSET $2
+prisma:query SELECT "public"."WebsiteAudit"."id", "public"."WebsiteAudit"."leadId", "public"."WebsiteAudit"."url", "public"."WebsiteAudit"."reachable", "public"."WebsiteAudit"."statusCode", "public"."WebsiteAudit"."https", "public"."WebsiteAudit"."responseTimeMs", "public"."WebsiteAudit"."hasViewport", "public"."WebsiteAudit"."hasTitle", "public"."WebsiteAudit"."hasMetaDescription", "public"."WebsiteAudit"."hasImprint", "public"."WebsiteAudit"."hasPrivacy", "public"."WebsiteAudit"."hasConsent", "public"."WebsiteAudit"."hasContact", "public"."WebsiteAudit"."hasPhone", "public"."WebsiteAudit"."hasEmail", "public"."WebsiteAudit"."hasSocials", "public"."WebsiteAudit"."hasCta", "public"."WebsiteAudit"."hasBooking", "public"."WebsiteAudit"."findings", "public"."WebsiteAudit"."error", "public"."WebsiteAudit"."createdAt", "public"."WebsiteAudit"."createdById" FROM "public"."WebsiteAudit" WHERE "public"."WebsiteAudit"."leadId" IN ($1) ORDER BY "public"."WebsiteAudit"."createdAt" DESC LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Task"."id", "public"."Task"."title", "public"."Task"."description", "public"."Task"."status"::text, "public"."Task"."priority"::text, "public"."Task"."category"::text, "public"."Task"."dueAt", "public"."Task"."completedAt", "public"."Task"."leadId", "public"."Task"."userId", "public"."Task"."aiGenerated", "public"."Task"."createdAt", "public"."Task"."updatedAt" FROM "public"."Task" WHERE "public"."Task"."leadId" IN ($1) ORDER BY "public"."Task"."createdAt" DESC OFFSET $2
+prisma:query SELECT "public"."CallRecording"."id", "public"."CallRecording"."leadId", "public"."CallRecording"."createdById", "public"."CallRecording"."fileName", "public"."CallRecording"."fileSize", "public"."CallRecording"."durationSeconds", "public"."CallRecording"."storageUrl", "public"."CallRecording"."transcription", "public"."CallRecording"."aiSummary", "public"."CallRecording"."aiNextSteps", "public"."CallRecording"."aiSentiment", "public"."CallRecording"."aiExtractedData", "public"."CallRecording"."aiFeedback", "public"."CallRecording"."status"::text, "public"."CallRecording"."error", "public"."CallRecording"."createdAt", "public"."CallRecording"."updatedAt" FROM "public"."CallRecording" WHERE "public"."CallRecording"."leadId" IN ($1) ORDER BY "public"."CallRecording"."createdAt" DESC OFFSET $2
+prisma:query COMMIT
+ GET /api/leads/cmtsfbchm0001ld046t1g5ucb 200 in 835ms (next.js: 16ms, proxy.ts: 53ms, application-code: 766ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."displayName", "public"."User"."active", "public"."User"."restaurantScoutEnabled", "public"."User"."sidebarConfig", "public"."User"."baseAddress", "public"."User"."baseLatitude", "public"."User"."baseLongitude", "public"."User"."preferredLocationMode", "public"."User"."workClockStartedAt", "public"."User"."createdAt", "public"."User"."updatedAt" FROM "public"."User" WHERE ("public"."User"."id" = $1 OR "public"."User"."email" ILIKE $2) LIMIT $3 OFFSET $4
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."AISettings"."id", "public"."AISettings"."enabled", "public"."AISettings"."geminiEnabled", "public"."AISettings"."groqEnabled", "public"."AISettings"."maxAutomaticAttempts", "public"."AISettings"."cooldownSeconds", "public"."AISettings"."updatedAt" FROM "public"."AISettings" WHERE 1=1 LIMIT $1 OFFSET $2
+prisma:query COMMIT
+ GET /api/settings 200 in 859ms (next.js: 1.6ms, proxy.ts: 42ms, application-code: 815ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."displayName", "public"."User"."active", "public"."User"."restaurantScoutEnabled", "public"."User"."sidebarConfig", "public"."User"."baseAddress", "public"."User"."baseLatitude", "public"."User"."baseLongitude", "public"."User"."preferredLocationMode", "public"."User"."workClockStartedAt", "public"."User"."createdAt", "public"."User"."updatedAt" FROM "public"."User" WHERE ("public"."User"."id" = $1 OR "public"."User"."email" ILIKE $2) LIMIT $3 OFFSET $4
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."AISettings"."id", "public"."AISettings"."enabled", "public"."AISettings"."geminiEnabled", "public"."AISettings"."groqEnabled", "public"."AISettings"."maxAutomaticAttempts", "public"."AISettings"."cooldownSeconds", "public"."AISettings"."updatedAt" FROM "public"."AISettings" WHERE 1=1 LIMIT $1 OFFSET $2
+prisma:query COMMIT
+ GET /api/settings 200 in 455ms (next.js: 3ms, proxy.ts: 48ms, application-code: 403ms)
+prisma:query SELECT 1
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."Lead"."id" FROM "public"."Lead" WHERE (("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) AND "public"."Lead"."acquisitionType" = CAST($3::text AS "public"."AcquisitionType")) OFFSET $4) AS "sub"
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."companyName", "public"."Lead"."industry", "public"."Lead"."address", "public"."Lead"."city", "public"."Lead"."webPresence"::text, "public"."Lead"."website", "public"."Lead"."treatwellUrl", "public"."Lead"."phone", "public"."Lead"."email", "public"."Lead"."instagram", "public"."Lead"."googleMapsUrl", "public"."Lead"."googleRating", "public"."Lead"."googleReviewCount", "public"."Lead"."contactPerson", "public"."Lead"."preferredContactMethod"::text, "public"."Lead"."contactNote", "public"."Lead"."notes", "public"."Lead"."richNotes", "public"."Lead"."source", "public"."Lead"."lastContactAt", "public"."Lead"."nextFollowUpAt", "public"."Lead"."status"::text, "public"."Lead"."priority"::text, "public"."Lead"."score", "public"."Lead"."scoreReasons", "public"."Lead"."opportunityTags", "public"."Lead"."interestingReason", "public"."Lead"."enrichmentStatus", "public"."Lead"."hasMenu", "public"."Lead"."menuUrl", "public"."Lead"."menuSnippet", "public"."Lead"."menuCheckedAt", "public"."Lead"."acquisitionType"::text, "public"."Lead"."nfcDemoUrl", "public"."Lead"."addedAt", "public"."Lead"."createdAt", "public"."Lead"."updatedAt", "public"."Lead"."createdById", "public"."Lead"."assignedToId", COALESCE("aggr_selection_0_Interaction"."_aggr_count_interactions", 0) AS "_aggr_count_interactions", COALESCE("aggr_selection_1_WebsiteAudit"."_aggr_count_audits", 0) AS "_aggr_count_audits", COALESCE("aggr_selection_2_Task"."_aggr_count_tasks", 0) AS "_aggr_count_tasks" FROM "public"."Lead" LEFT JOIN (SELECT "public"."Interaction"."leadId", COUNT(*) AS "_aggr_count_interactions" FROM "public"."Interaction" WHERE 1=1 GROUP BY "public"."Interaction"."leadId") AS "aggr_selection_0_Interaction" ON ("public"."Lead"."id" = "aggr_selection_0_Interaction"."leadId") LEFT JOIN (SELECT "public"."WebsiteAudit"."leadId", COUNT(*) AS "_aggr_count_audits" FROM "public"."WebsiteAudit" WHERE 1=1 GROUP BY "public"."WebsiteAudit"."leadId") AS "aggr_selection_1_WebsiteAudit" ON ("public"."Lead"."id" = "aggr_selection_1_WebsiteAudit"."leadId") LEFT JOIN (SELECT "public"."Task"."leadId", COUNT(*) AS "_aggr_count_tasks" FROM "public"."Task" WHERE 1=1 GROUP BY "public"."Task"."leadId") AS "aggr_selection_2_Task" ON ("public"."Lead"."id" = "aggr_selection_2_Task"."leadId") WHERE (("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) AND "public"."Lead"."acquisitionType" = CAST($3::text AS "public"."AcquisitionType")) ORDER BY "public"."Lead"."updatedAt" DESC LIMIT $4 OFFSET $5
+prisma:query SELECT "public"."User"."id", "public"."User"."displayName", "public"."User"."email" FROM "public"."User" WHERE "public"."User"."id" IN ($1) OFFSET $2
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."industry" FROM "public"."Lead" WHERE ("public"."Lead"."industry" IS NOT NULL AND ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2)) OFFSET $3
+prisma:query COMMIT
+ GET /api/leads?acquisitionType=WALK_IN&page=1&limit=20 200 in 843ms (next.js: 4ms, proxy.ts: 189ms, application-code: 650ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."companyName", "public"."Lead"."industry", "public"."Lead"."address", "public"."Lead"."city", "public"."Lead"."webPresence"::text, "public"."Lead"."website", "public"."Lead"."treatwellUrl", "public"."Lead"."phone", "public"."Lead"."email", "public"."Lead"."instagram", "public"."Lead"."googleMapsUrl", "public"."Lead"."googleRating", "public"."Lead"."googleReviewCount", "public"."Lead"."contactPerson", "public"."Lead"."preferredContactMethod"::text, "public"."Lead"."contactNote", "public"."Lead"."notes", "public"."Lead"."richNotes", "public"."Lead"."source", "public"."Lead"."lastContactAt", "public"."Lead"."nextFollowUpAt", "public"."Lead"."status"::text, "public"."Lead"."priority"::text, "public"."Lead"."score", "public"."Lead"."scoreReasons", "public"."Lead"."opportunityTags", "public"."Lead"."interestingReason", "public"."Lead"."enrichmentStatus", "public"."Lead"."hasMenu", "public"."Lead"."menuUrl", "public"."Lead"."menuSnippet", "public"."Lead"."menuCheckedAt", "public"."Lead"."acquisitionType"::text, "public"."Lead"."nfcDemoUrl", "public"."Lead"."addedAt", "public"."Lead"."createdAt", "public"."Lead"."updatedAt", "public"."Lead"."createdById", "public"."Lead"."assignedToId", COALESCE("aggr_selection_0_Interaction"."_aggr_count_interactions", 0) AS "_aggr_count_interactions", COALESCE("aggr_selection_1_WebsiteAudit"."_aggr_count_audits", 0) AS "_aggr_count_audits", COALESCE("aggr_selection_2_Task"."_aggr_count_tasks", 0) AS "_aggr_count_tasks" FROM "public"."Lead" LEFT JOIN (SELECT "public"."Interaction"."leadId", COUNT(*) AS "_aggr_count_interactions" FROM "public"."Interaction" WHERE 1=1 GROUP BY "public"."Interaction"."leadId") AS "aggr_selection_0_Interaction" ON ("public"."Lead"."id" = "aggr_selection_0_Interaction"."leadId") LEFT JOIN (SELECT "public"."WebsiteAudit"."leadId", COUNT(*) AS "_aggr_count_audits" FROM "public"."WebsiteAudit" WHERE 1=1 GROUP BY "public"."WebsiteAudit"."leadId") AS "aggr_selection_1_WebsiteAudit" ON ("public"."Lead"."id" = "aggr_selection_1_WebsiteAudit"."leadId") LEFT JOIN (SELECT "public"."Task"."leadId", COUNT(*) AS "_aggr_count_tasks" FROM "public"."Task" WHERE 1=1 GROUP BY "public"."Task"."leadId") AS "aggr_selection_2_Task" ON ("public"."Lead"."id" = "aggr_selection_2_Task"."leadId") WHERE (("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) AND "public"."Lead"."acquisitionType" = CAST($3::text AS "public"."AcquisitionType")) ORDER BY "public"."Lead"."updatedAt" DESC LIMIT $4 OFFSET $5
+prisma:query SELECT "public"."User"."id", "public"."User"."displayName", "public"."User"."email" FROM "public"."User" WHERE "public"."User"."id" IN ($1) OFFSET $2
+prisma:query SELECT "public"."User"."id", "public"."User"."displayName", "public"."User"."email" FROM "public"."User" WHERE "public"."User"."id" IN ($1) OFFSET $2
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."Lead"."id" FROM "public"."Lead" WHERE (("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) AND "public"."Lead"."acquisitionType" = CAST($3::text AS "public"."AcquisitionType")) OFFSET $4) AS "sub"
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."industry" FROM "public"."Lead" WHERE ("public"."Lead"."industry" IS NOT NULL AND ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2)) OFFSET $3
+prisma:query COMMIT
+ GET /api/leads?acquisitionType=CALL&page=1&limit=20 200 in 851ms (next.js: 5ms, proxy.ts: 61ms, application-code: 785ms)
+✓ Compiled in 56ms
+ GET /leads 200 in 231ms (next.js: 9ms, proxy.ts: 205ms, application-code: 17ms)
+✓ Compiled in 66ms
+ GET /leads 200 in 137ms (next.js: 3ms, proxy.ts: 118ms, application-code: 15ms)
+ GET /leads 200 in 495ms (next.js: 92ms, proxy.ts: 318ms, application-code: 85ms)
+prisma:query SELECT 1
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."companyName", "public"."Lead"."industry", "public"."Lead"."address", "public"."Lead"."city", "public"."Lead"."webPresence"::text, "public"."Lead"."website", "public"."Lead"."treatwellUrl", "public"."Lead"."phone", "public"."Lead"."email", "public"."Lead"."instagram", "public"."Lead"."googleMapsUrl", "public"."Lead"."googleRating", "public"."Lead"."googleReviewCount", "public"."Lead"."contactPerson", "public"."Lead"."preferredContactMethod"::text, "public"."Lead"."contactNote", "public"."Lead"."notes", "public"."Lead"."richNotes", "public"."Lead"."source", "public"."Lead"."lastContactAt", "public"."Lead"."nextFollowUpAt", "public"."Lead"."status"::text, "public"."Lead"."priority"::text, "public"."Lead"."score", "public"."Lead"."scoreReasons", "public"."Lead"."opportunityTags", "public"."Lead"."interestingReason", "public"."Lead"."enrichmentStatus", "public"."Lead"."hasMenu", "public"."Lead"."menuUrl", "public"."Lead"."menuSnippet", "public"."Lead"."menuCheckedAt", "public"."Lead"."acquisitionType"::text, "public"."Lead"."nfcDemoUrl", "public"."Lead"."addedAt", "public"."Lead"."createdAt", "public"."Lead"."updatedAt", "public"."Lead"."createdById", "public"."Lead"."assignedToId", COALESCE("aggr_selection_0_Interaction"."_aggr_count_interactions", 0) AS "_aggr_count_interactions", COALESCE("aggr_selection_1_WebsiteAudit"."_aggr_count_audits", 0) AS "_aggr_count_audits", COALESCE("aggr_selection_2_Task"."_aggr_count_tasks", 0) AS "_aggr_count_tasks" FROM "public"."Lead" LEFT JOIN (SELECT "public"."Interaction"."leadId", COUNT(*) AS "_aggr_count_interactions" FROM "public"."Interaction" WHERE 1=1 GROUP BY "public"."Interaction"."leadId") AS "aggr_selection_0_Interaction" ON ("public"."Lead"."id" = "aggr_selection_0_Interaction"."leadId") LEFT JOIN (SELECT "public"."WebsiteAudit"."leadId", COUNT(*) AS "_aggr_count_audits" FROM "public"."WebsiteAudit" WHERE 1=1 GROUP BY "public"."WebsiteAudit"."leadId") AS "aggr_selection_1_WebsiteAudit" ON ("public"."Lead"."id" = "aggr_selection_1_WebsiteAudit"."leadId") LEFT JOIN (SELECT "public"."Task"."leadId", COUNT(*) AS "_aggr_count_tasks" FROM "public"."Task" WHERE 1=1 GROUP BY "public"."Task"."leadId") AS "aggr_selection_2_Task" ON ("public"."Lead"."id" = "aggr_selection_2_Task"."leadId") WHERE ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) ORDER BY "public"."Lead"."updatedAt" DESC LIMIT $3 OFFSET $4
+prisma:query SELECT "public"."User"."id", "public"."User"."displayName", "public"."User"."email" FROM "public"."User" WHERE "public"."User"."id" IN ($1) OFFSET $2
+prisma:query SELECT "public"."User"."id", "public"."User"."displayName", "public"."User"."email" FROM "public"."User" WHERE "public"."User"."id" IN ($1) OFFSET $2
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."Lead"."id" FROM "public"."Lead" WHERE ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) OFFSET $3) AS "sub"
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."industry" FROM "public"."Lead" WHERE ("public"."Lead"."industry" IS NOT NULL AND ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2)) OFFSET $3
+ GET /api/leads?page=1&limit=20 200 in 853ms (next.js: 7ms, proxy.ts: 58ms, application-code: 787ms)
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."displayName", "public"."User"."active", "public"."User"."restaurantScoutEnabled", "public"."User"."sidebarConfig", "public"."User"."baseAddress", "public"."User"."baseLatitude", "public"."User"."baseLongitude", "public"."User"."preferredLocationMode", "public"."User"."workClockStartedAt", "public"."User"."createdAt", "public"."User"."updatedAt" FROM "public"."User" WHERE ("public"."User"."id" = $1 OR "public"."User"."email" ILIKE $2) LIMIT $3 OFFSET $4
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."AISettings"."id", "public"."AISettings"."enabled", "public"."AISettings"."geminiEnabled", "public"."AISettings"."groqEnabled", "public"."AISettings"."maxAutomaticAttempts", "public"."AISettings"."cooldownSeconds", "public"."AISettings"."updatedAt" FROM "public"."AISettings" WHERE 1=1 LIMIT $1 OFFSET $2
+prisma:query COMMIT
+ GET /api/settings 200 in 1113ms (next.js: 7ms, proxy.ts: 73ms, application-code: 1033ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."Lead"."id" FROM "public"."Lead" WHERE ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) OFFSET $3) AS "sub"
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."companyName", "public"."Lead"."industry", "public"."Lead"."address", "public"."Lead"."city", "public"."Lead"."webPresence"::text, "public"."Lead"."website", "public"."Lead"."treatwellUrl", "public"."Lead"."phone", "public"."Lead"."email", "public"."Lead"."instagram", "public"."Lead"."googleMapsUrl", "public"."Lead"."googleRating", "public"."Lead"."googleReviewCount", "public"."Lead"."contactPerson", "public"."Lead"."preferredContactMethod"::text, "public"."Lead"."contactNote", "public"."Lead"."notes", "public"."Lead"."richNotes", "public"."Lead"."source", "public"."Lead"."lastContactAt", "public"."Lead"."nextFollowUpAt", "public"."Lead"."status"::text, "public"."Lead"."priority"::text, "public"."Lead"."score", "public"."Lead"."scoreReasons", "public"."Lead"."opportunityTags", "public"."Lead"."interestingReason", "public"."Lead"."enrichmentStatus", "public"."Lead"."hasMenu", "public"."Lead"."menuUrl", "public"."Lead"."menuSnippet", "public"."Lead"."menuCheckedAt", "public"."Lead"."acquisitionType"::text, "public"."Lead"."nfcDemoUrl", "public"."Lead"."addedAt", "public"."Lead"."createdAt", "public"."Lead"."updatedAt", "public"."Lead"."createdById", "public"."Lead"."assignedToId", COALESCE("aggr_selection_0_Interaction"."_aggr_count_interactions", 0) AS "_aggr_count_interactions", COALESCE("aggr_selection_1_WebsiteAudit"."_aggr_count_audits", 0) AS "_aggr_count_audits", COALESCE("aggr_selection_2_Task"."_aggr_count_tasks", 0) AS "_aggr_count_tasks" FROM "public"."Lead" LEFT JOIN (SELECT "public"."Interaction"."leadId", COUNT(*) AS "_aggr_count_interactions" FROM "public"."Interaction" WHERE 1=1 GROUP BY "public"."Interaction"."leadId") AS "aggr_selection_0_Interaction" ON ("public"."Lead"."id" = "aggr_selection_0_Interaction"."leadId") LEFT JOIN (SELECT "public"."WebsiteAudit"."leadId", COUNT(*) AS "_aggr_count_audits" FROM "public"."WebsiteAudit" WHERE 1=1 GROUP BY "public"."WebsiteAudit"."leadId") AS "aggr_selection_1_WebsiteAudit" ON ("public"."Lead"."id" = "aggr_selection_1_WebsiteAudit"."leadId") LEFT JOIN (SELECT "public"."Task"."leadId", COUNT(*) AS "_aggr_count_tasks" FROM "public"."Task" WHERE 1=1 GROUP BY "public"."Task"."leadId") AS "aggr_selection_2_Task" ON ("public"."Lead"."id" = "aggr_selection_2_Task"."leadId") WHERE ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) ORDER BY "public"."Lead"."updatedAt" DESC LIMIT $3 OFFSET $4
+prisma:query SELECT "public"."User"."id", "public"."User"."displayName", "public"."User"."email" FROM "public"."User" WHERE "public"."User"."id" IN ($1) OFFSET $2
+prisma:query SELECT "public"."User"."id", "public"."User"."displayName", "public"."User"."email" FROM "public"."User" WHERE "public"."User"."id" IN ($1) OFFSET $2
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."industry" FROM "public"."Lead" WHERE ("public"."Lead"."industry" IS NOT NULL AND ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2)) OFFSET $3
+prisma:query COMMIT
+ GET /api/leads?page=1&limit=20 200 in 838ms (next.js: 3ms, proxy.ts: 72ms, application-code: 763ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."displayName", "public"."User"."active", "public"."User"."restaurantScoutEnabled", "public"."User"."sidebarConfig", "public"."User"."baseAddress", "public"."User"."baseLatitude", "public"."User"."baseLongitude", "public"."User"."preferredLocationMode", "public"."User"."workClockStartedAt", "public"."User"."createdAt", "public"."User"."updatedAt" FROM "public"."User" WHERE ("public"."User"."id" = $1 OR "public"."User"."email" ILIKE $2) LIMIT $3 OFFSET $4
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."AISettings"."id", "public"."AISettings"."enabled", "public"."AISettings"."geminiEnabled", "public"."AISettings"."groqEnabled", "public"."AISettings"."maxAutomaticAttempts", "public"."AISettings"."cooldownSeconds", "public"."AISettings"."updatedAt" FROM "public"."AISettings" WHERE 1=1 LIMIT $1 OFFSET $2
+prisma:query COMMIT
+ GET /api/settings 200 in 908ms (next.js: 3ms, proxy.ts: 50ms, application-code: 856ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."displayName", "public"."User"."active", "public"."User"."restaurantScoutEnabled", "public"."User"."sidebarConfig", "public"."User"."baseAddress", "public"."User"."baseLatitude", "public"."User"."baseLongitude", "public"."User"."preferredLocationMode", "public"."User"."workClockStartedAt", "public"."User"."createdAt", "public"."User"."updatedAt" FROM "public"."User" WHERE ("public"."User"."id" = $1 OR "public"."User"."email" ILIKE $2) LIMIT $3 OFFSET $4
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."AISettings"."id", "public"."AISettings"."enabled", "public"."AISettings"."geminiEnabled", "public"."AISettings"."groqEnabled", "public"."AISettings"."maxAutomaticAttempts", "public"."AISettings"."cooldownSeconds", "public"."AISettings"."updatedAt" FROM "public"."AISettings" WHERE 1=1 LIMIT $1 OFFSET $2
+prisma:query COMMIT
+ GET /api/settings 200 in 507ms (next.js: 8ms, proxy.ts: 72ms, application-code: 427ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."displayName", "public"."User"."active", "public"."User"."restaurantScoutEnabled", "public"."User"."sidebarConfig", "public"."User"."baseAddress", "public"."User"."baseLatitude", "public"."User"."baseLongitude", "public"."User"."preferredLocationMode", "public"."User"."workClockStartedAt", "public"."User"."createdAt", "public"."User"."updatedAt" FROM "public"."User" WHERE ("public"."User"."id" = $1 OR "public"."User"."email" ILIKE $2) LIMIT $3 OFFSET $4
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."AISettings"."id", "public"."AISettings"."enabled", "public"."AISettings"."geminiEnabled", "public"."AISettings"."groqEnabled", "public"."AISettings"."maxAutomaticAttempts", "public"."AISettings"."cooldownSeconds", "public"."AISettings"."updatedAt" FROM "public"."AISettings" WHERE 1=1 LIMIT $1 OFFSET $2
+prisma:query COMMIT
+ GET /api/settings 200 in 515ms (next.js: 5ms, proxy.ts: 105ms, application-code: 405ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."CallRecording"."id", "public"."CallRecording"."leadId", "public"."CallRecording"."createdById", "public"."CallRecording"."fileName", "public"."CallRecording"."fileSize", "public"."CallRecording"."durationSeconds", "public"."CallRecording"."storageUrl", "public"."CallRecording"."transcription", "public"."CallRecording"."aiSummary", "public"."CallRecording"."aiNextSteps", "public"."CallRecording"."aiSentiment", "public"."CallRecording"."aiExtractedData", "public"."CallRecording"."aiFeedback", "public"."CallRecording"."status"::text, "public"."CallRecording"."error", "public"."CallRecording"."createdAt", "public"."CallRecording"."updatedAt" FROM "public"."CallRecording" WHERE ("public"."CallRecording"."createdById" = $1 AND "public"."CallRecording"."leadId" = $2) ORDER BY "public"."CallRecording"."createdAt" DESC OFFSET $3
+prisma:query COMMIT
+ GET /api/cold-calls/recordings?leadId=cmtsfbchm0001ld046t1g5ucb 200 in 326ms (next.js: 8ms, proxy.ts: 57ms, application-code: 261ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."companyName", "public"."Lead"."industry", "public"."Lead"."address", "public"."Lead"."city", "public"."Lead"."webPresence"::text, "public"."Lead"."website", "public"."Lead"."treatwellUrl", "public"."Lead"."phone", "public"."Lead"."email", "public"."Lead"."instagram", "public"."Lead"."googleMapsUrl", "public"."Lead"."googleRating", "public"."Lead"."googleReviewCount", "public"."Lead"."contactPerson", "public"."Lead"."preferredContactMethod"::text, "public"."Lead"."contactNote", "public"."Lead"."notes", "public"."Lead"."richNotes", "public"."Lead"."source", "public"."Lead"."lastContactAt", "public"."Lead"."nextFollowUpAt", "public"."Lead"."status"::text, "public"."Lead"."priority"::text, "public"."Lead"."score", "public"."Lead"."scoreReasons", "public"."Lead"."opportunityTags", "public"."Lead"."interestingReason", "public"."Lead"."enrichmentStatus", "public"."Lead"."hasMenu", "public"."Lead"."menuUrl", "public"."Lead"."menuSnippet", "public"."Lead"."menuCheckedAt", "public"."Lead"."acquisitionType"::text, "public"."Lead"."nfcDemoUrl", "public"."Lead"."addedAt", "public"."Lead"."createdAt", "public"."Lead"."updatedAt", "public"."Lead"."createdById", "public"."Lead"."assignedToId" FROM "public"."Lead" WHERE ("public"."Lead"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."User"."id", "public"."User"."displayName", "public"."User"."email" FROM "public"."User" WHERE "public"."User"."id" IN ($1) OFFSET $2
+prisma:query SELECT "public"."Interaction"."id", "public"."Interaction"."leadId", "public"."Interaction"."type"::text, "public"."Interaction"."note", "public"."Interaction"."createdAt", "public"."Interaction"."createdById", "public"."Interaction"."callRecordingId" FROM "public"."Interaction" WHERE "public"."Interaction"."leadId" IN ($1) ORDER BY "public"."Interaction"."createdAt" DESC OFFSET $2
+prisma:query SELECT "public"."WebsiteAudit"."id", "public"."WebsiteAudit"."leadId", "public"."WebsiteAudit"."url", "public"."WebsiteAudit"."reachable", "public"."WebsiteAudit"."statusCode", "public"."WebsiteAudit"."https", "public"."WebsiteAudit"."responseTimeMs", "public"."WebsiteAudit"."hasViewport", "public"."WebsiteAudit"."hasTitle", "public"."WebsiteAudit"."hasMetaDescription", "public"."WebsiteAudit"."hasImprint", "public"."WebsiteAudit"."hasPrivacy", "public"."WebsiteAudit"."hasConsent", "public"."WebsiteAudit"."hasContact", "public"."WebsiteAudit"."hasPhone", "public"."WebsiteAudit"."hasEmail", "public"."WebsiteAudit"."hasSocials", "public"."WebsiteAudit"."hasCta", "public"."WebsiteAudit"."hasBooking", "public"."WebsiteAudit"."findings", "public"."WebsiteAudit"."error", "public"."WebsiteAudit"."createdAt", "public"."WebsiteAudit"."createdById" FROM "public"."WebsiteAudit" WHERE "public"."WebsiteAudit"."leadId" IN ($1) ORDER BY "public"."WebsiteAudit"."createdAt" DESC LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."Task"."id", "public"."Task"."title", "public"."Task"."description", "public"."Task"."status"::text, "public"."Task"."priority"::text, "public"."Task"."category"::text, "public"."Task"."dueAt", "public"."Task"."completedAt", "public"."Task"."leadId", "public"."Task"."userId", "public"."Task"."aiGenerated", "public"."Task"."createdAt", "public"."Task"."updatedAt" FROM "public"."Task" WHERE "public"."Task"."leadId" IN ($1) ORDER BY "public"."Task"."createdAt" DESC OFFSET $2
+prisma:query SELECT "public"."CallRecording"."id", "public"."CallRecording"."leadId", "public"."CallRecording"."createdById", "public"."CallRecording"."fileName", "public"."CallRecording"."fileSize", "public"."CallRecording"."durationSeconds", "public"."CallRecording"."storageUrl", "public"."CallRecording"."transcription", "public"."CallRecording"."aiSummary", "public"."CallRecording"."aiNextSteps", "public"."CallRecording"."aiSentiment", "public"."CallRecording"."aiExtractedData", "public"."CallRecording"."aiFeedback", "public"."CallRecording"."status"::text, "public"."CallRecording"."error", "public"."CallRecording"."createdAt", "public"."CallRecording"."updatedAt" FROM "public"."CallRecording" WHERE "public"."CallRecording"."leadId" IN ($1) ORDER BY "public"."CallRecording"."createdAt" DESC OFFSET $2
+prisma:query COMMIT
+ GET /api/leads/cmtsfbchm0001ld046t1g5ucb 200 in 804ms (next.js: 14ms, proxy.ts: 94ms, application-code: 696ms)
+⚠ Fast Refresh had to perform a full reload when ./src/lib/location-context.tsx changed. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+✓ Compiled in 223ms
+ GET /leads 200 in 413ms (next.js: 25ms, proxy.ts: 365ms, application-code: 22ms)
+⨯ ReferenceError: User is not defined
+    at LeadsTable (src/components/leads/leads-table.tsx:183:16)
+  181 |               }}
+  182 |             >
+> 183 |               <User className="w-4 h-4 text-muted-foreground" />
+      |                ^
+  184 |               <span>Walk-Ins</span>
+  185 |             </button>
+  186 |           </div> {
+  digest: '2593809750'
+}
+ GET /leads 200 in 537ms (next.js: 8ms, proxy.ts: 418ms, application-code: 111ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."displayName", "public"."User"."active", "public"."User"."restaurantScoutEnabled", "public"."User"."sidebarConfig", "public"."User"."baseAddress", "public"."User"."baseLatitude", "public"."User"."baseLongitude", "public"."User"."preferredLocationMode", "public"."User"."workClockStartedAt", "public"."User"."createdAt", "public"."User"."updatedAt" FROM "public"."User" WHERE ("public"."User"."id" = $1 OR "public"."User"."email" ILIKE $2) LIMIT $3 OFFSET $4
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."AISettings"."id", "public"."AISettings"."enabled", "public"."AISettings"."geminiEnabled", "public"."AISettings"."groqEnabled", "public"."AISettings"."maxAutomaticAttempts", "public"."AISettings"."cooldownSeconds", "public"."AISettings"."updatedAt" FROM "public"."AISettings" WHERE 1=1 LIMIT $1 OFFSET $2
+prisma:query COMMIT
+ GET /api/settings 200 in 772ms (next.js: 9ms, proxy.ts: 103ms, application-code: 660ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."displayName", "public"."User"."active", "public"."User"."restaurantScoutEnabled", "public"."User"."sidebarConfig", "public"."User"."baseAddress", "public"."User"."baseLatitude", "public"."User"."baseLongitude", "public"."User"."preferredLocationMode", "public"."User"."workClockStartedAt", "public"."User"."createdAt", "public"."User"."updatedAt" FROM "public"."User" WHERE ("public"."User"."id" = $1 OR "public"."User"."email" ILIKE $2) LIMIT $3 OFFSET $4
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."AISettings"."id", "public"."AISettings"."enabled", "public"."AISettings"."geminiEnabled", "public"."AISettings"."groqEnabled", "public"."AISettings"."maxAutomaticAttempts", "public"."AISettings"."cooldownSeconds", "public"."AISettings"."updatedAt" FROM "public"."AISettings" WHERE 1=1 LIMIT $1 OFFSET $2
+prisma:query COMMIT
+ GET /api/settings 200 in 517ms (next.js: 3ms, proxy.ts: 80ms, application-code: 434ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."displayName", "public"."User"."active", "public"."User"."restaurantScoutEnabled", "public"."User"."sidebarConfig", "public"."User"."baseAddress", "public"."User"."baseLatitude", "public"."User"."baseLongitude", "public"."User"."preferredLocationMode", "public"."User"."workClockStartedAt", "public"."User"."createdAt", "public"."User"."updatedAt" FROM "public"."User" WHERE ("public"."User"."id" = $1 OR "public"."User"."email" ILIKE $2) LIMIT $3 OFFSET $4
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."AISettings"."id", "public"."AISettings"."enabled", "public"."AISettings"."geminiEnabled", "public"."AISettings"."groqEnabled", "public"."AISettings"."maxAutomaticAttempts", "public"."AISettings"."cooldownSeconds", "public"."AISettings"."updatedAt" FROM "public"."AISettings" WHERE 1=1 LIMIT $1 OFFSET $2
+prisma:query COMMIT
+ GET /api/settings 200 in 445ms (next.js: 3ms, proxy.ts: 45ms, application-code: 398ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."displayName", "public"."User"."active", "public"."User"."restaurantScoutEnabled", "public"."User"."sidebarConfig", "public"."User"."baseAddress", "public"."User"."baseLatitude", "public"."User"."baseLongitude", "public"."User"."preferredLocationMode", "public"."User"."workClockStartedAt", "public"."User"."createdAt", "public"."User"."updatedAt" FROM "public"."User" WHERE ("public"."User"."id" = $1 OR "public"."User"."email" ILIKE $2) LIMIT $3 OFFSET $4
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."AISettings"."id", "public"."AISettings"."enabled", "public"."AISettings"."geminiEnabled", "public"."AISettings"."groqEnabled", "public"."AISettings"."maxAutomaticAttempts", "public"."AISettings"."cooldownSeconds", "public"."AISettings"."updatedAt" FROM "public"."AISettings" WHERE 1=1 LIMIT $1 OFFSET $2
+prisma:query COMMIT
+ GET /api/settings 200 in 445ms (next.js: 3ms, proxy.ts: 45ms, application-code: 397ms)
+⚠ Fast Refresh had to perform a full reload due to a runtime error.
+✓ Compiled in 34ms
+ GET /leads 200 in 220ms (next.js: 7ms, proxy.ts: 115ms, application-code: 98ms)
+prisma:query SELECT 1
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."displayName", "public"."User"."active", "public"."User"."restaurantScoutEnabled", "public"."User"."sidebarConfig", "public"."User"."baseAddress", "public"."User"."baseLatitude", "public"."User"."baseLongitude", "public"."User"."preferredLocationMode", "public"."User"."workClockStartedAt", "public"."User"."createdAt", "public"."User"."updatedAt" FROM "public"."User" WHERE ("public"."User"."id" = $1 OR "public"."User"."email" ILIKE $2) LIMIT $3 OFFSET $4
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."AISettings"."id", "public"."AISettings"."enabled", "public"."AISettings"."geminiEnabled", "public"."AISettings"."groqEnabled", "public"."AISettings"."maxAutomaticAttempts", "public"."AISettings"."cooldownSeconds", "public"."AISettings"."updatedAt" FROM "public"."AISettings" WHERE 1=1 LIMIT $1 OFFSET $2
+prisma:query COMMIT
+ GET /api/settings 200 in 497ms (next.js: 4ms, proxy.ts: 61ms, application-code: 432ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."displayName", "public"."User"."active", "public"."User"."restaurantScoutEnabled", "public"."User"."sidebarConfig", "public"."User"."baseAddress", "public"."User"."baseLatitude", "public"."User"."baseLongitude", "public"."User"."preferredLocationMode", "public"."User"."workClockStartedAt", "public"."User"."createdAt", "public"."User"."updatedAt" FROM "public"."User" WHERE ("public"."User"."id" = $1 OR "public"."User"."email" ILIKE $2) LIMIT $3 OFFSET $4
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."AISettings"."id", "public"."AISettings"."enabled", "public"."AISettings"."geminiEnabled", "public"."AISettings"."groqEnabled", "public"."AISettings"."maxAutomaticAttempts", "public"."AISettings"."cooldownSeconds", "public"."AISettings"."updatedAt" FROM "public"."AISettings" WHERE 1=1 LIMIT $1 OFFSET $2
+prisma:query COMMIT
+ GET /api/settings 200 in 426ms (next.js: 3ms, proxy.ts: 50ms, application-code: 372ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."displayName", "public"."User"."active", "public"."User"."restaurantScoutEnabled", "public"."User"."sidebarConfig", "public"."User"."baseAddress", "public"."User"."baseLatitude", "public"."User"."baseLongitude", "public"."User"."preferredLocationMode", "public"."User"."workClockStartedAt", "public"."User"."createdAt", "public"."User"."updatedAt" FROM "public"."User" WHERE ("public"."User"."id" = $1 OR "public"."User"."email" ILIKE $2) LIMIT $3 OFFSET $4
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."AISettings"."id", "public"."AISettings"."enabled", "public"."AISettings"."geminiEnabled", "public"."AISettings"."groqEnabled", "public"."AISettings"."maxAutomaticAttempts", "public"."AISettings"."cooldownSeconds", "public"."AISettings"."updatedAt" FROM "public"."AISettings" WHERE 1=1 LIMIT $1 OFFSET $2
+prisma:query COMMIT
+ GET /api/settings 200 in 463ms (next.js: 3ms, proxy.ts: 142ms, application-code: 319ms)
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."displayName", "public"."User"."active", "public"."User"."restaurantScoutEnabled", "public"."User"."sidebarConfig", "public"."User"."baseAddress", "public"."User"."baseLatitude", "public"."User"."baseLongitude", "public"."User"."preferredLocationMode", "public"."User"."workClockStartedAt", "public"."User"."createdAt", "public"."User"."updatedAt" FROM "public"."User" WHERE ("public"."User"."id" = $1 OR "public"."User"."email" ILIKE $2) LIMIT $3 OFFSET $4
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."AISettings"."id", "public"."AISettings"."enabled", "public"."AISettings"."geminiEnabled", "public"."AISettings"."groqEnabled", "public"."AISettings"."maxAutomaticAttempts", "public"."AISettings"."cooldownSeconds", "public"."AISettings"."updatedAt" FROM "public"."AISettings" WHERE 1=1 LIMIT $1 OFFSET $2
+prisma:query COMMIT
+ GET /api/settings 200 in 453ms (next.js: 4ms, proxy.ts: 61ms, application-code: 388ms)
+✓ Compiled in 30ms
+ GET /leads 200 in 217ms (next.js: 6ms, proxy.ts: 199ms, application-code: 13ms)
+prisma:query SELECT 1
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."companyName", "public"."Lead"."industry", "public"."Lead"."address", "public"."Lead"."city", "public"."Lead"."webPresence"::text, "public"."Lead"."website", "public"."Lead"."treatwellUrl", "public"."Lead"."phone", "public"."Lead"."email", "public"."Lead"."instagram", "public"."Lead"."googleMapsUrl", "public"."Lead"."googleRating", "public"."Lead"."googleReviewCount", "public"."Lead"."contactPerson", "public"."Lead"."preferredContactMethod"::text, "public"."Lead"."contactNote", "public"."Lead"."notes", "public"."Lead"."richNotes", "public"."Lead"."source", "public"."Lead"."lastContactAt", "public"."Lead"."nextFollowUpAt", "public"."Lead"."status"::text, "public"."Lead"."priority"::text, "public"."Lead"."score", "public"."Lead"."scoreReasons", "public"."Lead"."opportunityTags", "public"."Lead"."interestingReason", "public"."Lead"."enrichmentStatus", "public"."Lead"."hasMenu", "public"."Lead"."menuUrl", "public"."Lead"."menuSnippet", "public"."Lead"."menuCheckedAt", "public"."Lead"."acquisitionType"::text, "public"."Lead"."nfcDemoUrl", "public"."Lead"."addedAt", "public"."Lead"."createdAt", "public"."Lead"."updatedAt", "public"."Lead"."createdById", "public"."Lead"."assignedToId", COALESCE("aggr_selection_0_Interaction"."_aggr_count_interactions", 0) AS "_aggr_count_interactions", COALESCE("aggr_selection_1_WebsiteAudit"."_aggr_count_audits", 0) AS "_aggr_count_audits", COALESCE("aggr_selection_2_Task"."_aggr_count_tasks", 0) AS "_aggr_count_tasks" FROM "public"."Lead" LEFT JOIN (SELECT "public"."Interaction"."leadId", COUNT(*) AS "_aggr_count_interactions" FROM "public"."Interaction" WHERE 1=1 GROUP BY "public"."Interaction"."leadId") AS "aggr_selection_0_Interaction" ON ("public"."Lead"."id" = "aggr_selection_0_Interaction"."leadId") LEFT JOIN (SELECT "public"."WebsiteAudit"."leadId", COUNT(*) AS "_aggr_count_audits" FROM "public"."WebsiteAudit" WHERE 1=1 GROUP BY "public"."WebsiteAudit"."leadId") AS "aggr_selection_1_WebsiteAudit" ON ("public"."Lead"."id" = "aggr_selection_1_WebsiteAudit"."leadId") LEFT JOIN (SELECT "public"."Task"."leadId", COUNT(*) AS "_aggr_count_tasks" FROM "public"."Task" WHERE 1=1 GROUP BY "public"."Task"."leadId") AS "aggr_selection_2_Task" ON ("public"."Lead"."id" = "aggr_selection_2_Task"."leadId") WHERE ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) ORDER BY "public"."Lead"."updatedAt" DESC LIMIT $3 OFFSET $4
+prisma:query SELECT "public"."User"."id", "public"."User"."displayName", "public"."User"."email" FROM "public"."User" WHERE "public"."User"."id" IN ($1) OFFSET $2
+prisma:query SELECT "public"."User"."id", "public"."User"."displayName", "public"."User"."email" FROM "public"."User" WHERE "public"."User"."id" IN ($1) OFFSET $2
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT COUNT(*) AS "_count$_all" FROM (SELECT "public"."Lead"."id" FROM "public"."Lead" WHERE ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2) OFFSET $3) AS "sub"
+prisma:query COMMIT
+prisma:query BEGIN
+prisma:query DEALLOCATE ALL
+prisma:query SELECT "public"."Lead"."id", "public"."Lead"."industry" FROM "public"."Lead" WHERE ("public"."Lead"."industry" IS NOT NULL AND ("public"."Lead"."createdById" = $1 OR "public"."Lead"."assignedToId" = $2)) OFFSET $3
+prisma:query COMMIT
+ GET /api/leads?page=1&limit=20 200 in 828ms (next.js: 4ms, proxy.ts: 85ms, application-code: 738ms)

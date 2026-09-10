@@ -144,8 +144,8 @@ export function LeadFormModal({ isOpen, onClose, onSuccess }: LeadFormModalProps
                 value={formData.acquisitionType}
                 onChange={(e) => setFormData({ ...formData, acquisitionType: e.target.value as AcquisitionType })}
               >
-                <option value="CALL">📞 Cold Call</option>
-                <option value="WALK_IN">🚶‍♂️ Walk-In</option>
+                <option value="CALL">Cold Call</option>
+                <option value="WALK_IN">Walk-In</option>
               </select>
             </div>
 

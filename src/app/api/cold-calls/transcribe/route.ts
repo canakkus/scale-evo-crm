@@ -68,7 +68,7 @@ export async function POST(request: Request) {
 
     // If lead is linked, create an Interaction automatically!
     if (lead) {
-      const summaryText = `📞 **Groq Call-Transkription**: ${analysis.summary}\n\n**Nächste Schritte:** ${analysis.nextSteps.join(", ")}`;
+      const summaryText = `**Groq Call-Transkription**: ${analysis.summary}\n\n**Nächste Schritte:** ${analysis.nextSteps.join(", ")}`;
       await prisma.interaction.create({
         data: {
           leadId: lead.id,

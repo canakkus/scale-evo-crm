@@ -34,3 +34,9 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Recent Updates (Auto-Documented)
+- **Emoji-Purge im CRM**: Emojis in der UI (z.B. Leads-Tabelle) wurden durch saubere `lucide-react`-Icons ersetzt.
+- **UI & Build Fixes**: Build-Fehler und redundante Variablen bereinigt.
+- **ScaleEvo-Schreibregel**: Systemregeln aktualisiert, damit "ScaleEvo" durchgängig zusammengeschrieben wird.
+- **Vault Cleanup**: `node_modules` und `auth_info` (WhatsApp Bridge, Amoeba) wurden für eine sauberere Indizierung über `.obsidian/app.json` ignoriert.

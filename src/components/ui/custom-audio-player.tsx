@@ -50,7 +50,7 @@ export function CustomAudioPlayer({
   const [reducedMotion, setReducedMotion] = useState(false);
 
   useEffect(() => {
-    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const mediaQuery = ({ matches: false } as any);
     setReducedMotion(mediaQuery.matches);
     const handler = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
     mediaQuery.addEventListener("change", handler);
@@ -290,7 +290,7 @@ export function CustomAudioPlayer({
           >
             {/* Scrubber Thumb */}
             <div
-              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3.5 h-3.5 rounded-full bg-white shadow-md border-2 border-[#121212] transition-transform scale-90 group-hover:scale-125"
+              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3.5 h-3.5 rounded-full bg-white shadow-md border-2 border-[#121212] transition-transform scale-90 "
             />
           </div>
 
@@ -385,7 +385,7 @@ export function CustomAudioPlayer({
               color: "var(--text-2)",
             }}
           >
-            <RotateCcw className="w-4 h-4 transition-transform group-hover:-rotate-12" />
+            <RotateCcw className="w-4 h-4 transition-transform " />
             <span className="absolute -bottom-1 text-[8px] font-bold font-mono tracking-tighter" style={{ color: "var(--text-3)" }}>
               10
             </span>
@@ -429,7 +429,7 @@ export function CustomAudioPlayer({
               color: "var(--text-2)",
             }}
           >
-            <RotateCw className="w-4 h-4 transition-transform group-hover:rotate-12" />
+            <RotateCw className="w-4 h-4 transition-transform " />
             <span className="absolute -bottom-1 text-[8px] font-bold font-mono tracking-tighter" style={{ color: "var(--text-3)" }}>
               10
             </span>

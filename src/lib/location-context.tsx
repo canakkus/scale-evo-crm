@@ -112,7 +112,7 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
           };
           setCoords(liveCoords);
           setMode("live");
-          setLabel("📍 Live-Standort (GPS)");
+          setLabel("Live-Standort (GPS)");
           setAddress(null);
           setLoadingGps(false);
           localStorage.setItem(STORAGE_KEY_MODE, "live");

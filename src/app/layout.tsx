@@ -5,6 +5,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { getOptionalUser } from "@/lib/auth";
 import { LocationProvider } from "@/lib/location-context";
 import { LocationPromptModal } from "@/components/location/location-prompt-modal";
+import { ThemeProvider } from "@/components/theme-provider";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -28,23 +29,25 @@ export default async function RootLayout({
   const user = await getOptionalUser();
 
   return (
-    <html lang="de" className={inter.variable}>
-      <body>
-        <LocationProvider>
-          {user ? (
-            // Authenticated: Shell mit Sidebar
-            <div className="flex h-screen overflow-hidden">
-              <Sidebar />
-              <main className="flex-1 overflow-y-auto">
-                {children}
-              </main>
-              <LocationPromptModal />
-            </div>
-          ) : (
-            // Unauthenticated: kein Layout (Login-Seite)
-            <>{children}</>
-          )}
-        </LocationProvider>
+    <html lang="de" className={inter.variable} suppressHydrationWarning>
+      <body suppressHydrationWarning>
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+          <LocationProvider>
+            {user ? (
+              // Authenticated: Shell mit Sidebar
+              <div className="flex h-screen overflow-hidden">
+                <Sidebar />
+                <main className="flex-1 overflow-y-auto">
+                  {children}
+                </main>
+                <LocationPromptModal />
+              </div>
+            ) : (
+              // Unauthenticated: kein Layout (Login-Seite)
+              <>{children}</>
+            )}
+          </LocationProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -123,7 +123,7 @@ export function AudioUploadModal({ isOpen, onClose, onSuccess }: AudioUploadModa
       >
         <div className="flex items-center justify-between px-6 py-4 border-b shrink-0" style={{ borderColor: "var(--border)" }}>
           <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5" style={{ color: "var(--status-warm-tx)" }} />
+            <Upload className="w-5 h-5" style={{ color: "var(--status-warm-tx)" }} />
             <h2 className="font-heading text-lg font-bold" style={{ color: "var(--text)" }}>
               Call-Aufnahme hochladen
             </h2>
@@ -244,7 +244,7 @@ export function AudioUploadModal({ isOpen, onClose, onSuccess }: AudioUploadModa
                 </>
               ) : (
                 <>
-                  <Sparkles className="w-4 h-4" />
+                  <Upload className="w-4 h-4" />
                   Audio analysieren
                 </>
               )}

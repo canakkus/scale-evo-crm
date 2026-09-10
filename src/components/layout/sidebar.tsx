@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { cn, initials } from "@/lib/utils";
 import { DEFAULT_NAV_ITEMS, resolveNavConfig, type NavItemConfig } from "@/lib/nav-config";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const NAV_ICON_MAP: Record<string, any> = {
   "/": LayoutDashboard,
@@ -224,8 +225,9 @@ export function Sidebar() {
             );
           })}
 
-          {/* Red Logout Button directly under Einstellungen */}
-          <div className="pt-2 mt-2 border-t" style={{ borderColor: "var(--border)" }}>
+          {/* Theme Toggle & Logout */}
+          <div className="pt-2 mt-2 border-t space-y-1" style={{ borderColor: "var(--border)" }}>
+            <ThemeToggle collapsed={collapsed} />
             <button
               type="button"
               onClick={() => {

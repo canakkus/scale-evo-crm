@@ -180,90 +180,69 @@ export function PipelineBoardComponent() {
   }
 
   return (
-    <div className="space-y-4">
-      {/* Top Header Controls: View Switcher Toggle & Search */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-        {/* Toggle Switcher: Cold Calls vs Walk-Ins */}
+    <div className="space-y-6">
+      {/* Top Header Controls */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+        {/* Apple-style Segmented Control */}
         <div
-          className="inline-flex p-1 rounded-xl border max-w-fit shadow-inner"
-          style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}
+          className="inline-flex p-1 rounded-xl"
+          style={{ background: "var(--surface-2)" }}
         >
           <button
             type="button"
             onClick={() => setActiveTab("CALL")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+            className={`px-5 py-1.5 rounded-lg text-[13px] font-medium transition-all ${
               activeTab === "CALL"
-                ? "shadow-md scale-[1.02]"
-                : "opacity-75 hover:opacity-100 hover:text-[var(--text)]"
+                ? "shadow-sm"
+                : "opacity-70 hover:opacity-100"
             }`}
             style={{
-              background: activeTab === "CALL" ? "var(--accent)" : "transparent",
-              color: activeTab === "CALL" ? "var(--bg)" : "var(--text-2)",
+              background: activeTab === "CALL" ? "var(--surface)" : "transparent",
+              color: "var(--text)",
             }}
           >
-            <span className="text-sm">📞</span>
-            <span>Cold Calls</span>
-            <span
-              className="px-2 py-0.5 rounded-full text-[10px] font-bold"
-              style={{
-                background: activeTab === "CALL" ? "rgba(0,0,0,0.2)" : "var(--surface-3)",
-                color: activeTab === "CALL" ? "var(--bg)" : "var(--text-3)",
-              }}
-            >
-              {coldCallLeads.length}
-            </span>
+            Cold Calls <span className="opacity-50 ml-1">{coldCallLeads.length}</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab("WALK_IN")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+            className={`px-5 py-1.5 rounded-lg text-[13px] font-medium transition-all ${
               activeTab === "WALK_IN"
-                ? "shadow-md scale-[1.02]"
-                : "opacity-75 hover:opacity-100 hover:text-[var(--text)]"
+                ? "shadow-sm"
+                : "opacity-70 hover:opacity-100"
             }`}
             style={{
-              background: activeTab === "WALK_IN" ? "var(--accent)" : "transparent",
-              color: activeTab === "WALK_IN" ? "var(--bg)" : "var(--text-2)",
+              background: activeTab === "WALK_IN" ? "var(--surface)" : "transparent",
+              color: "var(--text)",
             }}
           >
-            <span className="text-sm">🚶‍♂️</span>
-            <span>Walk-Ins</span>
-            <span
-              className="px-2 py-0.5 rounded-full text-[10px] font-bold"
-              style={{
-                background: activeTab === "WALK_IN" ? "rgba(0,0,0,0.2)" : "var(--surface-3)",
-                color: activeTab === "WALK_IN" ? "var(--bg)" : "var(--text-3)",
-              }}
-            >
-              {walkInLeads.length}
-            </span>
+            Walk-Ins <span className="opacity-50 ml-1">{walkInLeads.length}</span>
           </button>
         </div>
 
-        {/* Search Input for Kanban Board */}
-        <div className="relative flex-1 max-w-xs sm:max-w-sm">
+        {/* Minimal Search Input */}
+        <div className="relative flex-1 max-w-xs">
           <Search
-            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
-            style={{ color: "var(--text-3)" }}
+            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-50"
+            style={{ color: "var(--text)" }}
           />
           <input
             type="text"
-            placeholder="Board filtern (Name, Stadt, Adresse)..."
+            placeholder="Suchen..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-lg pl-9 pr-4 py-2 text-xs border outline-none transition-colors"
+            className="w-full rounded-xl pl-9 pr-8 py-2 text-[14px] outline-none transition-all"
             style={{
-              background: "var(--surface)",
-              borderColor: "var(--border)",
+              background: "var(--surface-2)",
               color: "var(--text)",
             }}
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery("")}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-bold px-1.5 py-0.5 rounded hover:bg-[var(--surface-3)]"
-              style={{ color: "var(--text-3)" }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[13px] opacity-50 hover:opacity-100"
+              style={{ color: "var(--text)" }}
             >
               ✕
             </button>
@@ -272,17 +251,17 @@ export function PipelineBoardComponent() {
       </div>
 
       {loading ? (
-        <div className="p-12 text-center text-xs" style={{ color: "var(--text-3)" }}>
+        <div className="p-12 text-center text-[14px]" style={{ color: "var(--text-3)" }}>
           <div
-            className="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin mx-auto mb-2"
-            style={{ borderColor: "var(--border-2)", borderTopColor: "var(--accent)" }}
+            className="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin mx-auto mb-3"
+            style={{ borderColor: "var(--border-2)", borderTopColor: "var(--text)" }}
           />
-          Pipeline wird geladen…
+          Laden...
         </div>
       ) : (
         /* Kanban Board Columns */
         <div
-          className="flex gap-4 overflow-x-auto pb-6 min-h-[70vh] touch-pan-x select-none md:select-auto"
+          className="flex gap-4 overflow-x-auto pb-6 min-h-[70vh] touch-pan-x select-none md:select-auto px-1"
           style={{ WebkitOverflowScrolling: "touch" }}
         >
           {(activeColumns as LeadStatus[]).map((statusKey: LeadStatus) => {
@@ -291,39 +270,31 @@ export function PipelineBoardComponent() {
             return (
               <div
                 key={statusKey}
-                className={`w-72 shrink-0 rounded-xl border flex flex-col max-h-[75vh] transition-colors shadow-sm ${
+                className={`w-72 shrink-0 flex flex-col max-h-[75vh] transition-all rounded-2xl ${
                   dragOverColumn === statusKey
-                    ? "border-[var(--accent)] ring-2 ring-[var(--accent)] ring-opacity-50"
-                    : ""
+                    ? "bg-[var(--surface-2)]"
+                    : "bg-transparent"
                 }`}
-                style={{
-                  background: "var(--surface)",
-                  borderColor: dragOverColumn === statusKey ? "var(--accent)" : "var(--border)",
-                }}
                 onDragOver={(e) => onDragOver(e, statusKey)}
                 onDragLeave={onDragLeave}
                 onDrop={(e) => onDrop(e, statusKey)}
               >
-                {/* Column Header */}
-                <div
-                  className="p-3.5 border-b flex items-center justify-between shrink-0"
-                  style={{ borderColor: "var(--border)", background: "var(--surface-2)" }}
-                >
-                  <div className="flex items-center gap-2">
-                    <StatusBadge status={statusKey} />
-                    <span className="text-xs font-bold px-1.5 py-0.5 rounded-full bg-[var(--surface-3)]" style={{ color: "var(--text-2)" }}>
+                {/* Minimal Column Header */}
+                <div className="px-3 py-3 flex items-center justify-between shrink-0">
+                  <div className="flex items-baseline gap-2">
+                    <h3 className="text-[14px] font-medium" style={{ color: "var(--text)" }}>
+                      {STATUS_LABELS[statusKey]}
+                    </h3>
+                    <span className="text-[13px] opacity-50" style={{ color: "var(--text)" }}>
                       {columnLeads.length}
                     </span>
                   </div>
                 </div>
 
                 {/* Column Body */}
-                <div className="flex-1 overflow-y-auto p-3 space-y-3">
+                <div className="flex-1 overflow-y-auto px-1 pb-4 space-y-2">
                   {columnLeads.length === 0 ? (
-                    <div
-                      className="p-6 text-center text-xs italic rounded-lg border border-dashed"
-                      style={{ color: "var(--text-3)", borderColor: "var(--border)" }}
-                    >
+                    <div className="p-3 text-[13px] opacity-50 text-center" style={{ color: "var(--text)" }}>
                       Keine Leads
                     </div>
                   ) : (
@@ -338,74 +309,53 @@ export function PipelineBoardComponent() {
                           onDragStart={(e) => onDragStart(e, lead.id)}
                           onDragEnd={() => setDraggedLead(null)}
                           onClick={() => setSelectedLeadId(lead.id)}
-                          className={`p-3.5 rounded-lg border space-y-3 transition-all cursor-pointer hover:shadow-md hover:border-[var(--border-2)] ${
-                            draggedLead === lead.id ? "opacity-40 scale-95" : "opacity-100"
+                          className={`group relative p-3.5 rounded-2xl transition-all cursor-pointer ${
+                            draggedLead === lead.id ? "opacity-40" : "opacity-100"
                           }`}
-                          style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}
+                          style={{
+                            background: "var(--surface)",
+                            boxShadow: "0 1px 3px rgba(0,0,0,0.02), 0 0 0 1px var(--border)",
+                          }}
                         >
-                          {/* Top row: Name & Industry */}
-                          <div>
-                            <div className="flex items-start justify-between gap-1">
-                              <h4 className="font-bold text-xs leading-snug" style={{ color: "var(--text)" }}>
-                                {lead.companyName}
-                              </h4>
-                              {lead.score > 0 && (
-                                <span
-                                  className="text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 bg-amber-500/10 text-amber-400 border border-amber-500/20"
-                                  title="Lead Score"
-                                >
-                                  ★ {lead.score}
-                                </span>
+                          {/* Clean Card Content (Typography-driven) */}
+                          <div className="pr-8">
+                            <h4 className="text-[14px] font-medium leading-tight mb-1" style={{ color: "var(--text)" }}>
+                              {lead.companyName}
+                            </h4>
+                            
+                            <div className="text-[13px] space-y-0.5" style={{ color: "var(--text-2)" }}>
+                              <p>
+                                {lead.industry || "Branche k.A."}
+                                {lead.city ? ` · ${lead.city}` : ""}
+                              </p>
+                              <p className="truncate" title={lead.address}>
+                                {lead.address}
+                              </p>
+                              
+                              {(lead.score > 0 || lead.googleRating != null || lead.hasMenu) && (
+                                <p style={{ color: "var(--text-3)" }}>
+                                  {[
+                                    lead.score > 0 ? `Score: ${lead.score}` : null,
+                                    lead.googleRating != null ? `Rating: ${lead.googleRating.toFixed(1)}` : null,
+                                    lead.hasMenu ? "Menükarte" : null
+                                  ].filter(Boolean).join(" · ")}
+                                </p>
                               )}
                             </div>
-                            <p className="text-[11px] mt-0.5" style={{ color: "var(--text-3)" }}>
-                              {lead.industry || "Branche k.A."} {lead.city ? `· ${lead.city}` : ""}
-                            </p>
                           </div>
 
-                          {/* Address / Physical Info (Crucial for Walk-Ins) */}
-                          {lead.address && (
-                            <div className="flex items-start gap-1.5 text-[11px]" style={{ color: "var(--text-2)" }}>
-                              <MapPin className="w-3.5 h-3.5 shrink-0 mt-0.5" style={{ color: "var(--text-3)" }} />
-                              <span className="truncate">{lead.address}</span>
-                            </div>
-                          )}
-
-                          {/* Contact & Meta Info */}
-                          <div className="space-y-1 text-[11px]" style={{ color: "var(--text-2)" }}>
+                          {/* Hover Actions (Progressive Disclosure) */}
+                          <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-100 transition-opacity flex flex-col gap-1 bg-[var(--surface)]/90 backdrop-blur-md p-1 rounded-xl shadow-sm border border-[var(--border)]">
                             {lead.phone && (
-                              <div className="flex items-center gap-1.5 font-mono">
-                                <Phone className="w-3 h-3 shrink-0" style={{ color: "var(--text-3)" }} />
-                                <span>{lead.phone}</span>
-                              </div>
+                              <a
+                                href={`tel:${lead.phone}`}
+                                onClick={(e) => e.stopPropagation()}
+                                className="p-1.5 hover:bg-[var(--surface-3)] rounded-lg text-[var(--text-2)] hover:text-[var(--text)] transition-colors"
+                                title={`Anrufen: ${lead.phone}`}
+                              >
+                                <Phone className="w-4 h-4" />
+                              </a>
                             )}
-
-                            <div className="flex items-center gap-2 flex-wrap pt-0.5">
-                              {lead.googleRating != null && (
-                                <div className="flex items-center gap-1 text-[11px]">
-                                  <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                                  <span className="font-semibold">{lead.googleRating.toFixed(1)}</span>
-                                  {lead.googleReviewCount != null && (
-                                    <span style={{ color: "var(--text-3)" }}>({lead.googleReviewCount})</span>
-                                  )}
-                                </div>
-                              )}
-
-                              {lead.hasMenu === true && (
-                                <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
-                                  <UtensilsCrossed className="w-2.5 h-2.5" /> Karte
-                                </span>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Quick Action Utilities Row */}
-                          <div
-                            className="flex items-center gap-1.5 flex-wrap pt-2 border-t"
-                            style={{ borderColor: "var(--border)" }}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            {/* Maps Navigation Button */}
                             {mapsUrl && (
                               <button
                                 type="button"
@@ -413,116 +363,34 @@ export function PipelineBoardComponent() {
                                   e.stopPropagation();
                                   window.open(mapsUrl, "_blank", "noopener,noreferrer");
                                 }}
-                                className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-semibold border transition-all hover:bg-[var(--surface-3)] hover:scale-[1.02]"
-                                style={{
-                                  background: "var(--surface)",
-                                  borderColor: "var(--border)",
-                                  color: "var(--text)",
-                                }}
-                                title="Navigation: Route auf Google/Apple Maps öffnen"
+                                className="p-1.5 hover:bg-[var(--surface-3)] rounded-lg text-[var(--text-2)] hover:text-[var(--text)] transition-colors"
+                                title="Route"
                               >
-                                <Navigation className="w-3 h-3 text-sky-400 shrink-0" />
-                                <span>Route</span>
+                                <Navigation className="w-4 h-4" />
                               </button>
                             )}
-
-                            {/* NFC Demo Quick-Action */}
-                            {lead.nfcDemoUrl ? (
-                              <div className="inline-flex items-center rounded border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
-                                <button
-                                  type="button"
-                                  onClick={(e) => handleCopyNfc(e, lead.nfcDemoUrl, lead.id)}
-                                  className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-semibold transition-colors hover:bg-[var(--surface-3)]"
-                                  style={{ color: copiedNfcId === lead.id ? "var(--accent)" : "var(--text-2)" }}
-                                  title={`NFC-Demo URL kopieren: ${lead.nfcDemoUrl}`}
-                                >
-                                  {copiedNfcId === lead.id ? (
-                                    <>
-                                      <Check className="w-3 h-3 text-emerald-400" />
-                                      <span className="text-emerald-400 font-bold">Kopiert!</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Radio className="w-3 h-3 text-purple-400" />
-                                      <span>NFC</span>
-                                    </>
-                                  )}
-                                </button>
-                                <a
-                                  href={lead.nfcDemoUrl}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="px-1.5 py-1 border-l hover:bg-[var(--surface-3)] transition-colors"
-                                  style={{ borderColor: "var(--border)", color: "var(--text-3)" }}
-                                  title="NFC-Demo im Browser öffnen"
-                                >
-                                  <ExternalLink className="w-2.5 h-2.5" />
-                                </a>
-                              </div>
-                            ) : null}
-
-                            {/* Call Button */}
-                            {lead.phone && (
-                              <a
-                                href={`tel:${lead.phone}`}
-                                onClick={(e) => e.stopPropagation()}
-                                className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-semibold border transition-all hover:bg-[var(--surface-3)]"
-                                style={{
-                                  background: "var(--surface)",
-                                  borderColor: "var(--border)",
-                                  color: "var(--accent)",
-                                }}
-                                title={`Anrufen: ${lead.phone}`}
+                            {lead.nfcDemoUrl && (
+                              <button
+                                type="button"
+                                onClick={(e) => handleCopyNfc(e, lead.nfcDemoUrl, lead.id)}
+                                className="p-1.5 hover:bg-[var(--surface-3)] rounded-lg transition-colors"
+                                style={{ color: copiedNfcId === lead.id ? "var(--accent)" : "var(--text-2)" }}
+                                title="NFC URL kopieren"
                               >
-                                <Phone className="w-3 h-3" />
-                                <span>Anruf</span>
-                              </a>
+                                {copiedNfcId === lead.id ? <Check className="w-4 h-4" /> : <Radio className="w-4 h-4" />}
+                              </button>
                             )}
-                          </div>
-
-                          {/* Dropdown status switcher or advance button */}
-                          <div
-                            className="pt-2 border-t flex items-center justify-between gap-2"
-                            style={{ borderColor: "var(--border)" }}
-                          >
-                            <select
-                              onClick={(e) => e.stopPropagation()}
-                              className="text-[10px] rounded px-1.5 py-1 border outline-none bg-[var(--surface)] text-[var(--text-2)] cursor-pointer font-medium"
-                              style={{ borderColor: "var(--border)" }}
-                              value={lead.status}
-                              onChange={(e) => handleSetStatus(lead.id, e.target.value as LeadStatus)}
-                            >
-                              <optgroup label="Aktuelle Pipeline">
-                                {(activeColumns as LeadStatus[]).map((k: LeadStatus) => (
-                                  <option key={k} value={k}>
-                                    {STATUS_LABELS[k]}
-                                  </option>
-                                ))}
-                              </optgroup>
-                              <optgroup label="Weitere Status">
-                                {Object.entries(STATUS_LABELS)
-                                  .filter(([k]) => !activeColumns.includes(k as LeadStatus))
-                                  .map(([k, label]) => (
-                                    <option key={k} value={k}>
-                                      {label}
-                                    </option>
-                                  ))}
-                              </optgroup>
-                            </select>
-
                             {nextStatus && (
                               <button
+                                type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handleAdvanceStatus(lead.id, lead.status);
                                 }}
-                                className="p-1 rounded text-[10px] font-semibold flex items-center gap-0.5 hover:bg-[var(--surface-3)] transition-colors shrink-0"
-                                style={{ color: "var(--accent)" }}
+                                className="p-1.5 hover:bg-[var(--surface-3)] rounded-lg text-[var(--text-2)] hover:text-[var(--text)] transition-colors"
                                 title={`Weiter zu: ${STATUS_LABELS[nextStatus]}`}
                               >
-                                <span>Weiter</span>
-                                <ChevronRight className="w-3 h-3" />
+                                <ChevronRight className="w-4 h-4" />
                               </button>
                             )}
                           </div>

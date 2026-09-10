@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import {
-  Search,
+  Search, User,
   Plus,
   Filter,
   Phone,
@@ -161,7 +161,7 @@ export function LeadsTable() {
                 color: acquisitionFilter === "CALL" ? "var(--text)" : "var(--text-2)",
               }}
             >
-              <span>📞</span>
+              <Phone className="w-4 h-4 text-muted-foreground" />
               <span>Cold Calls</span>
             </button>
             <button
@@ -180,7 +180,7 @@ export function LeadsTable() {
                 color: acquisitionFilter === "WALK_IN" ? "var(--text)" : "var(--text-2)",
               }}
             >
-              <span>🚶‍♂️</span>
+              <User className="w-4 h-4 text-muted-foreground" />
               <span>Walk-Ins</span>
             </button>
           </div>
@@ -440,7 +440,7 @@ export function LeadsTable() {
                               color: isWalkIn ? "rgb(192, 132, 252)" : "rgb(96, 165, 250)",
                             }}
                           >
-                            {isWalkIn ? "🚶‍♂️ Walk-In" : "📞 Cold Call"}
+                            {isWalkIn ? "Walk-In" : "Cold Call"}
                           </span>
                         </div>
                       </td>
@@ -497,7 +497,7 @@ export function LeadsTable() {
 
                       {/* Actions */}
                       <td className="px-5 py-4 align-top text-right" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center justify-end gap-2 opacity-100 transition-opacity">
                           {/* Maps Quick Action */}
                           {mapsUrl && (
                             <button

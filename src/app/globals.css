@@ -2,55 +2,55 @@
 @import "tailwindcss";
 
 /* ================================================================
-   Scale Evo CRM 3.0 — Design System
+   Scale Evo CRM 3.0 — Design System (Light & Colorful Theme)
    ================================================================ */
 
 :root {
   /* Hintergründe */
-  --bg:         #0A0A0A;
-  --surface:    #141414;
-  --surface-2:  #1C1C1C;
-  --surface-3:  #242424;
+  --bg:         #F8FAFC;
+  --surface:    #FFFFFF;
+  --surface-2:  #F1F5F9;
+  --surface-3:  #E2E8F0;
 
   /* Text */
-  --text:       #FAFAFA;
-  --text-2:     #A1A1A1;
-  --text-3:     #6B6B6B;
+  --text:       #0F172A;
+  --text-2:     #475569;
+  --text-3:     #94A3B8;
 
   /* Linien / Borders */
-  --border:     #2A2A2A;
-  --border-2:   #3A3A3A;
+  --border:     #E2E8F0;
+  --border-2:   #CBD5E1;
 
   /* Akzent */
-  --accent:     #FAFAFA;
-  --accent-2:   #E0E0E0;
+  --accent:     #3B82F6;
+  --accent-2:   #2563EB;
 
-  /* Status (Lead) */
-  --status-new-bg:        #1A2332;
-  --status-new-tx:        #6BA4E8;
-  --status-contacted-bg:  #221A32;
-  --status-contacted-tx:  #A88BE0;
-  --status-planned-bg:    #2A2018;
-  --status-planned-tx:    #E0A868;
-  --status-warm-bg:       #18241A;
-  --status-warm-tx:       #6BE089;
-  --status-lost-bg:       #241818;
-  --status-lost-tx:       #E06868;
+  /* Status (Lead) - Farbfroher! */
+  --status-new-bg:        #E0F2FE;
+  --status-new-tx:        #0284C7;
+  --status-contacted-bg:  #F3E8FF;
+  --status-contacted-tx:  #9333EA;
+  --status-planned-bg:    #FFEDD5;
+  --status-planned-tx:    #EA580C;
+  --status-warm-bg:       #DCFCE7;
+  --status-warm-tx:       #16A34A;
+  --status-lost-bg:       #FEE2E2;
+  --status-lost-tx:       #DC2626;
 
   /* Task-Status */
-  --task-open-bg:   #1A2332;
-  --task-open-tx:   #6BA4E8;
-  --task-done-bg:   #18241A;
-  --task-done-tx:   #6BE089;
+  --task-open-bg:   #E0F2FE;
+  --task-open-tx:   #0284C7;
+  --task-done-bg:   #DCFCE7;
+  --task-done-tx:   #16A34A;
 
-  /* Overlay / Liquid Glass */
-  --overlay:      rgba(0, 0, 0, 0.45);
-  --overlay-blur: blur(24px) saturate(180%);
+  /* Overlay */
+  --overlay:      rgba(255, 255, 255, 0.7);
+  --overlay-blur: blur(12px);
 
-  /* Shadows */
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.40);
-  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.50);
-  --shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.60);
+  /* Shadows (Softer for light theme) */
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+  --shadow-lg: 0 12px 32px rgba(0,0,0,0.12);
 
   /* Spacing */
   --sp-1:  4px;
@@ -63,11 +63,11 @@
   --sp-10: 40px;
 
   /* Radii */
-  --r-sm:   4px;
-  --r-md:   6px;
-  --r-lg:   8px;
-  --r-xl:   12px;
-  --r-2xl:  14px;
+  --r-sm:   10px;
+  --r-md:   14px;
+  --r-lg:   20px;
+  --r-xl:   28px;
+  --r-2xl:  36px;
   --r-full: 9999px;
 
   /* Transitions */
@@ -79,12 +79,54 @@
   --dur-slow: 0.32s;
 
   /* Sidebar */
-  --sidebar-w:         220px;
-  --sidebar-collapsed: 64px;
+  --sidebar-w:         240px;
+  --sidebar-collapsed: 72px;
 
-  /* Fonts */
-  --font-body:    system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  /* Fonts - Going back to Inter for a more web-app feel */
+  --font-body:    'Inter', system-ui, -apple-system, sans-serif;
   --font-mono:    ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+.dark {
+  /* Hintergründe */
+  --bg:         #000000;
+  --surface:    #111111;
+  --surface-2:  #222222;
+  --surface-3:  #333333;
+
+  /* Text */
+  --text:       #FFFFFF;
+  --text-2:     #A1A1AA;
+  --text-3:     #71717A;
+
+  /* Linien / Borders */
+  --border:     #333333;
+  --border-2:   #444444;
+
+  /* Akzent */
+  --accent:     #3B82F6;
+  --accent-2:   #60A5FA;
+
+  /* Status (Lead) - etwas abgedämpft für Dark Mode */
+  --status-new-bg:        rgba(2, 132, 199, 0.2);
+  --status-new-tx:        #38BDF8;
+  --status-contacted-bg:  rgba(147, 51, 234, 0.2);
+  --status-contacted-tx:  #C084FC;
+  --status-planned-bg:    rgba(234, 88, 12, 0.2);
+  --status-planned-tx:    #FB923C;
+  --status-warm-bg:       rgba(22, 163, 74, 0.2);
+  --status-warm-tx:       #4ADE80;
+  --status-lost-bg:       rgba(220, 38, 38, 0.2);
+  --status-lost-tx:       #F87171;
+
+  /* Task-Status */
+  --task-open-bg:   rgba(2, 132, 199, 0.2);
+  --task-open-tx:   #38BDF8;
+  --task-done-bg:   rgba(22, 163, 74, 0.2);
+  --task-done-tx:   #4ADE80;
+
+  /* Overlay */
+  --overlay:      rgba(0, 0, 0, 0.6);
 }
 
 @theme {
@@ -118,7 +160,7 @@
 
 html {
   font-size: 100%;
-  color-scheme: dark;
+  color-scheme: light;
   scrollbar-color: var(--border-2) transparent;
   scrollbar-width: thin;
 }
@@ -133,9 +175,9 @@ body {
 }
 
 /* ---- Scrollbar ---- */
-::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: var(--r-full); }
+::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: var(--r-full); border: 2px solid var(--bg); }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-3); }
 
 /* ---- Focus ---- */
@@ -153,12 +195,12 @@ body {
 
 /* ---- Animations ---- */
 @keyframes fade-in {
-  from { opacity: 0; transform: translateY(4px); }
+  from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes slide-in-left {
-  from { opacity: 0; transform: translateX(-8px); }
+  from { opacity: 0; transform: translateX(-12px); }
   to   { opacity: 1; transform: translateX(0); }
 }
 
@@ -166,5 +208,5 @@ body {
   to { transform: rotate(360deg); }
 }
 
-.animate-fade-in    { animation: fade-in 0.2s var(--ease) both; }
-.animate-slide-left { animation: slide-in-left 0.2s var(--ease) both; }
+.animate-fade-in    { animation: fade-in 0.25s var(--ease-out) both; }
+.animate-slide-left { animation: slide-in-left 0.25s var(--ease-out) both; }

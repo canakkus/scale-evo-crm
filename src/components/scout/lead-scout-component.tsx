@@ -109,7 +109,7 @@ function ResultCard({
   };
 
   return (
-    <div className="rounded-xl border p-5 transition hover:shadow-lg space-y-4" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+    <div className="group border-b py-5 px-3 transition-colors hover:bg-[var(--surface-3)] flex flex-col gap-4" style={{ borderColor: "var(--border)" }}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex flex-wrap items-center gap-2.5">
@@ -177,8 +177,8 @@ function ResultCard({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-lg border p-3" style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}>
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x" style={{ borderColor: "var(--border)" }}>
+        <div className="p-2">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--text-3)" }}>Duplikat-Check</span>
             <StepBadge status={duplicate.status} />
@@ -196,7 +196,7 @@ function ResultCard({
           )}
         </div>
 
-        <div className="rounded-lg border p-3" style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}>
+        <div className="p-2">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--text-3)" }}>Google Maps</span>
             <StepBadge status={maps.status} />
@@ -204,7 +204,7 @@ function ResultCard({
           <p className="mt-1 text-xs truncate" style={{ color: "var(--text-2)" }}>{maps.matchReason}</p>
         </div>
 
-        <div className="rounded-lg border p-3" style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}>
+        <div className="p-2">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--text-3)" }}>Website</span>
             <StepBadge status={website.status} />
@@ -225,7 +225,7 @@ function ResultCard({
           )}
         </div>
 
-        <div className="rounded-lg border p-3" style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}>
+        <div className="p-2">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--text-3)" }}>Kontakt</span>
             <span className="text-xs font-semibold" style={{ color: contacts.phone ? "var(--status-warm-tx)" : "var(--text-3)" }}>
@@ -244,7 +244,7 @@ function ResultCard({
         <div className="rounded-lg border p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-fade-in" style={{ background: "var(--surface-2)", borderColor: "rgba(56, 189, 248, 0.3)" }}>
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold px-2 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">
-              🚶 Walk-In Lead
+              Walk-In Lead
             </span>
             <span className="text-xs" style={{ color: "var(--text-2)" }}>
               Lead wird als Vor-Ort-Akquise markiert.
@@ -275,6 +275,7 @@ function ResultCard({
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t" style={{ borderColor: "var(--border)" }}>
+      <div className="opacity-100 sm:opacity-100 transition-opacity flex w-full flex-wrap items-center justify-between gap-3">
         {/* Walk-In Checkbox Selector */}
         <label className="flex items-center gap-2 text-xs font-semibold cursor-pointer select-none">
           <input
@@ -330,6 +331,7 @@ function ResultCard({
             {isDuplicate ? "Duplikat im CRM" : added ? "Bereits Angelegt" : `Als Lead anlegen (${STATUS_LABELS[status]})`}
           </button>
         </div>
+      </div>
       </div>
     </div>
   );
@@ -488,9 +490,9 @@ export function LeadScoutComponent() {
   return (
     <div className="space-y-6">
       {/* Search Form Card */}
-      <div className="rounded-xl border p-6 space-y-6" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+      <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h2 className="font-heading text-lg font-bold flex items-center gap-2" style={{ color: "var(--text)" }}>
+          <h2 className="text-2xl font-semibold tracking-tight flex items-center gap-2" style={{ color: "var(--text)" }}>
             <Radar className="w-5 h-5" style={{ color: "var(--accent)" }} />
             Neuen Scout-Durchlauf starten
           </h2>
@@ -567,141 +569,143 @@ export function LeadScoutComponent() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          <div>
-            <label className="block text-xs font-medium mb-1" style={{ color: "var(--text-2)" }}>Nische / Kategorie</label>
-            <select
-              className="w-full rounded-md px-3 py-2 text-sm border outline-none cursor-pointer"
-              style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-            >
-              {CATEGORIES.map((item) => (
-                <option key={item.slug} value={item.slug}>{item.label}</option>
-              ))}
-            </select>
-          </div>
+        <div className="flex flex-col rounded-xl border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+          <div className="flex flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x" style={{ borderColor: "var(--border)" }}>
+            <div className="flex-1 px-4 py-2">
+              <label className="block text-[10px] font-bold uppercase tracking-wider mb-0.5" style={{ color: "var(--text-3)" }}>Nische / Kategorie</label>
+              <select
+                className="w-full bg-transparent outline-none text-sm appearance-none cursor-pointer"
+                style={{ color: "var(--text)" }}
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+              >
+                {CATEGORIES.map((item) => (
+                  <option key={item.slug} value={item.slug}>{item.label}</option>
+                ))}
+              </select>
+            </div>
 
-          <div>
-            <label className="block text-xs font-medium mb-1" style={{ color: "var(--text-2)" }}>Stadt</label>
-            <input
-              type="text"
-              className="w-full rounded-md px-3 py-2 text-sm border outline-none"
-              style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-              placeholder="z. B. Wien"
-            />
-          </div>
+            <div className="flex-1 px-4 py-2">
+              <label className="block text-[10px] font-bold uppercase tracking-wider mb-0.5" style={{ color: "var(--text-3)" }}>Stadt</label>
+              <input
+                type="text"
+                className="w-full bg-transparent outline-none text-sm"
+                style={{ color: "var(--text)" }}
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                placeholder="z. B. Wien"
+              />
+            </div>
 
-          <div>
-            <label className="block text-xs font-medium mb-1" style={{ color: "var(--text-2)" }}>Mindest-Bewertung</label>
-            <input
-              type="number"
-              min={0}
-              max={5}
-              step={0.1}
-              className="w-full rounded-md px-3 py-2 text-sm border outline-none"
-              style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
-              value={minRating}
-              onChange={(e) => setMinRating(e.target.value)}
-            />
-          </div>
+            <div className="flex-1 px-4 py-2">
+              <label className="block text-[10px] font-bold uppercase tracking-wider mb-0.5" style={{ color: "var(--text-3)" }}>Min. Bewertung</label>
+              <input
+                type="number"
+                min={0}
+                max={5}
+                step={0.1}
+                className="w-full bg-transparent outline-none text-sm"
+                style={{ color: "var(--text)" }}
+                value={minRating}
+                onChange={(e) => setMinRating(e.target.value)}
+              />
+            </div>
 
-          <div>
-            <label className="block text-xs font-medium mb-1" style={{ color: "var(--text-2)" }}>Min. Bewertungen</label>
-            <input
-              type="number"
-              min={0}
-              className="w-full rounded-md px-3 py-2 text-sm border outline-none"
-              style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
-              value={minReviews}
-              onChange={(e) => setMinReviews(e.target.value)}
-            />
-          </div>
+            <div className="flex-1 px-4 py-2">
+              <label className="block text-[10px] font-bold uppercase tracking-wider mb-0.5" style={{ color: "var(--text-3)" }}>Min. Reviews</label>
+              <input
+                type="number"
+                min={0}
+                className="w-full bg-transparent outline-none text-sm"
+                style={{ color: "var(--text)" }}
+                value={minReviews}
+                onChange={(e) => setMinReviews(e.target.value)}
+              />
+            </div>
 
-          <div>
-            <label className="block text-xs font-medium mb-1" style={{ color: "var(--text-2)" }}>Max. Ergebnisse</label>
-            <input
-              type="number"
-              min={1}
-              max={30}
-              className="w-full rounded-md px-3 py-2 text-sm border outline-none"
-              style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
-              value={maxResults}
-              onChange={(e) => setMaxResults(e.target.value)}
-            />
+            <div className="flex-1 px-4 py-2">
+              <label className="block text-[10px] font-bold uppercase tracking-wider mb-0.5" style={{ color: "var(--text-3)" }}>Ergebnisse</label>
+              <input
+                type="number"
+                min={1}
+                max={30}
+                className="w-full bg-transparent outline-none text-sm"
+                style={{ color: "var(--text)" }}
+                value={maxResults}
+                onChange={(e) => setMaxResults(e.target.value)}
+              />
+            </div>
           </div>
         </div>
 
         {/* Extended Filter Controls */}
-        <div className="pt-4 border-t grid grid-cols-1 sm:grid-cols-5 gap-4" style={{ borderColor: "var(--border)" }}>
-          <div>
-            <label className="block text-[11px] font-semibold mb-1" style={{ color: "var(--text-3)" }}>Sortierung</label>
+        <div className="flex flex-col sm:flex-row rounded-xl border overflow-hidden divide-y sm:divide-y-0 sm:divide-x" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+          <div className="flex-1 px-3 py-2">
+            <label className="block text-[10px] font-bold uppercase tracking-wider mb-0.5" style={{ color: "var(--text-3)" }}>Sortierung</label>
             <select
-              className="w-full rounded-md px-2.5 py-1.5 text-xs border outline-none cursor-pointer"
-              style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
+              className="w-full bg-transparent outline-none text-[11px] appearance-none cursor-pointer"
+              style={{ color: "var(--text)" }}
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as "rating" | "distance")}
             >
-              <option value="rating">Beste Bewertung (Standard)</option>
-              <option value="distance">Kürzeste Distanz (Walk-In)</option>
+              <option value="rating">Beste Bewertung</option>
+              <option value="distance">Kürzeste Distanz</option>
             </select>
           </div>
 
-          <div>
-            <label className="block text-[11px] font-semibold mb-1" style={{ color: "var(--text-3)" }}>Website-Filter</label>
+          <div className="flex-1 px-3 py-2">
+            <label className="block text-[10px] font-bold uppercase tracking-wider mb-0.5" style={{ color: "var(--text-3)" }}>Website</label>
             <select
-              className="w-full rounded-md px-2.5 py-1.5 text-xs border outline-none cursor-pointer"
-              style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
+              className="w-full bg-transparent outline-none text-[11px] appearance-none cursor-pointer"
+              style={{ color: "var(--text)" }}
               value={hasWebsiteFilter}
               onChange={(e) => setHasWebsiteFilter(e.target.value as any)}
             >
-              <option value="all">Alle anzeigen</option>
-              <option value="no">Nur OHNE eigene Website (Top Akquise!)</option>
-              <option value="yes">Nur MIT eigener Website</option>
+              <option value="all">Alle</option>
+              <option value="no">Ohne Website</option>
+              <option value="yes">Mit Website</option>
             </select>
           </div>
 
-          <div>
-            <label className="block text-[11px] font-semibold mb-1" style={{ color: "var(--text-3)" }}>Treatwell-Profil</label>
+          <div className="flex-1 px-3 py-2">
+            <label className="block text-[10px] font-bold uppercase tracking-wider mb-0.5" style={{ color: "var(--text-3)" }}>Treatwell</label>
             <select
-              className="w-full rounded-md px-2.5 py-1.5 text-xs border outline-none cursor-pointer"
-              style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
+              className="w-full bg-transparent outline-none text-[11px] appearance-none cursor-pointer"
+              style={{ color: "var(--text)" }}
               value={hasTreatwellFilter}
               onChange={(e) => setHasTreatwellFilter(e.target.value as any)}
             >
               <option value="all">Alle</option>
-              <option value="yes">Nur auf Treatwell</option>
-              <option value="no">Nicht auf Treatwell</option>
+              <option value="yes">Ja</option>
+              <option value="no">Nein</option>
             </select>
           </div>
 
-          <div>
-            <label className="block text-[11px] font-semibold mb-1" style={{ color: "var(--text-3)" }}>Telefon-Kontakt</label>
+          <div className="flex-1 px-3 py-2">
+            <label className="block text-[10px] font-bold uppercase tracking-wider mb-0.5" style={{ color: "var(--text-3)" }}>Telefon</label>
             <select
-              className="w-full rounded-md px-2.5 py-1.5 text-xs border outline-none cursor-pointer"
-              style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
+              className="w-full bg-transparent outline-none text-[11px] appearance-none cursor-pointer"
+              style={{ color: "var(--text)" }}
               value={hasPhoneFilter}
               onChange={(e) => setHasPhoneFilter(e.target.value as any)}
             >
               <option value="all">Alle</option>
-              <option value="yes">Nur mit Telefonnummer</option>
-              <option value="no">Ohne Telefonnummer</option>
+              <option value="yes">Ja</option>
+              <option value="no">Nein</option>
             </select>
           </div>
 
-          <div>
-            <label className="block text-[11px] font-semibold mb-1" style={{ color: "var(--text-3)" }}>Instagram-Kontakt</label>
+          <div className="flex-1 px-3 py-2">
+            <label className="block text-[10px] font-bold uppercase tracking-wider mb-0.5" style={{ color: "var(--text-3)" }}>Instagram</label>
             <select
-              className="w-full rounded-md px-2.5 py-1.5 text-xs border outline-none cursor-pointer"
-              style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
+              className="w-full bg-transparent outline-none text-[11px] appearance-none cursor-pointer"
+              style={{ color: "var(--text)" }}
               value={hasInstagramFilter}
               onChange={(e) => setHasInstagramFilter(e.target.value as any)}
             >
               <option value="all">Alle</option>
-              <option value="yes">Nur mit Instagram</option>
-              <option value="no">Ohne Instagram</option>
+              <option value="yes">Ja</option>
+              <option value="no">Nein</option>
             </select>
           </div>
         </div>
@@ -785,7 +789,7 @@ export function LeadScoutComponent() {
 
       {/* Results List */}
       {response && response.results.length > 0 && (
-        <div className="space-y-4">
+        <div className="flex flex-col border-t" style={{ borderColor: "var(--border)" }}>
           {response.results.map((result) => (
             <ResultCard
               key={result.venue.key}

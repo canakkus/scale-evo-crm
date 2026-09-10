@@ -647,7 +647,7 @@ export default function RestaurantScoutPage() {
                                   <span>Keine Karte gefunden</span>
                                 </span>
                                 <span className="text-[10px] font-medium" style={{ color: "var(--accent)" }}>
-                                  🎯 Potenzial-Lead
+                                  Potenzial-LeadPotenzial-Lead
                                 </span>
                               </div>
                             ) : (
@@ -761,15 +761,15 @@ export default function RestaurantScoutPage() {
 
                   {selectedLead.hasMenu ? (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                      🟢 Speisekarte Online
+                      Status: Speisekarte Online
                     </span>
                   ) : selectedLead.website ? (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-red-500/10 text-red-400 border border-red-500/20">
-                      🔴 Keine Karte
+                      Status: Keine Karte
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-zinc-500/10 text-zinc-400 border border-zinc-500/20">
-                      ⚠️ Keine Website
+                      Achtung: Keine Website
                     </span>
                   )}
                 </div>
@@ -815,7 +815,7 @@ export default function RestaurantScoutPage() {
                     style={{ borderColor: "var(--border)", color: "var(--text)" }}
                   >
                     <RefreshCw size={12} className={cn(checkingMenuId === selectedLead.id && "animate-spin text-[var(--accent)]")} />
-                    <span>{checkingMenuId === selectedLead.id ? "Analysiere Website..." : "🔄 Speisekarte neu prüfen"}</span>
+                    <span>{checkingMenuId === selectedLead.id ? "Analysiere Website..." : "Neu prüfen: Speisekarte neu prüfen"}</span>
                   </button>
                 )}
               </div>
