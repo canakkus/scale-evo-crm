@@ -31,8 +31,18 @@ export function RecordingDetailModal({ recording, onClose }: RecordingDetailModa
   };
 
   const sentiment = sentimentStyles[recording.aiSentiment] || sentimentStyles.NEUTRAL;
-  const extracted = recording.aiExtractedData || {};
-  const nextSteps = Array.isArray(recording.aiNextSteps) ? recording.aiNextSteps : [];
+  const extracted = (typeof recording.aiExtractedData === "object" && recording.aiExtractedData) ? recording.aiExtractedData : {};
+  const nextSteps = Array.isArray(recording.aiNextSteps)
+    ? recording.aiNextSteps
+    : typeof recording.aiNextSteps === "string"
+      ? [recording.aiNextSteps]
+      : [];
+  const aiFeedback = (typeof recording.aiFeedback === "object" && recording.aiFeedback) ? recording.aiFeedback : null;
+  const feedbackTips: string[] = Array.isArray(aiFeedback?.tips)
+    ? aiFeedback.tips
+    : typeof aiFeedback?.tips === "string"
+      ? [aiFeedback.tips]
+      : [];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "var(--overlay)", backdropFilter: "var(--overlay-blur)" }}>
@@ -151,7 +161,7 @@ export function RecordingDetailModal({ recording, onClose }: RecordingDetailModa
           )}
 
           {/* Rhetoric Feedback */}
-          {recording.aiFeedback && (
+          {aiFeedback && (
             <div className="p-4 rounded-xl border space-y-3" style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}>
               <h4 className="text-xs font-semibold flex items-center gap-1.5" style={{ color: "var(--status-warm-tx)" }}>
                 <Sparkles className="w-4 h-4" />
@@ -160,23 +170,23 @@ export function RecordingDetailModal({ recording, onClose }: RecordingDetailModa
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
                 <div className="space-y-0.5">
                   <span className="font-semibold text-[11px]" style={{ color: "var(--text-3)" }}>Redegeschwindigkeit:</span>
-                  <p style={{ color: "var(--text)" }}>{recording.aiFeedback.pace || "—"}</p>
+                  <p style={{ color: "var(--text)" }}>{aiFeedback.pace || "—"}</p>
                 </div>
                 <div className="space-y-0.5">
                   <span className="font-semibold text-[11px]" style={{ color: "var(--text-3)" }}>Füllwörter & Stottern:</span>
-                  <p style={{ color: "var(--text)" }}>{recording.aiFeedback.stuttering || "—"}</p>
+                  <p style={{ color: "var(--text)" }}>{aiFeedback.stuttering || "—"}</p>
                 </div>
                 <div className="space-y-0.5">
                   <span className="font-semibold text-[11px]" style={{ color: "var(--text-3)" }}>Gelassenheit & Tonfall:</span>
-                  <p style={{ color: "var(--text)" }}>{recording.aiFeedback.tone || "—"}</p>
+                  <p style={{ color: "var(--text)" }}>{aiFeedback.tone || "—"}</p>
                 </div>
               </div>
 
-              {recording.aiFeedback.tips && recording.aiFeedback.tips.length > 0 && (
+              {feedbackTips.length > 0 && (
                 <div className="border-t pt-2.5 mt-2 space-y-1.5" style={{ borderColor: "var(--border)" }}>
                   <span className="font-semibold text-[11px]" style={{ color: "var(--text-3)" }}>Rhetorik-Tipps zur Verbesserung:</span>
                   <ul className="space-y-1 mt-1">
-                    {recording.aiFeedback.tips.map((tip: string, idx: number) => (
+                    {feedbackTips.map((tip: string, idx: number) => (
                       <li key={idx} className="flex items-start gap-1.5" style={{ color: "var(--text-2)" }}>
                         <span style={{ color: "var(--accent)" }}>•</span>
                         {tip}

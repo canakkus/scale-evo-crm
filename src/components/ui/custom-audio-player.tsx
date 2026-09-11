@@ -50,11 +50,17 @@ export function CustomAudioPlayer({
   const [reducedMotion, setReducedMotion] = useState(false);
 
   useEffect(() => {
-    const mediaQuery = ({ matches: false } as any);
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
     setReducedMotion(mediaQuery.matches);
     const handler = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
-    mediaQuery.addEventListener("change", handler);
-    return () => mediaQuery.removeEventListener("change", handler);
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener("change", handler);
+      return () => mediaQuery.removeEventListener("change", handler);
+    } else if ((mediaQuery as any).addListener) {
+      (mediaQuery as any).addListener(handler);
+      return () => (mediaQuery as any).removeListener(handler);
+    }
   }, []);
 
   // Format seconds to mm:ss or hh:mm:ss
