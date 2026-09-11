@@ -1,5 +1,6 @@
 import { normalizeInstagramHandle, normalizeUrl } from "@/lib/utils";
-import type { InstagramProfile } from "./types";
+import { sanitizeCaption } from "./caption";
+import { daysSince, emptyProfile, type InstagramProfile } from "./types";
 
 /**
  * ============================================================
@@ -79,22 +80,7 @@ export class InstagramGraphApiProvider {
   ) {}
 
   private empty(handle: string, note: string): InstagramProfile {
-    return {
-      handle,
-      url: `https://www.instagram.com/${handle}`,
-      bio: null,
-      displayName: null,
-      followerCount: null,
-      followingCount: null,
-      postCount: null,
-      externalUrl: null,
-      externalUrlKnown: false,
-      isBusinessAccount: null,
-      isPrivate: null,
-      daysSinceLastPost: null,
-      incomplete: true,
-      note,
-    };
+    return emptyProfile(handle, note);
   }
 
   async fetchProfile(input: string): Promise<InstagramProfile> {
@@ -145,14 +131,14 @@ export class InstagramGraphApiProvider {
     const bio = data.biography?.trim() || null;
     const website = data.website?.trim() ? normalizeUrl(data.website.trim()) : null;
 
-    const timestamps = (data.media?.data ?? [])
-      .map((media) => (media.timestamp ? Date.parse(media.timestamp) : NaN))
-      .filter((value) => Number.isFinite(value));
+    // Nach Zeitstempel sortieren statt Index 0 zu vertrauen: die Reihenfolge
+    // der media-Kante ist nicht garantiert der Veroeffentlichungsreihenfolge.
+    const posts = (data.media?.data ?? [])
+      .map((media) => ({ at: media.timestamp ? Date.parse(media.timestamp) : NaN, caption: media.caption }))
+      .filter((post) => Number.isFinite(post.at))
+      .sort((a, b) => b.at - a.at);
 
-    const daysSinceLastPost =
-      timestamps.length > 0
-        ? Math.max(0, Math.floor((Date.now() - Math.max(...timestamps)) / 86_400_000))
-        : null;
+    const lastPostAt = posts.length > 0 ? new Date(posts[0].at).toISOString() : null;
 
     return {
       handle: data.username ?? handle,
@@ -171,9 +157,21 @@ export class InstagramGraphApiProvider {
       // Business-/Creator-Account. Andere liefern einen Fehler.
       isBusinessAccount: true,
       isPrivate: false,
-      daysSinceLastPost,
+      isVerified: null,
+      lastPostAt,
+      daysSinceLastPost: daysSince(lastPostAt),
+      latestPostCaption: sanitizeCaption(posts[0]?.caption ?? null),
+      postCadenceDays: cadenceDays(posts.map((post) => post.at)),
       incomplete: false,
       note: null,
     };
   }
+}
+
+/** Durchschnittlicher Abstand zwischen den letzten Posts in Tagen. */
+function cadenceDays(times: number[]): number | null {
+  if (times.length < 3) return null;
+  const span = Math.max(...times) - Math.min(...times);
+  if (span <= 0) return null;
+  return Math.round(span / 86_400_000 / (times.length - 1));
 }

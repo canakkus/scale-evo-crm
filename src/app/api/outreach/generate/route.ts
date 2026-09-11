@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { getOptionalUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ensureDbUser } from "@/lib/outreach-user";
-import { fetchInstagramProfile } from "@/services/instagram/resolve-provider";
+import { readSnapshotSafe } from "@/services/instagram/snapshot-cache";
+import { hasSolidWebsite } from "@/services/instagram/enrichment";
 import { scoreInstagramProfile } from "@/services/instagram/score";
 import {
   deriveAnchors,
@@ -34,24 +35,32 @@ export async function POST(request: Request) {
     });
     if (!lead) return NextResponse.json({ error: "Lead nicht gefunden." }, { status: 404 });
 
-    // Profil best-effort laden — schlaegt das fehl, arbeiten wir mit dem,
-    // was am Lead schon bekannt ist, statt abzubrechen.
-    const profile = lead.instagram
-      ? await fetchInstagramProfile(lead.instagram)
-      : null;
+    // ------------------------------------------------------------------
+    // NUR CACHE — NIEMALS EIN LIVE-ABRUF.
+    // Diese Route feuert bei jedem Tonalitaets- und Kanalwechsel, bei jedem
+    // "G" im Fokus-Modus und bei jedem Sequenzschritt. Ein Live-Abruf wuerde
+    // hier fuer exakt dieselben Daten wieder und wieder einen kosten-
+    // pflichtigen Apify-Run ausloesen. Angereichert wird ausschliesslich an
+    // bewusst ausgeloesten Stellen (/api/leads/[id]/instagram und
+    // /api/instagram/enrich).
+    // ------------------------------------------------------------------
+    const snapshot = lead.instagram ? await readSnapshotSafe(lead.instagram) : null;
+    const profile = snapshot?.profile ?? null;
 
     const scored = profile
       ? scoreInstagramProfile(profile, {
           industry: lead.industry,
           city: lead.city,
-          hasSolidWebsite: Boolean(lead.website),
+          // Derselbe Helper wie im Vorfilter — sonst wertet der Score einen
+          // Linktree als eigene Website und zieht 30 Punkte ab.
+          hasSolidWebsite: hasSolidWebsite(lead.website),
         })
       : null;
 
-    // Live-Tags haben Vorrang, aber nur wenn der Profilabruf ueberhaupt etwas
-    // ergeben hat. Ausgeloggt liefert Instagram meist keine Bio- und Link-Daten,
-    // und dann waeren die am Lead gepflegten Tags — also genau die staerksten
-    // Aufhaenger — stillschweigend verworfen.
+    // Tags aus dem Snapshot haben Vorrang, aber nur wenn dort ueberhaupt etwas
+    // steht. Ein Snapshot aus dem oeffentlichen Seitenabruf kennt meist weder
+    // Bio noch Link-in-Bio — dann waeren die am Lead gepflegten Tags, also
+    // genau die staerksten Aufhaenger, stillschweigend verworfen.
     const liveTags = scored?.tags ?? [];
     const storedTags = Array.isArray(lead.opportunityTags) ? (lead.opportunityTags as string[]) : [];
     const tags = liveTags.length > 0 ? liveTags : storedTags;
@@ -60,6 +69,7 @@ export async function POST(request: Request) {
       bio: profile?.bio ?? null,
       tags,
       daysSinceLastPost: profile?.daysSinceLastPost ?? null,
+      latestPostCaption: profile?.latestPostCaption ?? null,
       city: lead.city,
       googleRating: lead.googleRating,
     });
@@ -84,8 +94,23 @@ export async function POST(request: Request) {
       sequenceStep,
     });
 
+    const profileMeta = snapshot
+      ? { source: snapshot.source, fetchedAt: snapshot.fetchedAt, ageDays: snapshot.ageDays, stale: snapshot.stale }
+      : null;
+
+    // Fehlt der Snapshot, ist der duenne Aufhaenger-Vorrat kein KI-Problem,
+    // sondern eine fehlende Anreicherung. Das muss die UI sagen koennen.
+    const needsEnrichment = Boolean(lead.instagram) && (!snapshot || snapshot.stale);
+
     if (!result.ok) {
-      return NextResponse.json({ ok: false, reason: result.reason, anchors, profile, score: scored }, { status: 200 });
+      const reason =
+        needsEnrichment && anchors.length === 0
+          ? `${result.reason} Das Profil wurde noch nicht angereichert — Anreicherung starten.`
+          : result.reason;
+      return NextResponse.json(
+        { ok: false, reason, anchors, profile, profileMeta, needsEnrichment, score: scored },
+        { status: 200 },
+      );
     }
 
     // Entwuerfe persistieren — Grundlage fuer Sequenzen und Lern-Loop.
@@ -121,6 +146,8 @@ export async function POST(request: Request) {
       anchorUsed: result.anchorUsed,
       anchors,
       profile,
+      profileMeta,
+      needsEnrichment,
       score: scored,
     });
   } catch (error) {

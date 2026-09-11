@@ -1,6 +1,6 @@
 import * as cheerio from "cheerio";
 import { normalizeInstagramHandle, normalizeUrl } from "@/lib/utils";
-import type { InstagramProfile } from "./types";
+import { daysSince, emptyProfile, type InstagramProfile } from "./types";
 
 /**
  * Liest oeffentlich verfuegbare Profildaten best-effort aus.
@@ -21,22 +21,7 @@ export class InstagramProfileProvider {
   }
 
   private empty(handle: string, note: string): InstagramProfile {
-    return {
-      handle,
-      url: `https://www.instagram.com/${handle}`,
-      bio: null,
-      displayName: null,
-      followerCount: null,
-      followingCount: null,
-      postCount: null,
-      externalUrl: null,
-      isBusinessAccount: null,
-      isPrivate: null,
-      daysSinceLastPost: null,
-      externalUrlKnown: false,
-      incomplete: true,
-      note,
-    };
+    return emptyProfile(handle, note);
   }
 
   async fetchProfile(input: string): Promise<InstagramProfile> {
@@ -109,7 +94,7 @@ export class InstagramProfileProvider {
         ? false
         : null;
 
-    const daysSinceLastPost = this.parseDaysSinceLastPost(html);
+    const lastPostAt = this.parseLastPostAt(html);
 
     const hasAnything = counts.followerCount !== null || displayName !== null;
     const incomplete = !hasAnything || !hasProfileJson;
@@ -132,7 +117,12 @@ export class InstagramProfileProvider {
       externalUrlKnown,
       isBusinessAccount,
       isPrivate,
-      daysSinceLastPost,
+      isVerified: /"is_verified":\s*true/i.test(html) ? true : /"is_verified":\s*false/i.test(html) ? false : null,
+      lastPostAt,
+      daysSinceLastPost: daysSince(lastPostAt),
+      // Ausgeloggt liefert Instagram keine Captions — bewusst null statt raten.
+      latestPostCaption: null,
+      postCadenceDays: null,
       incomplete,
       note,
     };
@@ -200,14 +190,15 @@ export class InstagramProfileProvider {
     }
   }
 
-  private parseDaysSinceLastPost(html: string): number | null {
+  /** Absoluter Zeitpunkt des neuesten Posts — cache-tauglich. */
+  private parseLastPostAt(html: string): string | null {
     const timestamps = [...html.matchAll(/"taken_at_timestamp":\s*(\d{9,11})/g)]
       .map((match) => Number(match[1]))
       .filter((value) => Number.isFinite(value) && value > 0);
     if (timestamps.length === 0) return null;
 
     const newest = Math.max(...timestamps) * 1000;
-    const days = Math.floor((Date.now() - newest) / 86_400_000);
-    return days >= 0 && days < 36_500 ? days : null;
+    if (newest > Date.now() + 86_400_000) return null;
+    return new Date(newest).toISOString();
   }
 }

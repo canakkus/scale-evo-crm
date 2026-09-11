@@ -16,7 +16,52 @@ type QueueLead = {
   scoreReasons: unknown; opportunityTags: unknown; interestingReason: string | null;
   status: string; googleRating: number | null; lastContactAt: string | null;
   warmupState: WarmupState; warmupDueAt: string | null;
+  profileMeta: ProfileMeta | null;
 };
+
+/** Herkunft der Profildaten — bewusst dezent, kein Badge-Zoo. */
+type ProfileMeta = {
+  source: "graph-api" | "apify" | "public-page";
+  ageDays: number;
+  stale: boolean;
+  bioKnown: boolean;
+  linkKnown: boolean;
+  lastPostAt: string | null;
+};
+
+const SOURCE_LABELS: Record<ProfileMeta["source"], string> = {
+  "graph-api": "Instagram Graph API",
+  apify: "Apify",
+  "public-page": "Nur öffentliche Daten",
+};
+
+function ProfileSourceLine({ meta }: { meta: ProfileMeta | null }) {
+  if (!meta) {
+    return (
+      <span className="text-[11px]" style={{ color: "var(--text-3)" }} title="Für diesen Lead wurden noch keine Profildaten geholt.">
+        Profil noch nicht geprüft
+      </span>
+    );
+  }
+
+  const age = meta.ageDays === 0 ? "heute geprüft" : `vor ${meta.ageDays} ${meta.ageDays === 1 ? "Tag" : "Tagen"} geprüft`;
+  const known = [
+    meta.bioKnown ? "Bio" : null,
+    meta.linkKnown ? "Link in Bio" : "Link in Bio unbekannt",
+    meta.lastPostAt ? "letzter Post" : null,
+  ].filter(Boolean);
+
+  return (
+    <span
+      className="text-[11px]"
+      style={{ color: "var(--text-3)" }}
+      title={`Bekannte Felder: ${known.join(", ")}${meta.stale ? " · Snapshot veraltet" : ""}`}
+    >
+      {SOURCE_LABELS[meta.source]} · {age}
+      {meta.source === "public-page" && !meta.bioKnown ? " · Bio unbekannt" : ""}
+    </span>
+  );
+}
 
 const SHORTCUTS = [
   { key: "C", label: "Kopieren & Instagram öffnen" },
@@ -34,6 +79,7 @@ const SHORTCUTS = [
 
 type Variant = { index: number; body: string; charCount: number; draftId?: string | null };
 type Anchor = { key: string; label: string; detail: string };
+type ApifyHealth = { status: string; outage: boolean; note: string | null };
 type Channel = "INSTAGRAM_DM" | "PHONE";
 type Tone = "CASUAL_VIENNESE" | "PROFESSIONAL_DU" | "FORMAL_SIE";
 
@@ -57,6 +103,9 @@ export default function OutreachPageComponent() {
   const [loading, setLoading] = useState(true);
   const [activeId, setActiveId] = useState<string | null>(null);
 
+  const [apifyNote, setApifyNote] = useState<string | null>(null);
+  const [bulkNote, setBulkNote] = useState<string | null>(null);
+  const [enriching, setEnriching] = useState(false);
   const [channel, setChannel] = useState<Channel>("INSTAGRAM_DM");
   const [tone, setTone] = useState<Tone>("CASUAL_VIENNESE");
   const [variants, setVariants] = useState<Variant[]>([]);
@@ -154,6 +203,94 @@ export default function OutreachPageComponent() {
       setGenError("Netzwerkfehler bei der Generierung.");
     } finally {
       setGenerating(false);
+    }
+  }
+
+  /**
+   * Bewusst ausgeloeste Anreicherung — die einzige Stelle in dieser Ansicht,
+   * die einen kostenpflichtigen Abruf ausloesen darf. Die Generierung selbst
+   * liest ausschliesslich aus dem Snapshot-Cache.
+   */
+  async function enrichActive() {
+    if (!active || enriching) return;
+    setEnriching(true); setGenError(null);
+    try {
+      const response = await fetch("/api/instagram/enrich", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ leadIds: [active.id] }),
+      });
+      const data = await response.json();
+      const health: ApifyHealth | undefined = data.apify;
+      setApifyNote(health?.outage ? (health.note ?? "Apify nicht verfügbar — es wird ohne Bio-Daten weitergearbeitet.") : null);
+      if (!data.ok) {
+        setGenError(data.reason ?? data.error ?? "Anreicherung fehlgeschlagen.");
+        return;
+      }
+      await loadQueue();
+    } catch {
+      setGenError("Netzwerkfehler bei der Anreicherung.");
+    } finally {
+      setEnriching(false);
+    }
+  }
+
+  /**
+   * Sammel-Anreicherung fuer die gesamte Warteschlange. Erst Vorschau
+   * (kostet nichts), dann Rueckfrage mit konkreter Anzahl — ein Lauf kann
+   * je nach Quelle bezahlt werden, also entscheidet das der Nutzer.
+   */
+  async function enrichQueue() {
+    if (leads.length === 0 || enriching) return;
+    const leadIds = leads.filter((lead) => normalizeInstagramHandle(lead.instagram)).map((lead) => lead.id);
+    if (leadIds.length === 0) return;
+
+    setEnriching(true); setBulkNote(null);
+    try {
+      const preview = await fetch("/api/instagram/enrich", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ leadIds, preview: true }),
+      }).then((response) => response.json());
+
+      const count: number = preview.willFetch ?? 0;
+      const maxBatch: number = preview.maxBatch ?? 0;
+      if (count === 0) {
+        setBulkNote("Alle Profile sind aktuell — nichts zu prüfen.");
+        return;
+      }
+      // Das Limit kennen wir schon aus der Vorschau. Es hier abzufangen
+      // erspart die sinnlose Rueckfrage "43 Profile werden geprüft?" mit
+      // anschliessender Ablehnung.
+      if (maxBatch > 0 && count > maxBatch) {
+        setBulkNote(
+          `${count} Profile stehen an — pro Lauf sind höchstens ${maxBatch} möglich, ` +
+            "weil ein abgebrochener Lauf trotzdem abgerechnet wird. " +
+            "Bitte die Warteschlange filtern und in Blöcken prüfen.",
+        );
+        return;
+      }
+      if (!window.confirm(`${count} ${count === 1 ? "Profil wird" : "Profile werden"} geprüft. Fortfahren?`)) return;
+
+      const data = await fetch("/api/instagram/enrich", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ leadIds }),
+      }).then((response) => response.json());
+
+      const health: ApifyHealth | undefined = data.apify;
+      setApifyNote(health?.outage ? (health.note ?? "Apify nicht verfügbar — es wird ohne Bio-Daten weitergearbeitet.") : null);
+
+      if (!data.ok) {
+        setBulkNote(data.reason ?? data.error ?? "Anreicherung fehlgeschlagen.");
+        return;
+      }
+      setBulkNote(`${data.updated?.length ?? 0} Leads neu bewertet.`);
+      await loadQueue();
+    } catch {
+      setBulkNote("Netzwerkfehler bei der Anreicherung.");
+    } finally {
+      setEnriching(false);
     }
   }
 
@@ -294,6 +431,27 @@ export default function OutreachPageComponent() {
                     </span>
                   )}
                 </div>
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  <ProfileSourceLine meta={active.profileMeta} />
+                  {(!active.profileMeta || active.profileMeta.stale) && (
+                    <button
+                      onClick={() => void enrichActive()}
+                      disabled={enriching || !normalizeInstagramHandle(active.instagram)}
+                      className="rounded-md px-2 py-0.5 text-[11px] font-semibold disabled:opacity-40"
+                      style={{ background: "var(--surface-3)", color: "var(--text-2)", border: "1px solid var(--border-2)" }}
+                      title="Holt Bio, Link-in-Bio und letzten Beitrag. Kostenpflichtig, wenn Apify greift."
+                    >
+                      {enriching ? "Wird geprüft …" : "Profil anreichern"}
+                    </button>
+                  )}
+                </div>
+
+                {apifyNote && (
+                  <p className="mt-2 text-[11px]" style={{ color: "var(--status-planned-tx)" }}>
+                    {apifyNote}
+                  </p>
+                )}
+
                 {asTags(active.opportunityTags).length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {asTags(active.opportunityTags).map((tag) => (
@@ -614,15 +772,32 @@ export default function OutreachPageComponent() {
             Warteschlange
           </span>
           <BudgetMeter sent={sentToday} limit={dailyLimit} onChange={updateLimit} />
-          <button
-            onClick={() => setFocusMode(true)}
-            disabled={leads.length === 0}
-            className="rounded-lg border px-2 py-1 text-[11px] font-semibold"
-            style={{ borderColor: "var(--border-2)", color: "var(--text-2)", opacity: leads.length === 0 ? 0.4 : 1 }}
-          >
-            ▶ Fokus
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => void enrichQueue()}
+              disabled={leads.length === 0 || enriching}
+              className="rounded-lg border px-2 py-1 text-[11px] font-semibold"
+              style={{ borderColor: "var(--border-2)", color: "var(--text-2)", opacity: leads.length === 0 || enriching ? 0.4 : 1 }}
+              title="Holt Bio, Link-in-Bio und letzten Beitrag für alle Leads der Warteschlange. Zeigt vorher an, wie viele Profile geprüft werden."
+            >
+              {enriching ? "…" : "Profile prüfen"}
+            </button>
+            <button
+              onClick={() => setFocusMode(true)}
+              disabled={leads.length === 0}
+              className="rounded-lg border px-2 py-1 text-[11px] font-semibold"
+              style={{ borderColor: "var(--border-2)", color: "var(--text-2)", opacity: leads.length === 0 ? 0.4 : 1 }}
+            >
+              ▶ Fokus
+            </button>
+          </div>
         </div>
+
+        {bulkNote && (
+          <p className="px-4 pb-2 text-[11px]" style={{ color: "var(--text-3)" }} role="status">
+            {bulkNote}
+          </p>
+        )}
         {loading ? (
           <div className="space-y-2 px-4">
             {[0, 1, 2].map((index) => <div key={index} className="skeleton-line h-10" />)}

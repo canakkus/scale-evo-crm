@@ -536,3 +536,40 @@ model DmDraft {
   @@index([leadId, createdAt])
   @@index([createdById, status])
 }
+
+/// Zwischenspeicher fuer angereicherte Instagram-Profile.
+///
+/// Key ist das NORMALISIERTE Handle, nicht die leadId — so teilen sich
+/// alle Leads und Scout-Sessions denselben Snapshot und ein Profil wird
+/// nie zweimal bezahlt. Enthaelt ausschliesslich oeffentliche Profildaten,
+/// deshalb bewusst nicht pro Nutzer isoliert.
+///
+/// WICHTIG: Es wird `lastPostAt` als ABSOLUTER Zeitpunkt gespeichert,
+/// niemals `daysSinceLastPost`. Ein relativer Wert wuerde im Cache
+/// taeglich verrotten und kostenpflichtige Re-Fetches erzwingen.
+model InstagramProfileSnapshot {
+  id         String    @id @default(cuid())
+  handle     String    @unique
+  /// "graph-api" | "apify" | "public-page"
+  source     String
+  fetchedAt  DateTime  @default(now())
+  lastPostAt DateTime?
+  /// true, wenn das Profil privat ist — solche Handles werden dauerhaft uebersprungen.
+  isPrivate  Boolean?
+  /// true, wenn der Abruf unvollstaendig war (dann ist ein frueher Retry sinnvoll).
+  incomplete Boolean   @default(false)
+  /// Wann zuletzt eine vollwertige Quelle (Graph API / Apify) TATSAECHLICH
+  /// befragt wurde — unabhaengig davon, ob sie etwas geliefert hat. Ohne
+  /// diesen Merker wuerde ein Handle, fuer das Apify nichts zurueckgibt,
+  /// bei jedem Durchlauf erneut kostenpflichtig angefragt.
+  richSourceAttemptedAt DateTime?
+  /// Geparstes InstagramProfile (ohne daysSinceLastPost).
+  profile    Json
+  /// Unveraendertes Item der Quelle — fuer Nachanalysen, wenn sich Feldnamen aendern.
+  raw        Json?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([fetchedAt])
+  @@index([source])
+}

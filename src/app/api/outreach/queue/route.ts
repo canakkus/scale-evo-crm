@@ -3,6 +3,9 @@ import { getOptionalUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ensureDbUser } from "@/lib/outreach-user";
 import { WARMUP_TASK_PREFIX, warmupStateFrom } from "@/lib/outreach-shared";
+import { normalizeInstagramHandle } from "@/lib/utils";
+import { readSnapshotsSafe } from "@/services/instagram/snapshot-cache";
+import { isApifyConfigured } from "@/services/instagram/resolve-provider";
 
 export async function GET() {
   try {
@@ -39,11 +42,29 @@ export async function GET() {
     });
     const warmupByLead = new Map(warmupTasks.map((task) => [task.leadId, task.dueAt]));
 
-    const withWarmup = leads.map((lead) => ({
-      ...lead,
-      warmupState: warmupStateFrom(warmupByLead.get(lead.id)),
-      warmupDueAt: warmupByLead.get(lead.id) ?? null,
-    }));
+    // Herkunft der Profildaten mitliefern — eine Leseabfrage, kein Abruf.
+    // Die Oberflaeche zeigt damit an, worauf ein Score beruht.
+    const snapshots = await readSnapshotsSafe(leads.map((lead) => lead.instagram ?? ""));
+
+    const withWarmup = leads.map((lead) => {
+      const handle = normalizeInstagramHandle(lead.instagram);
+      const snapshot = handle ? snapshots.get(handle) : undefined;
+      return {
+        ...lead,
+        warmupState: warmupStateFrom(warmupByLead.get(lead.id)),
+        warmupDueAt: warmupByLead.get(lead.id) ?? null,
+        profileMeta: snapshot
+          ? {
+              source: snapshot.source,
+              ageDays: snapshot.ageDays,
+              stale: snapshot.stale,
+              bioKnown: snapshot.profile.bio !== null,
+              linkKnown: snapshot.profile.externalUrlKnown,
+              lastPostAt: snapshot.profile.lastPostAt,
+            }
+          : null,
+      };
+    });
 
     const sentToday = await prisma.interaction.count({
       where: {
@@ -53,7 +74,7 @@ export async function GET() {
       },
     });
 
-    return NextResponse.json({ leads: withWarmup, sentToday });
+    return NextResponse.json({ leads: withWarmup, sentToday, apifyConfigured: isApifyConfigured() });
   } catch (error) {
     console.error("[GET /api/outreach/queue] Error:", error);
     return NextResponse.json({ error: "Warteschlange konnte nicht geladen werden." }, { status: 500 });
