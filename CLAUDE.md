@@ -20,7 +20,7 @@
 - **Gatekeeping:** `src/proxy.ts` (strict Next.js 16 Proxy interceptor)
 - **External APIs:**
   - Google Places API (Places Search & Address/Phone Enrichment)
-  - Groq SDK (Whisper `whisper-large-v3` for <2s speech-to-text, `openai/gpt-oss-120b` for AI Chat, Tool Calling, Task Prioritization & Call Analysis)
+  - Groq SDK (Whisper `whisper-large-v3` for speech-to-text with `verbose_json` timestamps, `llama-3.3-70b-versatile` for AI Chat, Tool Calling, Task Prioritization & Call Analysis)
   - Google Generative AI (Gemini 1.5 Flash SDK fallback for Menu Detection & Assistant)
 
 ---
@@ -54,8 +54,9 @@
 ## 🚀 Key Modules
 
 ### 1. Cold Calls, Automatic Dialogue Formatting & Sales Coaching (`/cold-calls`, `src/services/groq.ts`)
-- **Transcription (Step 1):** Groq `whisper-large-v3` converts audio into raw text in ~1-2 seconds.
-- **Dialogue & Diarization Formatting (Step 2):** `openai/gpt-oss-120b` (with native `response_format: { type: "json_object" }`) formats continuous raw transcripts into clean speaker-separated dialogue (`[Anrufer]` vs. `[Kunde]`).
+- **Transcription (Step 1):** Groq `whisper-large-v3` converts audio into timestamped segments (`verbose_json`).
+- **Dialogue & Role Disambiguation (Step 2):** Groq `llama-3.3-70b-versatile` (with native `response_format: { type: "json_object" }`) formats continuous timestamped raw transcripts into clean speaker-separated dialogue (`[Anrufer / Verkäufer]` vs. `[Kunde / Ansprechpartner]`).
+- **Strict Role Rules:** Enforces cold-call greeting logic (the person answering phone is `[Kunde / Ansprechpartner]`, the person introducing/pitching is `[Anrufer / Verkäufer]`), prohibiting mid-call role swaps and centering `aiFeedback` exclusively on the seller.
 - **Analysis:** Automatically extracts structured `summary`, `nextSteps`, `sentiment`, `extractedData` (contact, appointment date, objections, interest level) and `aiFeedback` (pace, stuttering/fillers, tone, rhetoric tips).
 - **Reprocessing Utility:** `scripts/reprocess-call-recordings.ts` to re-analyze and re-format historical recordings.
 

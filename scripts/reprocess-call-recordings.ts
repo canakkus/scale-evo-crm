@@ -90,11 +90,25 @@ async function reprocessCallRecordings() {
     const companyName = recording.lead?.companyName || recording.fileName;
     const context = `Der Call war mit dem Lead / Unternehmen "${companyName}".`;
 
-    const analysisPrompt = `Du bist ein präziser Vertriebsassistent und Rhetorik-Coach. ${context}
+    const analysisPrompt = `Du bist ein hochpräziser Vertriebsassistent und Call-Analyst für B2B Cold Calls. ${context}
+
+STRIKTE ROLLEN- UND SPRECHERERKENNUNG (CRITICAL - ROLE DISAMBIGUATION):
+In jedem Verkaufs-/Telefon-Call gibt es ZWEI fest definierte Parteien. Verwechsle deren Rollen NIEMALS:
+
+1. **[Anrufer / Verkäufer]** (z.B. Can / Scale Evo Vertrieb):
+   - Der Anrufer startet den Pitch, stellt sich namentlich vor ("Hier ist Can...", "Ich rufe an von..."), pitched Produkte/Software/Dienstleistungen, stellt Qualifizierungsfragen, behandelt Einwände und schlägt Termine vor.
+2. **[Kunde / Ansprechpartner]** (z.B. Inhaber/Mitarbeiter bei "${companyName || 'dem angerufenen Unternehmen'}"):
+   - Der Angerufene hebt ab (oft mit Firmennamen z.B. "${companyName || 'Firma XYZ'}, Guten Tag" oder "Ja bitte?"), antwortet auf Fragen, äußert Einwände ("keine Zeit", "haben schon eine Agentur", "schicken Sie Unterlagen") oder nimmt Termine an.
+
+CHRONOLOGISCHE REGELN FÜR SPRECHERWECHSEL:
+- REGEL 1 (ABHEBEN): Wer das Telefon abhebt (erste 1-2 Sätze), ist ZWINGEND der **[Kunde / Ansprechpartner]**.
+- REGEL 2 (INTRO & PITCH): Wer danach grüßt, seinen Namen/Firma nennt ("Guten Tag, hier ist Can von Scale Evo...") und das Thema anspricht, ist ZWINGEND der **[Anrufer / Verkäufer]**.
+- REGEL 3 (KONSISTENZ): Ändere die Sprecherbezeichnung NIEMALS mitten im Gespräch. Wer einmal Anrufer ist, bleibt das ganze Gespräch lang Anrufer.
+- REGEL 4 (RHETORIK-FEEDBACK): Das "aiFeedback" (Redegeschwindigkeit, Füllwörter, Tonfall, Tipps) analysiert AUSSCHLIESSLICH die Rhetorik des **[Anrufer / Verkäufer]** (den Vertriebler), NICHT die des Kunden!
 
 AUFGABEN:
 1. Wandle die folgende Transkription in ein sauberes, strukturiertes DIALOG-PROTOKOLL um:
-   - Identifiziere die Gesprächspartner und trenne deren Aussagen in einzelne Absätze mit Sprecher-Kennzeichnung (z.B. '[Anrufer / Verkäufer]: ...' und '[Kunde / Ansprechpartner]: ...').
+   - Nutze exakt: '[Anrufer / Verkäufer]: ...' und '[Kunde / Ansprechpartner]: ...'.
    - Korrigiere Interpunktion und Grammatik sinnvoll, ohne den Inhalt zu verändern. Falls Vorgespräche oder Setup-Notizen vor dem Call im Text sind (wie z.B. 'Test, Test' oder 'Wir rufen da jetzt an'), trenne diese sauber ab.
 2. Analysiere das Gespräch detailliert (Zusammenfassung, nächste Schritte, Stimmung, extrahierte Kontaktdaten/Einwände und Rhetorik-Coaching-Feedback).
 
@@ -105,7 +119,7 @@ ${recording.transcription}
 
 Antworte AUSSCHLIESSLICH im folgenden JSON-Format ohne weiteren Fließtext:
 {
-  "dialogueTranscription": "Vollständiges Gespräch als formatierter Dialog mit getrennten Sprecher-Absätzen (z.B. [Anrufer]: ...\n\n[Kunde]: ...)",
+  "dialogueTranscription": "[Anrufer / Verkäufer]: Hallo Herr Schmidt, Can von Scale Evo hier...\n\n[Kunde / Ansprechpartner]: Guten Tag, worum geht es?",
   "summary": "Prägnante Zusammenfassung des Gesprächs in 2-3 Sätzen",
   "nextSteps": ["Konkrete nächste Schritte als Liste"],
   "sentiment": "POSITIVE|NEUTRAL|NEGATIVE|MIXED",
@@ -116,9 +130,9 @@ Antworte AUSSCHLIESSLICH im folgenden JSON-Format ohne weiteren Fließtext:
     "interestLevel": "HIGH|MEDIUM|LOW|NONE"
   },
   "aiFeedback": {
-    "pace": "Redegeschwindigkeit und Rhythmus des Anrufers",
-    "stuttering": "Verwendung von Füllwörtern wie äh, öhm oder Stottern",
-    "tone": "Tonfall, Souveränität und Gelassenheit des Anrufers",
+    "pace": "Redegeschwindigkeit und Rhythmus des Verkäufers",
+    "stuttering": "Verwendung von Füllwörtern wie äh, öhm oder Stottern beim Verkäufer",
+    "tone": "Tonfall, Souveränität und Gelassenheit des Verkäufers",
     "tips": ["Konkrete Rhetorik-Tipps zur Verbesserung als Liste"]
   }
 }`;
@@ -127,10 +141,10 @@ Antworte AUSSCHLIESSLICH im folgenden JSON-Format ohne weiteren Fließtext:
       console.log(`-> Sende an Groq AI...`);
       const analysisText = await withGroqClient(async (client) => {
         const response = await client.chat.completions.create({
-          model: 'openai/gpt-oss-120b',
+          model: 'llama-3.3-70b-versatile',
           messages: [{ role: 'user', content: analysisPrompt }],
           response_format: { type: 'json_object' },
-          temperature: 0.2,
+          temperature: 0.1,
           max_tokens: 4096,
         });
         return (response.choices[0]?.message?.content || '').trim();
