@@ -201,14 +201,21 @@ async function scoutVenue(venue: TreatwellVenue, options: LeadScoutOptions, lead
     }
   }
 
-  let websiteUrl: string | null = place?.website ? normalizeUrl(place.website) : null;
+  const isPlaceWebsiteTreatwell = place?.website ? /treatwell\.(at|de|com|ch|co\.uk)/i.test(place.website) : false;
+  let websiteUrl: string | null = place?.website && !isPlaceWebsiteTreatwell ? normalizeUrl(place.website) : null;
   let websiteSource: "maps" | "search" | null = websiteUrl ? "maps" : null;
 
   if (!websiteUrl) {
     const found = await searchFirstExternalUrl(`${venue.name} ${options.city} website`, { venueName: venue.name });
     if (found) {
-      websiteUrl = normalizeUrl(found);
-      websiteSource = "search";
+      if (/treatwell\.(at|de|com|ch|co\.uk)/i.test(found)) {
+        if (!venue.treatwellUrl) {
+          venue.treatwellUrl = normalizeUrl(found);
+        }
+      } else {
+        websiteUrl = normalizeUrl(found);
+        websiteSource = "search";
+      }
     }
   }
 
@@ -219,6 +226,17 @@ async function scoutVenue(venue: TreatwellVenue, options: LeadScoutOptions, lead
     } catch {
       audit = null;
     }
+  }
+
+  // If audit or place revealed a Treatwell profile / booking link, capture it
+  const detectedTreatwell =
+    venue.treatwellUrl ||
+    audit?.extracted?.treatwellUrl ||
+    (isPlaceWebsiteTreatwell ? place?.website : null) ||
+    null;
+
+  if (detectedTreatwell) {
+    venue.treatwellUrl = normalizeUrl(detectedTreatwell);
   }
 
   const phone = place?.phone ?? audit?.extracted.phone ?? null;
@@ -277,7 +295,7 @@ async function scoutVenue(venue: TreatwellVenue, options: LeadScoutOptions, lead
     venue.treatwellUrl ? `Treatwell-Profil: ${venue.treatwellUrl}` : null,
     venue.addressLine ? `Adresse: ${venue.addressLine}` : null,
     hasWebsite
-      ? `Website via ${websiteSource === "maps" ? "Google Maps" : "Websuche"} gefunden.`
+      ? `Website via ${websiteSource === "maps" ? "Google Maps" : "Websuche"} gefunden: ${websiteUrl}`
       : "Keine eigene Website gefunden.",
     menuNote,
     mapsMatched ? `Maps-Abgleich: ${matchReason}` : null,

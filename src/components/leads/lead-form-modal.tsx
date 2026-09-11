@@ -234,6 +234,18 @@ export function LeadFormModal({ isOpen, onClose, onSuccess }: LeadFormModalProps
             </div>
 
             <div>
+              <label className="block text-xs font-medium mb-1" style={{ color: "var(--text-2)" }}>Treatwell Link</label>
+              <input
+                type="url"
+                placeholder="https://www.treatwell.at/ort/..."
+                className="w-full rounded-md px-3 py-2 text-sm border outline-none"
+                style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
+                value={formData.treatwellUrl}
+                onChange={(e) => setFormData({ ...formData, treatwellUrl: e.target.value })}
+              />
+            </div>
+
+            <div>
               <label className="block text-xs font-medium mb-1" style={{ color: "var(--text-2)" }}>Instagram Handle / Link</label>
               <input
                 type="text"

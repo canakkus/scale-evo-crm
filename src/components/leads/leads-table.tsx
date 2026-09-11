@@ -20,6 +20,7 @@ import {
   Check,
   Copy,
   RefreshCw,
+  Sparkles,
 } from "lucide-react";
 import { StatusBadge, PriorityDot } from "@/components/ui/status-badge";
 import { LeadFormModal } from "@/components/leads/lead-form-modal";
@@ -475,12 +476,25 @@ export function LeadsTable() {
                               rel="noreferrer"
                               className="flex items-center gap-2 hover:underline truncate max-w-[160px]"
                               style={{ color: "var(--text-2)" }}
+                              title={lead.website}
                             >
                               <Globe className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--text-3)" }} />
                               {lead.website.replace(/^https?:\/\/(www\.)?/, "")}
                             </a>
                           ) : null}
-                          {!lead.phone && !lead.website && <span style={{ color: "var(--text-3)" }}>Keine Kontaktdaten</span>}
+                          {lead.treatwellUrl ? (
+                            <a
+                              href={lead.treatwellUrl.startsWith("http") ? lead.treatwellUrl : `https://${lead.treatwellUrl}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="flex items-center gap-2 hover:underline truncate max-w-[160px] text-teal-400 font-medium"
+                              title="Treatwell-Profil öffnen"
+                            >
+                              <Sparkles className="w-3.5 h-3.5 shrink-0 text-teal-400" />
+                              Treatwell
+                            </a>
+                          ) : null}
+                          {!lead.phone && !lead.website && !lead.treatwellUrl && <span style={{ color: "var(--text-3)" }}>Keine Kontaktdaten</span>}
                         </div>
                       </td>
 

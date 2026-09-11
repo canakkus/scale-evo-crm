@@ -134,16 +134,28 @@ function ResultCard({
             <MapPin className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--text-3)" }} />
             {venue.addressLine || "Adresse unbekannt"}
           </div>
-          <div className="mt-1.5 flex items-center gap-3 text-xs font-semibold">
+          <div className="mt-1.5 flex items-center gap-3 text-xs font-semibold flex-wrap">
             {venue.treatwellUrl && (
               <a
                 href={venue.treatwellUrl}
                 target="_blank"
                 rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 underline-offset-2 hover:underline text-teal-400 font-medium"
+              >
+                <Sparkles className="w-3 h-3 text-teal-400" />
+                Treatwell-Profil <ExternalLink className="w-3 h-3" />
+              </a>
+            )}
+            {website.url && (
+              <a
+                href={website.url}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 underline-offset-2 hover:underline"
                 style={{ color: "var(--status-new-tx)" }}
               >
-                Treatwell-Profil <ExternalLink className="w-3 h-3" />
+                <Globe className="w-3 h-3" />
+                Website <ExternalLink className="w-3 h-3" />
               </a>
             )}
             {maps.place?.googleMapsUri && (
@@ -206,23 +218,39 @@ function ResultCard({
 
         <div className="p-2">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--text-3)" }}>Website</span>
-            <StepBadge status={website.status} />
+            <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--text-3)" }}>Web & Treatwell</span>
+            <StepBadge status={website.status === "ok" || venue.treatwellUrl ? "ok" : "fail"} />
           </div>
-          {website.url ? (
-            <a
-              href={website.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-1 flex items-center gap-1 text-xs font-semibold underline truncate"
-              style={{ color: "var(--status-new-tx)" }}
-            >
-              <Globe className="w-3 h-3 shrink-0" />
-              {website.url.replace(/^https?:\/\/(www\.)?/, "").slice(0, 25)}
-            </a>
-          ) : (
-            <p className="mt-1 text-xs" style={{ color: "var(--status-lost-tx)" }}>Keine Website</p>
-          )}
+          <div className="mt-1 space-y-1">
+            {website.url && (
+              <a
+                href={website.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 text-xs font-semibold underline truncate"
+                style={{ color: "var(--status-new-tx)" }}
+                title={website.url}
+              >
+                <Globe className="w-3 h-3 shrink-0" />
+                {website.url.replace(/^https?:\/\/(www\.)?/, "").slice(0, 22)}
+              </a>
+            )}
+            {venue.treatwellUrl && (
+              <a
+                href={venue.treatwellUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 text-xs font-semibold underline truncate text-teal-400"
+                title={venue.treatwellUrl}
+              >
+                <Sparkles className="w-3 h-3 shrink-0 text-teal-400" />
+                Treatwell
+              </a>
+            )}
+            {!website.url && !venue.treatwellUrl && (
+              <p className="text-xs" style={{ color: "var(--status-lost-tx)" }}>Keine Website / Treatwell</p>
+            )}
+          </div>
         </div>
 
         <div className="p-2">

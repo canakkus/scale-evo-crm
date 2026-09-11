@@ -120,6 +120,7 @@ export class WebsiteAuditProvider {
       const email = $("a[href^='mailto:']").first().attr("href")?.replace(/^mailto:/, "").split("?")[0] ??
         firstMatch(pageText, /[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/);
       const instagram = allLinks.find((link) => /instagram\.com/i.test(link.href))?.href;
+      const treatwellUrl = allLinks.find((link) => /treatwell\.(at|de|com|ch|co\.uk)/i.test(link.href))?.href;
       const title = $("title").first().text().trim();
       const address =
         $("address").first().text().replace(/\s+/g, " ").trim() ||
@@ -164,6 +165,7 @@ export class WebsiteAuditProvider {
           "reservieren",
         ]),
         hasBooking: textContains(linkHaystack, [
+          "treatwell",
           "calendly",
           "termin",
           "booking",
@@ -175,7 +177,7 @@ export class WebsiteAuditProvider {
         menuIsPdf,
         findings: [],
         error: isOk ? null : `HTTP-Status ${statusCode}`,
-        extracted: { companyName, phone, email, address, instagram },
+        extracted: { companyName, phone, email, address, instagram, treatwellUrl },
       };
 
       result.findings = buildFindings(result);

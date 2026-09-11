@@ -28,5 +28,6 @@ export type AuditResult = {
     address?: string;
     instagram?: string;
     industry?: string;
+    treatwellUrl?: string;
   };
 };

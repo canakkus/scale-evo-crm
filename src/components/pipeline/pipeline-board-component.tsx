@@ -372,6 +372,30 @@ export function PipelineBoardComponent() {
                                 <Phone className="w-4 h-4" />
                               </a>
                             )}
+                            {lead.website && (
+                              <a
+                                href={lead.website.startsWith("http") ? lead.website : `https://${lead.website}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="p-1.5 hover:bg-[var(--surface-3)] rounded-lg text-[var(--text-2)] hover:text-[var(--text)] transition-colors"
+                                title={`Website: ${lead.website}`}
+                              >
+                                <Globe className="w-4 h-4" />
+                              </a>
+                            )}
+                            {lead.treatwellUrl && (
+                              <a
+                                href={lead.treatwellUrl.startsWith("http") ? lead.treatwellUrl : `https://${lead.treatwellUrl}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="p-1.5 hover:bg-[var(--surface-3)] rounded-lg text-teal-400 hover:text-teal-300 transition-colors"
+                                title="Treatwell-Profil öffnen"
+                              >
+                                <Sparkles className="w-4 h-4 text-teal-400" />
+                              </a>
+                            )}
                             {mapsUrl && (
                               <button
                                 type="button"
