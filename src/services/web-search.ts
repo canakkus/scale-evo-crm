@@ -47,7 +47,60 @@ function pickResult(links: Array<{ title: string; href: string }>, venueName: st
   return null;
 }
 
-import { runScrapling } from "./scrapling";
+async function fetchDuckDuckGoLinks(query: string): Promise<Array<{ title: string; href: string }>> {
+  try {
+    const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": USER_AGENT,
+        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      },
+      signal: AbortSignal.timeout(3000),
+      cache: "no-store",
+    }).catch(() => null);
+
+    if (!res || !res.ok) return [];
+    const html = await res.text();
+    const $ = cheerio.load(html);
+    const links: Array<{ title: string; href: string }> = [];
+    $(".result").each((_, el) => {
+      const linkEl = $(el).find(".result__a");
+      const title = linkEl.text().trim();
+      const href = linkEl.attr("href") || "";
+      if (title && href) links.push({ title, href });
+    });
+    return links;
+  } catch {
+    return [];
+  }
+}
+
+async function fetchBingLinks(query: string): Promise<Array<{ title: string; href: string }>> {
+  try {
+    const url = `https://www.bing.com/search?q=${encodeURIComponent(query)}&count=5&setlang=de`;
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": USER_AGENT,
+        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      },
+      signal: AbortSignal.timeout(3000),
+      cache: "no-store",
+    }).catch(() => null);
+
+    if (!res || !res.ok) return [];
+    const html = await res.text();
+    const $ = cheerio.load(html);
+    const links: Array<{ title: string; href: string }> = [];
+    $("li.b_algo h2 a").each((_, el) => {
+      const title = $(el).text().trim();
+      const href = $(el).attr("href") || "";
+      if (title && href) links.push({ title, href });
+    });
+    return links;
+  } catch {
+    return [];
+  }
+}
 
 export async function searchFirstExternalUrl(
   query: string,
@@ -55,13 +108,19 @@ export async function searchFirstExternalUrl(
 ): Promise<string | null> {
   const venueName = options.venueName ?? query.split(" website")[0] ?? query;
   try {
-    const res = await runScrapling("websearch", { query });
-    if (res.links && Array.isArray(res.links)) {
-      const found = pickResult(res.links, venueName);
+    const ddgLinks = await fetchDuckDuckGoLinks(query);
+    if (ddgLinks.length > 0) {
+      const found = pickResult(ddgLinks, venueName);
+      if (found) return found;
+    }
+
+    const bingLinks = await fetchBingLinks(query);
+    if (bingLinks.length > 0) {
+      const found = pickResult(bingLinks, venueName);
       if (found) return found;
     }
   } catch (error) {
-    console.error("Scrapling websearch error:", error);
+    console.error("Web search error:", error);
   }
   return null;
 }

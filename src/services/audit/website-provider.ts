@@ -35,36 +35,59 @@ function textContains(text: string, terms: string[]) {
   return terms.some((term) => value.includes(term));
 }
 
-import { runScrapling } from "../scrapling";
+const USER_AGENT =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
 
 export class WebsiteAuditProvider {
   async analyze(input: string): Promise<AuditResult> {
     const normalized = normalizeUrl(input);
-    const url = normalized ?? input;
+    const url = normalized ?? (input.startsWith("http") ? input : `https://${input}`);
     const https = url.startsWith("https://");
     const startedAt = performance.now();
 
     try {
-      const res = await runScrapling("fetch_html", { url });
-      
+      const response = await fetch(url, {
+        headers: {
+          "User-Agent": USER_AGENT,
+          Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+          "Accept-Language": "de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7",
+          "Cache-Control": "no-cache",
+        },
+        redirect: "follow",
+        cache: "no-store",
+        signal: AbortSignal.timeout(3500),
+      }).catch((err) => {
+        // If HTTPS fails (e.g. invalid certificate), attempt HTTP fallback
+        if (url.startsWith("https://")) {
+          const httpUrl = url.replace(/^https:\/\//, "http://");
+          return fetch(httpUrl, {
+            headers: { "User-Agent": USER_AGENT },
+            redirect: "follow",
+            cache: "no-store",
+            signal: AbortSignal.timeout(2500),
+          }).catch(() => null);
+        }
+        return null;
+      });
+
       const responseTimeMs = Math.round(performance.now() - startedAt);
-      
-      if (res.error) {
+
+      if (!response) {
         return {
           ...EMPTY_RESULT,
           url,
           https,
           reachable: false,
-          statusCode: res.status ?? 0,
+          statusCode: 0,
           responseTimeMs,
-          error: res.error,
+          error: "Timeout oder Verbindungsfehler beim Laden der Website.",
+          findings: ["Website nicht erreichbar oder Server antwortet nicht zeitnah."],
         };
       }
-      
-      // Checking for content-type isn't strictly necessary anymore if scrapling already handles HTML
-      // We assume it's html.
-      const html = (res.html || "").slice(0, 2_000_000);
-      const isOk = res.status ? res.status >= 200 && res.status < 400 : true;
+
+      const statusCode = response.status;
+      const isOk = statusCode >= 200 && statusCode < 400;
+      const html = (await response.text().catch(() => "")).slice(0, 2_000_000);
       const $ = cheerio.load(html);
       $("script, style, noscript, svg").remove();
       const pageText = $("body").text().replace(/\s+/g, " ").trim();
@@ -111,8 +134,8 @@ export class WebsiteAuditProvider {
       const result: AuditResult = {
         url,
         reachable: isOk,
-        statusCode: res.status ?? 0,
-        https: (res.url || url).startsWith("https://"),
+        statusCode: statusCode,
+        https: (response.url || url).startsWith("https://"),
         responseTimeMs,
         hasViewport: Boolean($("meta[name='viewport']").attr("content")),
         hasTitle: Boolean(title),
@@ -151,7 +174,7 @@ export class WebsiteAuditProvider {
         menuUrl,
         menuIsPdf,
         findings: [],
-        error: isOk ? null : `HTTP-Status ${res.status}`,
+        error: isOk ? null : `HTTP-Status ${statusCode}`,
         extracted: { companyName, phone, email, address, instagram },
       };
 

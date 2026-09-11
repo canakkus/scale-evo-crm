@@ -3,6 +3,9 @@ import { getOptionalUser } from "@/lib/auth";
 import { RESTAURANT_CATEGORIES } from "@/lib/lead-scout-types";
 import { runLeadScout } from "@/services/lead-scout";
 
+export const dynamic = "force-dynamic";
+export const maxDuration = 60;
+
 export async function POST(request: Request) {
   try {
     const user = await getOptionalUser();

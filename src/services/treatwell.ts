@@ -39,8 +39,6 @@ export function slugify(value: string) {
     .replace(/^-+|-+$/g, "");
 }
 
-import { runScrapling } from "./scrapling";
-
 export async function searchTreatwell(
   category: string,
   city: string,
@@ -51,64 +49,31 @@ export async function searchTreatwell(
   const useBei = entry ? entry.prefix : true;
   const prefix = useBei ? "bei-" : "";
   const url = `https://www.treatwell.at/orte/${prefix}${slug}/in-${slugify(city)}-at/`;
-  
+
   try {
-    const res = await runScrapling("treatwell", { url });
-    // Python script parses JSON-LD and returns it directly
-    if (res.error) {
-      return { venues: [], url, error: res.error };
+    const timeoutMs = options.timeoutMs ?? 4500;
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": USER_AGENT,
+        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Accept-Language": "de-AT,de;q=0.9,en;q=0.8",
+      },
+      signal: AbortSignal.timeout(timeoutMs),
+      cache: "no-store",
+    }).catch(() => null);
+
+    if (!res || !res.ok) {
+      return { venues: [], url, error: res ? `HTTP ${res.status}` : "Treatwell Timeout" };
     }
-    
-    // We still have the old parse logic if we want, but Python returns json_ld
-    const venues: TreatwellVenue[] = [];
-    if (res.json_ld && Array.isArray(res.json_ld)) {
-      for (const data of res.json_ld) {
-        if (!Array.isArray(data.itemListElement)) continue;
-        for (const entry of data.itemListElement) {
-          const item = (entry as { item?: Record<string, unknown> })?.item ?? (entry as Record<string, unknown>);
-          const name = typeof item.name === "string" ? item.name.trim() : "";
-          if (!name) continue;
 
-          const aggregateRating = (item.aggregateRating ?? {}) as Record<string, unknown>;
-          const address = (item.address ?? {}) as Record<string, unknown>;
-          const ratingValue = aggregateRating.ratingValue;
-          const reviewCountValue = aggregateRating.reviewCount;
-
-          const streetAddress = typeof address.streetAddress === "string" ? address.streetAddress.trim() : null;
-          const locality = typeof address.addressLocality === "string" ? address.addressLocality.trim() : null;
-          const postalCode = typeof address.postalCode === "string" ? address.postalCode.trim() : null;
-          const treatwellUrl =
-            typeof item["@id"] === "string" ? item["@id"] : typeof item.url === "string" ? item.url : "";
-
-          const parsedRating = typeof ratingValue === "number" ? ratingValue : parseFloat(String(ratingValue));
-          const parsedReviews =
-            typeof reviewCountValue === "number" ? reviewCountValue : parseInt(String(reviewCountValue), 10);
-
-          venues.push({
-            key: treatwellUrl || `${name}-${streetAddress ?? ""}`,
-            name,
-            source: "treatwell",
-            treatwellUrl: treatwellUrl || null,
-            googleMapsUri: null,
-            rating: Number.isFinite(parsedRating) ? parsedRating : null,
-            reviewCount: Number.isFinite(parsedReviews) ? parsedReviews : null,
-            streetAddress,
-            locality,
-            postalCode,
-            addressLine: [streetAddress, postalCode, locality].filter(Boolean).join(", "),
-            phone: null,
-            website: null,
-          });
-        }
-      }
-    }
-    
+    const html = await res.text();
+    const venues = parseTreatwellHtml(html);
     return { venues, url };
   } catch (error) {
     return {
       venues: [],
       url,
-      error: error instanceof Error ? error.message : "Treatwell konnte nicht geladen werden (Scrapling Error).",
+      error: error instanceof Error ? error.message : "Treatwell konnte nicht geladen werden.",
     };
   }
 }

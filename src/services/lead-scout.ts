@@ -382,7 +382,7 @@ export async function runLeadScout(options: LeadScoutOptions, userId: string): P
       ],
     },
   });
-  const CONCURRENCY = 5;
+  const CONCURRENCY = 10;
   const results: ScoutResult[] = [];
   for (let i = 0; i < selected.length; i += CONCURRENCY) {
     const batch = selected.slice(i, i + CONCURRENCY);
