@@ -379,8 +379,9 @@ export function LeadScoutComponent() {
 
   const [category, setCategory] = useState("Barber");
   const [city, setCity] = useState("Wien");
-  const isRestaurant = RESTAURANT_CATEGORIES.includes(category) || category === "Alle";
-  const source = isRestaurant ? "places" : "treatwell";
+  const BEAUTY_CATEGORIES = ["Barber", "Friseur", "Spa & Wellness", "Nagelstudio", "Kosmetik", "Massage", "Wimpern"];
+  const isTreatwell = BEAUTY_CATEGORIES.includes(category);
+  const source = isTreatwell ? "treatwell" : "places";
 
   // Filter options
   const [minRating, setMinRating] = useState("4.0");
@@ -599,18 +600,22 @@ export function LeadScoutComponent() {
 
         <div className="flex flex-col rounded-xl border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
           <div className="flex flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x" style={{ borderColor: "var(--border)" }}>
-            <div className="flex-1 px-4 py-2">
+            <div className="flex-1 px-4 py-2 relative">
               <label className="block text-[10px] font-bold uppercase tracking-wider mb-0.5" style={{ color: "var(--text-3)" }}>Nische / Kategorie</label>
-              <select
-                className="w-full bg-transparent outline-none text-sm appearance-none cursor-pointer"
+              <input
+                type="text"
+                list="categories-list"
+                className="w-full bg-transparent outline-none text-sm cursor-text"
                 style={{ color: "var(--text)" }}
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-              >
+                placeholder="z.B. Barber, Shisha Bar..."
+              />
+              <datalist id="categories-list">
                 {CATEGORIES.map((item) => (
                   <option key={item.slug} value={item.slug}>{item.label}</option>
                 ))}
-              </select>
+              </datalist>
             </div>
 
             <div className="flex-1 px-4 py-2">

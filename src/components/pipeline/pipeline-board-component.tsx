@@ -333,106 +333,108 @@ export function PipelineBoardComponent() {
                             boxShadow: "0 1px 3px rgba(0,0,0,0.02), 0 0 0 1px var(--border)",
                           }}
                         >
-                          {/* Clean Card Content (Typography-driven) */}
-                          <div className="pr-8">
-                            <h4 className="text-[14px] font-medium leading-tight mb-1" style={{ color: "var(--text)" }}>
-                              {lead.companyName}
-                            </h4>
-                            
-                            <div className="text-[13px] space-y-0.5" style={{ color: "var(--text-2)" }}>
-                              <p>
-                                {lead.industry || "Branche k.A."}
-                                {lead.city ? ` · ${lead.city}` : ""}
-                              </p>
-                              <p className="truncate" title={lead.address}>
-                                {lead.address}
-                              </p>
+                          <div className="flex gap-3 items-center justify-between">
+                            {/* Clean Card Content (Typography-driven) */}
+                            <div className="flex-1 min-w-0">
+                              <h4 className="text-[14px] font-medium leading-tight mb-1" style={{ color: "var(--text)" }}>
+                                {lead.companyName}
+                              </h4>
                               
-                              {(lead.score > 0 || lead.googleRating != null || lead.hasMenu) && (
-                                <p style={{ color: "var(--text-3)" }}>
-                                  {[
-                                    lead.score > 0 ? `Score: ${lead.score}` : null,
-                                    lead.googleRating != null ? `Rating: ${lead.googleRating.toFixed(1)}` : null,
-                                    lead.hasMenu ? "Menükarte" : null
-                                  ].filter(Boolean).join(" · ")}
+                              <div className="text-[13px] space-y-0.5" style={{ color: "var(--text-2)" }}>
+                                <p>
+                                  {lead.industry || "Branche k.A."}
+                                  {lead.city ? ` · ${lead.city}` : ""}
                                 </p>
+                                <p className="truncate" title={lead.address}>
+                                  {lead.address}
+                                </p>
+                                
+                                {(lead.score > 0 || lead.googleRating != null || lead.hasMenu) && (
+                                  <p style={{ color: "var(--text-3)" }}>
+                                    {[
+                                      lead.score > 0 ? `Score: ${lead.score}` : null,
+                                      lead.googleRating != null ? `Rating: ${lead.googleRating.toFixed(1)}` : null,
+                                      lead.hasMenu ? "Menükarte" : null
+                                    ].filter(Boolean).join(" · ")}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Actions (Progressive Disclosure) */}
+                            <div className="shrink-0 flex flex-col gap-1 bg-[var(--surface)]/90 backdrop-blur-md p-1.5 rounded-xl shadow-sm border border-[var(--border)]">
+                              {lead.phone && (
+                                <a
+                                  href={`tel:${lead.phone}`}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="p-2 hover:bg-[var(--surface-3)] rounded-lg text-[var(--text-2)] hover:text-[var(--text)] transition-colors flex items-center justify-center"
+                                  title={`Anrufen: ${lead.phone}`}
+                                >
+                                  <Phone className="w-5 h-5 sm:w-4 sm:h-4" />
+                                </a>
+                              )}
+                              {lead.website && (
+                                <a
+                                  href={lead.website.startsWith("http") ? lead.website : `https://${lead.website}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="p-2 hover:bg-[var(--surface-3)] rounded-lg text-[var(--text-2)] hover:text-[var(--text)] transition-colors flex items-center justify-center"
+                                  title={`Website: ${lead.website}`}
+                                >
+                                  <Globe className="w-5 h-5 sm:w-4 sm:h-4" />
+                                </a>
+                              )}
+                              {lead.treatwellUrl && (
+                                <a
+                                  href={lead.treatwellUrl.startsWith("http") ? lead.treatwellUrl : `https://${lead.treatwellUrl}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="p-2 hover:bg-[var(--surface-3)] rounded-lg text-teal-400 hover:text-teal-300 transition-colors flex items-center justify-center"
+                                  title="Treatwell-Profil öffnen"
+                                >
+                                  <Sparkles className="w-5 h-5 sm:w-4 sm:h-4 text-teal-400" />
+                                </a>
+                              )}
+                              {mapsUrl && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    window.open(mapsUrl, "_blank", "noopener,noreferrer");
+                                  }}
+                                  className="p-2 hover:bg-[var(--surface-3)] rounded-lg text-[var(--text-2)] hover:text-[var(--text)] transition-colors flex items-center justify-center"
+                                  title="Route"
+                                >
+                                  <Navigation className="w-5 h-5 sm:w-4 sm:h-4" />
+                                </button>
+                              )}
+                              {lead.nfcDemoUrl && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleCopyNfc(e, lead.nfcDemoUrl, lead.id)}
+                                  className="p-2 hover:bg-[var(--surface-3)] rounded-lg transition-colors flex items-center justify-center"
+                                  style={{ color: copiedNfcId === lead.id ? "var(--accent)" : "var(--text-2)" }}
+                                  title="NFC URL kopieren"
+                                >
+                                  {copiedNfcId === lead.id ? <Check className="w-5 h-5 sm:w-4 sm:h-4" /> : <Radio className="w-5 h-5 sm:w-4 sm:h-4" />}
+                                </button>
+                              )}
+                              {nextStatus && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleAdvanceStatus(lead.id, lead.status);
+                                  }}
+                                  className="p-2 hover:bg-[var(--surface-3)] rounded-lg text-[var(--text-2)] hover:text-[var(--text)] transition-colors flex items-center justify-center"
+                                  title={`Weiter zu: ${STATUS_LABELS[nextStatus]}`}
+                                >
+                                  <ChevronRight className="w-5 h-5 sm:w-4 sm:h-4" />
+                                </button>
                               )}
                             </div>
-                          </div>
-
-                          {/* Hover Actions (Progressive Disclosure) */}
-                          <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-100 transition-opacity flex flex-col gap-1 bg-[var(--surface)]/90 backdrop-blur-md p-1 rounded-xl shadow-sm border border-[var(--border)]">
-                            {lead.phone && (
-                              <a
-                                href={`tel:${lead.phone}`}
-                                onClick={(e) => e.stopPropagation()}
-                                className="p-1.5 hover:bg-[var(--surface-3)] rounded-lg text-[var(--text-2)] hover:text-[var(--text)] transition-colors"
-                                title={`Anrufen: ${lead.phone}`}
-                              >
-                                <Phone className="w-4 h-4" />
-                              </a>
-                            )}
-                            {lead.website && (
-                              <a
-                                href={lead.website.startsWith("http") ? lead.website : `https://${lead.website}`}
-                                target="_blank"
-                                rel="noreferrer"
-                                onClick={(e) => e.stopPropagation()}
-                                className="p-1.5 hover:bg-[var(--surface-3)] rounded-lg text-[var(--text-2)] hover:text-[var(--text)] transition-colors"
-                                title={`Website: ${lead.website}`}
-                              >
-                                <Globe className="w-4 h-4" />
-                              </a>
-                            )}
-                            {lead.treatwellUrl && (
-                              <a
-                                href={lead.treatwellUrl.startsWith("http") ? lead.treatwellUrl : `https://${lead.treatwellUrl}`}
-                                target="_blank"
-                                rel="noreferrer"
-                                onClick={(e) => e.stopPropagation()}
-                                className="p-1.5 hover:bg-[var(--surface-3)] rounded-lg text-teal-400 hover:text-teal-300 transition-colors"
-                                title="Treatwell-Profil öffnen"
-                              >
-                                <Sparkles className="w-4 h-4 text-teal-400" />
-                              </a>
-                            )}
-                            {mapsUrl && (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  window.open(mapsUrl, "_blank", "noopener,noreferrer");
-                                }}
-                                className="p-1.5 hover:bg-[var(--surface-3)] rounded-lg text-[var(--text-2)] hover:text-[var(--text)] transition-colors"
-                                title="Route"
-                              >
-                                <Navigation className="w-4 h-4" />
-                              </button>
-                            )}
-                            {lead.nfcDemoUrl && (
-                              <button
-                                type="button"
-                                onClick={(e) => handleCopyNfc(e, lead.nfcDemoUrl, lead.id)}
-                                className="p-1.5 hover:bg-[var(--surface-3)] rounded-lg transition-colors"
-                                style={{ color: copiedNfcId === lead.id ? "var(--accent)" : "var(--text-2)" }}
-                                title="NFC URL kopieren"
-                              >
-                                {copiedNfcId === lead.id ? <Check className="w-4 h-4" /> : <Radio className="w-4 h-4" />}
-                              </button>
-                            )}
-                            {nextStatus && (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleAdvanceStatus(lead.id, lead.status);
-                                }}
-                                className="p-1.5 hover:bg-[var(--surface-3)] rounded-lg text-[var(--text-2)] hover:text-[var(--text)] transition-colors"
-                                title={`Weiter zu: ${STATUS_LABELS[nextStatus]}`}
-                              >
-                                <ChevronRight className="w-4 h-4" />
-                              </button>
-                            )}
                           </div>
                         </div>
                       );
