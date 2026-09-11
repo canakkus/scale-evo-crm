@@ -19,6 +19,7 @@ import {
   Radio,
   Check,
   Copy,
+  RefreshCw,
 } from "lucide-react";
 import { StatusBadge, PriorityDot } from "@/components/ui/status-badge";
 import { LeadFormModal } from "@/components/leads/lead-form-modal";
@@ -357,6 +358,19 @@ export function LeadsTable() {
               </>
             )}
           </div>
+
+          {/* Refresh Button */}
+          <button
+            type="button"
+            onClick={() => fetchLeads()}
+            disabled={loading}
+            title="Leads aktualisieren"
+            className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium border outline-none transition-all cursor-pointer hover:bg-[var(--surface-2)] active:scale-95 disabled:opacity-50"
+            style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-2)" }}
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin text-[var(--accent)]" : ""}`} />
+            <span className="hidden sm:inline">Aktualisieren</span>
+          </button>
 
           {/* New Lead Button */}
           <button

@@ -26,6 +26,7 @@ import {
   UtensilsCrossed,
   Plus,
   Search,
+  RefreshCw,
 } from "lucide-react";
 import type { AcquisitionType, LeadStatus } from "@prisma/client";
 
@@ -221,32 +222,47 @@ export function PipelineBoardComponent() {
           </button>
         </div>
 
-        {/* Minimal Search Input */}
-        <div className="relative flex-1 max-w-xs">
-          <Search
-            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-50"
-            style={{ color: "var(--text)" }}
-          />
-          <input
-            type="text"
-            placeholder="Suchen..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-xl pl-9 pr-8 py-2 text-[14px] outline-none transition-all"
-            style={{
-              background: "var(--surface-2)",
-              color: "var(--text)",
-            }}
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[13px] opacity-50 hover:opacity-100"
+        <div className="flex items-center gap-2 flex-1 max-w-sm">
+          {/* Minimal Search Input */}
+          <div className="relative flex-1">
+            <Search
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-50"
               style={{ color: "var(--text)" }}
-            >
-              ✕
-            </button>
-          )}
+            />
+            <input
+              type="text"
+              placeholder="Suchen..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full rounded-xl pl-9 pr-8 py-2 text-[14px] outline-none transition-all"
+              style={{
+                background: "var(--surface-2)",
+                color: "var(--text)",
+              }}
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[13px] opacity-50 hover:opacity-100"
+                style={{ color: "var(--text)" }}
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          {/* Refresh Button */}
+          <button
+            type="button"
+            onClick={() => fetchLeads()}
+            disabled={loading}
+            title="Pipeline aktualisieren"
+            className="flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium border outline-none transition-all cursor-pointer hover:bg-[var(--surface-2)] active:scale-95 disabled:opacity-50 shrink-0"
+            style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-2)" }}
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin text-[var(--accent)]" : ""}`} />
+            <span className="hidden sm:inline text-xs font-medium">Aktualisieren</span>
+          </button>
         </div>
       </div>
 
