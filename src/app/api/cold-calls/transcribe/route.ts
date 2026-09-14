@@ -40,7 +40,7 @@ export async function POST(request: Request) {
     const buffer = Buffer.from(arrayBuffer);
     const mimeType = file.type || "audio/mp3";
 
-    // Transcribe & Analyze with Groq (Whisper large-v3 + Llama 3.3 70B)
+    // Transcribe & Analyze with Groq (Whisper large-v3 + gpt-oss-120b)
     const analysis = await transcribeAndAnalyzeCall(buffer, mimeType, file.name, targetCompanyName);
 
     // Save CallRecording in database

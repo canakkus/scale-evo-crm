@@ -32,6 +32,9 @@ import {
   Copy,
   Maximize,
   Minimize,
+  Bell,
+  CalendarCheck,
+  AlarmClock,
 } from "lucide-react";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { CustomAudioPlayer } from "@/components/ui/custom-audio-player";
@@ -94,6 +97,67 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
   const [editNextFollowUpAt, setEditNextFollowUpAt] = useState("");
   const [savingDetails, setSavingDetails] = useState(false);
   const [copiedNfc, setCopiedNfc] = useState(false);
+
+  // Apple Bridge: Custom Reminder & Calendar State
+  const [reminderOpen, setReminderOpen] = useState(false);
+  const [reminderText, setReminderText] = useState("");
+  const [reminderDateTime, setReminderDateTime] = useState("");
+  const [reminderSetAsFollowUp, setReminderSetAsFollowUp] = useState(true);
+  const [bookingReminder, setBookingReminder] = useState(false);
+  const [reminderSuccess, setReminderSuccess] = useState<string | null>(null);
+  const [reminderError, setReminderError] = useState<string | null>(null);
+
+  const handleBookAppleReminder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!lead || !reminderDateTime || !reminderText.trim()) return;
+    setBookingReminder(true);
+    setReminderError(null);
+    setReminderSuccess(null);
+
+    try {
+      const res = await fetch(`/api/leads/${lead.id}/reminder`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: reminderText.trim(),
+          dueDate: new Date(reminderDateTime).toISOString(),
+          setAsLeadFollowUp: reminderSetAsFollowUp,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Fehler beim Eintragen in Apple.");
+      }
+
+      setReminderSuccess(data.message || "In WORKSHIT & Privat eingetragen!");
+      setReminderText("");
+
+      if (reminderSetAsFollowUp) {
+        setLead((prev: any) =>
+          prev ? { ...prev, nextFollowUpAt: new Date(reminderDateTime).toISOString(), status: prev.status === "NEW" ? "FOLLOW_UP" : prev.status } : prev
+        );
+        onUpdate();
+      }
+
+      // Reload lead details to reflect new interaction timeline
+      fetch(`/api/leads/${lead.id}`)
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.lead) setLead(d.lead);
+        })
+        .catch(console.error);
+
+      setTimeout(() => {
+        setReminderSuccess(null);
+        setReminderOpen(false);
+      }, 3000);
+    } catch (err: any) {
+      setReminderError(err?.message || "Fehler beim Eintragen in Apple.");
+    } finally {
+      setBookingReminder(false);
+    }
+  };
 
   const fetchRecordings = useCallback(async () => {
     if (!leadId) return;
@@ -675,6 +739,181 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                     </div>
                   </div>
                 )}
+
+                {/* Apple Reminders & Kalender Bridge */}
+                <div className="pt-4 border-t mt-4 space-y-3" style={{ borderColor: "var(--border)" }}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 font-semibold text-xs" style={{ color: "var(--text)" }}>
+                      <Bell className="w-4 h-4 text-amber-400" />
+                      <span>Apple Sync</span>
+                    </div>
+                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--surface-3)] text-[var(--text-3)] border border-[var(--border)]">
+                      WORKSHIT • Privat (10m)
+                    </span>
+                  </div>
+
+                  {!reminderOpen ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setReminderOpen(true);
+                        if (!reminderDateTime) {
+                          const d = new Date();
+                          d.setHours(d.getHours() + 2, 0, 0, 0);
+                          const localIso = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+                          setReminderDateTime(localIso);
+                        }
+                      }}
+                      className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold border transition-all hover:bg-[var(--surface-3)] text-amber-400"
+                      style={{
+                        background: "var(--surface-2)",
+                        borderColor: "var(--border)",
+                      }}
+                    >
+                      <AlarmClock className="w-4 h-4" />
+                      <span>Erinnerung & Termin buchen</span>
+                    </button>
+                  ) : (
+                    <form onSubmit={handleBookAppleReminder} className="p-3 rounded-lg border space-y-2.5 animate-fade-in text-xs" style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}>
+                      <div className="flex items-center justify-between pb-1 border-b" style={{ borderColor: "var(--border)" }}>
+                        <span className="font-bold text-[var(--text)] flex items-center gap-1.5">
+                          <CalendarCheck className="w-3.5 h-3.5 text-amber-400" />
+                          Erinnerung buchen
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setReminderOpen(false);
+                            setReminderError(null);
+                            setReminderSuccess(null);
+                          }}
+                          className="text-[var(--text-3)] hover:text-[var(--text)] px-1"
+                        >
+                          ✕
+                        </button>
+                      </div>
+
+                      {/* Quick presets */}
+                      <div className="flex items-center gap-1 flex-wrap">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const d = new Date(Date.now() + 60 * 60 * 1000);
+                            setReminderDateTime(new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16));
+                          }}
+                          className="text-[10px] px-2 py-0.5 rounded border hover:bg-[var(--surface-3)] transition-colors"
+                          style={{ borderColor: "var(--border)", color: "var(--text-2)" }}
+                        >
+                          +1 Std
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const tm = new Date();
+                            tm.setDate(tm.getDate() + 1);
+                            tm.setHours(10, 0, 0, 0);
+                            setReminderDateTime(new Date(tm.getTime() - tm.getTimezoneOffset() * 60000).toISOString().slice(0, 16));
+                          }}
+                          className="text-[10px] px-2 py-0.5 rounded border hover:bg-[var(--surface-3)] transition-colors"
+                          style={{ borderColor: "var(--border)", color: "var(--text-2)" }}
+                        >
+                          Morgen 10:00
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const mo = new Date();
+                            const day = mo.getDay();
+                            const diff = day === 0 ? 1 : 8 - day;
+                            mo.setDate(mo.getDate() + diff);
+                            mo.setHours(10, 0, 0, 0);
+                            setReminderDateTime(new Date(mo.getTime() - mo.getTimezoneOffset() * 60000).toISOString().slice(0, 16));
+                          }}
+                          className="text-[10px] px-2 py-0.5 rounded border hover:bg-[var(--surface-3)] transition-colors"
+                          style={{ borderColor: "var(--border)", color: "var(--text-2)" }}
+                        >
+                          Mo 10:00
+                        </button>
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-semibold mb-1 text-[var(--text-3)]">Datum & Uhrzeit</label>
+                        <input
+                          type="datetime-local"
+                          required
+                          value={reminderDateTime}
+                          onChange={(e) => setReminderDateTime(e.target.value)}
+                          className="w-full text-xs rounded-md px-2 py-1.5 border outline-none"
+                          style={{ background: "var(--surface-3)", borderColor: "var(--border)", color: "var(--text)" }}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-semibold mb-1 text-[var(--text-3)]">Notiz / Text</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="z.B. Zurückrufen wegen NFC Demo..."
+                          value={reminderText}
+                          onChange={(e) => setReminderText(e.target.value)}
+                          className="w-full text-xs rounded-md px-2 py-1.5 border outline-none"
+                          style={{ background: "var(--surface-3)", borderColor: "var(--border)", color: "var(--text)" }}
+                        />
+                      </div>
+
+                      <label className="flex items-center gap-1.5 cursor-pointer text-[11px] text-[var(--text-2)] select-none pt-0.5">
+                        <input
+                          type="checkbox"
+                          checked={reminderSetAsFollowUp}
+                          onChange={(e) => setReminderSetAsFollowUp(e.target.checked)}
+                          className="rounded border-[var(--border)] text-amber-500 focus:ring-0"
+                        />
+                        <span>Auch als fixes Lead Follow-up setzen</span>
+                      </label>
+
+                      {reminderError && (
+                        <div className="text-[11px] text-red-400 p-2 rounded bg-red-500/10 border border-red-500/20 leading-snug">
+                          {reminderError}
+                        </div>
+                      )}
+
+                      {reminderSuccess && (
+                        <div className="text-[11px] text-emerald-400 p-2 rounded bg-emerald-500/10 border border-emerald-500/20 leading-snug flex items-center gap-1.5">
+                          <Check className="w-3.5 h-3.5 shrink-0" />
+                          <span>{reminderSuccess}</span>
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-2 pt-1">
+                        <button
+                          type="submit"
+                          disabled={bookingReminder || !reminderText.trim() || !reminderDateTime}
+                          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold hover:opacity-90 disabled:opacity-50 transition-all text-black bg-amber-400"
+                        >
+                          {bookingReminder ? (
+                            <>
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              <span>Bucht...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Bell className="w-3.5 h-3.5" />
+                              <span>In Apple eintragen</span>
+                            </>
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setReminderOpen(false)}
+                          className="px-2 py-1.5 rounded-md text-xs font-medium hover:bg-[var(--surface-3)]"
+                          style={{ color: "var(--text-3)" }}
+                        >
+                          Abbrechen
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                </div>
 
                 {/* Speisekarte (Gemini AI Detection) */}
                 <div className="pt-4 border-t mt-4 space-y-3" style={{ borderColor: "var(--border)" }}>

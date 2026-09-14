@@ -20,7 +20,7 @@
 - **Gatekeeping:** `src/proxy.ts` (strict Next.js 16 Proxy interceptor)
 - **External APIs:**
   - Google Places API (Places Search & Address/Phone Enrichment)
-  - Groq SDK (Whisper `whisper-large-v3` for speech-to-text with `verbose_json` timestamps, `llama-3.3-70b-versatile` for AI Chat, Tool Calling, Task Prioritization & Call Analysis)
+  - Groq SDK (Whisper `whisper-large-v3` for speech-to-text with `verbose_json` timestamps, `openai/gpt-oss-120b` for AI Chat, Tool Calling, Task Prioritization & Call Analysis)
   - Google Generative AI (Gemini 1.5 Flash SDK fallback for Menu Detection & Assistant)
 
 ---
@@ -55,7 +55,7 @@
 
 ### 1. Cold Calls, Automatic Dialogue Formatting & Sales Coaching (`/cold-calls`, `src/services/groq.ts`)
 - **Transcription (Step 1):** Groq `whisper-large-v3` converts audio into timestamped segments (`verbose_json`).
-- **Dialogue & Role Disambiguation (Step 2):** Groq `llama-3.3-70b-versatile` (with native `response_format: { type: "json_object" }`) formats continuous timestamped raw transcripts into clean speaker-separated dialogue (`[Anrufer / Verkäufer]` vs. `[Kunde / Ansprechpartner]`).
+- **Dialogue & Role Disambiguation (Step 2):** Groq `openai/gpt-oss-120b` (with native `response_format: { type: "json_object" }`) formats continuous timestamped raw transcripts into clean speaker-separated dialogue (`[Anrufer / Verkäufer]` vs. `[Kunde / Ansprechpartner]`).
 - **Strict Role Rules:** Enforces cold-call greeting logic (the person answering phone is `[Kunde / Ansprechpartner]`, the person introducing/pitching is `[Anrufer / Verkäufer]`), prohibiting mid-call role swaps and centering `aiFeedback` exclusively on the seller.
 - **Analysis:** Automatically extracts structured `summary`, `nextSteps`, `sentiment`, `extractedData` (contact, appointment date, objections, interest level) and `aiFeedback` (pace, stuttering/fillers, tone, rhetoric tips).
 - **Reprocessing Utility:** `scripts/reprocess-call-recordings.ts` to re-analyze and re-format historical recordings.
@@ -107,6 +107,18 @@
 - **Architecture:** Replaces legacy Node.js/Cheerio scrapers with an undetected Python **Scrapling** backend to bypass Cloudflare & antibot protections.
 - **Node-to-Python Bridge:** `src/services/scrapling.ts` spawns the Python wrapper and communicates via JSON over stdin/stdout. (Paths are interpolated to bypass Next.js Turbopack tracing).
 - **Modules Covered:** DuckDuckGo/Bing web searches (`web-search.ts`), Treatwell JSON-LD extraction (`treatwell.ts`), and Website HTML auditing (`website-provider.ts`).
+
+### 9. Apple Reminders & Calendar Bridge (`src/services/apple-bridge.ts`, `src/app/api/leads/[id]/reminder`)
+- **Target User Exclusivity:** Exclusively enabled for `canakkus378@gmail.com`.
+- **Double-Sync Targets:**
+  - **Apple Reminders:** Pushes to list `WORKSHIT` (VTODO via CalDAV / AppleScript).
+  - **Apple Calendar:** Pushes to calendar `Privat` (VEVENT with 10-minute blocker).
+- **Triggers:**
+  - **1. Fixed Follow-Up Setting:** Triggered automatically whenever a lead follow-up date (`nextFollowUpAt`) is created or updated in `PATCH /api/leads/[id]`, `POST /api/leads`, or via AI copilot tool calling (`createTask` with category `FOLLOW_UP`).
+  - **2. Custom Reminder in Lead View:** Inline widget in `LeadDetailModal` allowing Can to book custom date/time + note reminders directly from any lead with quick presets (+1h, Morgen 10:00, Mo 10:00), optional sync to lead follow-up, and timeline logging.
+- **Transports:**
+  - **Cloud (Production / Vercel):** Native CalDAV over HTTPS to `caldav.icloud.com` with App-Specific Password (`ICLOUD_APP_PASSWORD`), auto-discovering principals, calendar-home-sets, and collections via Cheerio XML parsing with 12h in-memory caching.
+  - **Local Development:** Automatic macOS AppleScript (`osascript`) fallback on Mac if `ICLOUD_APP_PASSWORD` is not configured locally.
 
 ---
 

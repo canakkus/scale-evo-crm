@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getOptionalUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { mapPlaceToSuggestion, type RawPlace } from "@/lib/places";
+import { pushToAppleEcosystem, isAppleSyncUser } from "@/services/apple-bridge";
 
 async function getPlaceDetailsFromUrl(url: string, defaultName: string): Promise<RawPlace | null> {
   const apiKey = process.env.GOOGLE_PLACES_API_KEY;
@@ -189,6 +190,27 @@ export async function PATCH(
         nextFollowUpAt: data.nextFollowUpAt !== undefined ? (data.nextFollowUpAt ? new Date(data.nextFollowUpAt) : null) : existingLead.nextFollowUpAt,
       },
     });
+
+    // Auto-sync fixed follow-up to Apple Reminders & Calendar for canakkus378@gmail.com
+    if (data.nextFollowUpAt && isAppleSyncUser(user.email)) {
+      const newFollowUp = new Date(data.nextFollowUpAt);
+      const oldFollowUp = existingLead.nextFollowUpAt ? new Date(existingLead.nextFollowUpAt) : null;
+      if (!isNaN(newFollowUp.getTime()) && (!oldFollowUp || oldFollowUp.getTime() !== newFollowUp.getTime())) {
+        pushToAppleEcosystem({
+          userEmail: user.email,
+          title: `Follow-up: ${updated.companyName}`,
+          notes: `Lead Status: ${updated.status}. Ansprechpartner: ${updated.contactPerson || "—"}`,
+          dueDate: newFollowUp,
+          leadId: updated.id,
+          leadCompany: updated.companyName,
+          leadPhone: updated.phone,
+          leadAddress: [updated.address, updated.city].filter(Boolean).join(", "),
+          durationMinutes: 10,
+        }).catch((err) => {
+          console.error("[PATCH /api/leads/[id]] Apple sync background error:", err);
+        });
+      }
+    }
 
     return NextResponse.json({ lead: updated });
   } catch (error) {

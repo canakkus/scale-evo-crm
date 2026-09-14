@@ -141,7 +141,7 @@ Antworte AUSSCHLIESSLICH im folgenden JSON-Format ohne weiteren Fließtext:
       console.log(`-> Sende an Groq AI...`);
       const analysisText = await withGroqClient(async (client) => {
         const response = await client.chat.completions.create({
-          model: 'llama-3.3-70b-versatile',
+          model: 'openai/gpt-oss-120b',
           messages: [{ role: 'user', content: analysisPrompt }],
           response_format: { type: 'json_object' },
           temperature: 0.1,

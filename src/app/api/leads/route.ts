@@ -3,6 +3,7 @@ import { getOptionalUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import type { LeadStatus, Priority, WebPresence } from "@prisma/client";
 import { INDUSTRIES } from "@/lib/constants";
+import { pushToAppleEcosystem, isAppleSyncUser } from "@/services/apple-bridge";
 
 export async function GET(request: Request) {
   try {
@@ -205,9 +206,29 @@ export async function POST(request: Request) {
         status: data.status || "NEW",
         priority: data.priority || "MEDIUM",
         score: data.score != null ? parseInt(data.score, 10) : 0,
+        nextFollowUpAt: data.nextFollowUpAt ? new Date(data.nextFollowUpAt) : null,
         createdById: dbUser.id,
       },
     });
+
+    if (data.nextFollowUpAt && isAppleSyncUser(user.email)) {
+      const followUpDate = new Date(data.nextFollowUpAt);
+      if (!isNaN(followUpDate.getTime())) {
+        pushToAppleEcosystem({
+          userEmail: user.email,
+          title: `Follow-up: ${lead.companyName}`,
+          notes: `Neuer Lead angelegt. Status: ${lead.status}`,
+          dueDate: followUpDate,
+          leadId: lead.id,
+          leadCompany: lead.companyName,
+          leadPhone: lead.phone,
+          leadAddress: [lead.address, lead.city].filter(Boolean).join(", "),
+          durationMinutes: 10,
+        }).catch((err) => {
+          console.error("[POST /api/leads] Apple sync error:", err);
+        });
+      }
+    }
 
     return NextResponse.json({ lead }, { status: 201 });
   } catch (error) {

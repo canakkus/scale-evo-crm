@@ -19,6 +19,7 @@ import { prisma } from "@/lib/prisma";
 import { runLeadScout } from "./lead-scout";
 import { runRestaurantScout } from "./restaurant-scout";
 import { withGroqClient } from "@/lib/groq-key-manager";
+import { pushToAppleEcosystem, isAppleSyncUser } from "@/services/apple-bridge";
 
 // Re-export für bequemen Import in anderen Modulen
 export { getKeyManager } from "@/lib/groq-key-manager";
@@ -175,7 +176,7 @@ Antworte AUSSCHLIESSLICH im folgenden JSON-Format ohne weiteren Fließtext:
 
   const analysisText = await withGroqClient(async (client) => {
     const response = await client.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
+      model: "openai/gpt-oss-120b",
       messages: [{ role: "user", content: analysisPrompt }],
       response_format: { type: "json_object" },
       temperature: 0.1,
@@ -470,13 +471,35 @@ export async function executeAssistantTool(name: string, args: any, userId: stri
         });
 
         if (leadId && category === "FOLLOW_UP") {
-          await prisma.lead.update({
+          const updatedLead = await prisma.lead.update({
             where: { id: leadId },
             data: {
               status: "FOLLOW_UP",
               ...(dueAt && { nextFollowUpAt: new Date(dueAt) }),
             },
           });
+
+          if (dueAt) {
+            const userRecord = await prisma.user.findUnique({
+              where: { id: userId },
+              select: { email: true },
+            });
+            if (userRecord && isAppleSyncUser(userRecord.email)) {
+              pushToAppleEcosystem({
+                userEmail: userRecord.email,
+                title: `Follow-up: ${updatedLead.companyName}`,
+                notes: `AI Task: ${title}`,
+                dueDate: new Date(dueAt),
+                leadId: updatedLead.id,
+                leadCompany: updatedLead.companyName,
+                leadPhone: updatedLead.phone,
+                leadAddress: [updatedLead.address, updatedLead.city].filter(Boolean).join(", "),
+                durationMinutes: 10,
+              }).catch((err) => {
+                console.error("[groq.createTask] Apple sync error:", err);
+              });
+            }
+          }
         }
 
         return { success: true, taskId: task.id, title: task.title };
