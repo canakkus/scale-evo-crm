@@ -28,6 +28,7 @@ import { useUserLocation } from "@/lib/location-context";
 import { RESTAURANT_CATEGORIES, type LeadScoutResponse, type ScoutResult, type ScoutStepStatus } from "@/lib/lead-scout-types";
 
 const CATEGORIES = [
+  { label: "🚀 Broad Discovery (Alle Branchen, Hohe Qualität)", slug: "Discovery" },
   { label: "Alle Kategorien (Beauty & Gastro)", slug: "Alle" },
   { label: "Barber", slug: "Barber" },
   { label: "Friseur", slug: "Friseur" },
@@ -41,6 +42,12 @@ const CATEGORIES = [
   { label: "Café & Bar", slug: "Café & Bar" },
   { label: "Imbiss", slug: "Imbiss" },
   { label: "Gastronomie", slug: "Gastronomie" },
+];
+
+const CITIES = [
+  "Wien", "Graz", "Linz", "Salzburg", "Innsbruck", "Klagenfurt", "Villach", "Wels", "St. Pölten", "Dornbirn",
+  "Berlin", "München", "Hamburg", "Köln", "Frankfurt", "Stuttgart", "Düsseldorf", "Leipzig",
+  "Zürich", "Genf", "Basel", "Bern"
 ];
 
 type AuditCheck = { key: keyof NonNullable<ScoutResult["audit"]>; label: string };
@@ -618,16 +625,22 @@ export function LeadScoutComponent() {
               </datalist>
             </div>
 
-            <div className="flex-1 px-4 py-2">
+            <div className="flex-1 px-4 py-2 relative">
               <label className="block text-[10px] font-bold uppercase tracking-wider mb-0.5" style={{ color: "var(--text-3)" }}>Stadt</label>
               <input
                 type="text"
-                className="w-full bg-transparent outline-none text-sm"
+                list="cities-list"
+                className="w-full bg-transparent outline-none text-sm cursor-text"
                 style={{ color: "var(--text)" }}
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
                 placeholder="z. B. Wien"
               />
+              <datalist id="cities-list">
+                {Array.from(new Set([...CITIES, ...sessions.map(s => s.city).filter(Boolean)])).map((c) => (
+                  <option key={c} value={c} />
+                ))}
+              </datalist>
             </div>
 
             <div className="flex-1 px-4 py-2">
@@ -661,7 +674,7 @@ export function LeadScoutComponent() {
               <input
                 type="number"
                 min={1}
-                max={30}
+                max={100}
                 className="w-full bg-transparent outline-none text-sm"
                 style={{ color: "var(--text)" }}
                 value={maxResults}

@@ -121,12 +121,12 @@ export function LeadsTable() {
   return (
     <div className="space-y-6">
       {/* Action Bar */}
-      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         {/* Search Input & Acquisition Type Switcher */}
-        <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap flex-1">
+        <div className="flex items-center gap-2.5 flex-1 min-w-0">
           {/* Acquisition Toggle */}
           <div
-            className="inline-flex p-1 rounded-xl border max-w-fit shrink-0 shadow-inner"
+            className="inline-flex p-0.5 rounded-xl border max-w-fit shrink-0 shadow-inner"
             style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}
           >
             <button
@@ -135,7 +135,7 @@ export function LeadsTable() {
                 setAcquisitionFilter("");
                 setPage(1);
               }}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 acquisitionFilter === ""
                   ? "shadow-sm"
                   : "opacity-75 hover:opacity-100 hover:text-[var(--text)]"
@@ -153,7 +153,7 @@ export function LeadsTable() {
                 setAcquisitionFilter("CALL");
                 setPage(1);
               }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 acquisitionFilter === "CALL"
                   ? "shadow-sm"
                   : "opacity-75 hover:opacity-100 hover:text-[var(--text)]"
@@ -163,8 +163,8 @@ export function LeadsTable() {
                 color: acquisitionFilter === "CALL" ? "var(--text)" : "var(--text-2)",
               }}
             >
-              <Phone className="w-4 h-4 text-muted-foreground" />
-              <span>Cold Calls</span>
+              <Phone className="w-3.5 h-3.5 opacity-70" />
+              <span>Calls</span>
             </button>
             <button
               type="button"
@@ -172,7 +172,7 @@ export function LeadsTable() {
                 setAcquisitionFilter("WALK_IN");
                 setPage(1);
               }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 acquisitionFilter === "WALK_IN"
                   ? "shadow-sm"
                   : "opacity-75 hover:opacity-100 hover:text-[var(--text)]"
@@ -182,14 +182,14 @@ export function LeadsTable() {
                 color: acquisitionFilter === "WALK_IN" ? "var(--text)" : "var(--text-2)",
               }}
             >
-              <User className="w-4 h-4 text-muted-foreground" />
+              <User className="w-3.5 h-3.5 opacity-70" />
               <span>Walk-Ins</span>
             </button>
           </div>
 
           {/* Search Input */}
-          <div className="relative flex-1 min-w-[200px] max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "var(--text-3)" }} />
+          <div className="relative flex-1 min-w-[140px] max-w-xs">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: "var(--text-3)" }} />
             <input
               type="text"
               placeholder="Lead suchen..."
@@ -198,16 +198,29 @@ export function LeadsTable() {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              className="w-full rounded-lg pl-9 pr-4 py-2 text-sm border outline-none transition-colors"
+              className="w-full rounded-xl pl-9 pr-7 py-1.5 text-xs sm:text-sm border outline-none transition-colors"
               style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}
             />
+            {search && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearch("");
+                  setPage(1);
+                }}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs opacity-50 hover:opacity-100"
+                style={{ color: "var(--text)" }}
+              >
+                ✕
+              </button>
+            )}
           </div>
         </div>
 
         {/* Filters & Add Button */}
-        <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
+        <div className="flex items-center gap-2 shrink-0">
           {/* Update Date Filter */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <select
               value={updatedDateFilter}
               onChange={(e) => {
@@ -217,7 +230,7 @@ export function LeadsTable() {
                   setCustomDate("");
                 }
               }}
-              className="rounded-lg px-3 py-2 text-sm font-medium border outline-none cursor-pointer"
+              className="rounded-xl px-2.5 py-1.5 text-xs sm:text-sm font-medium border outline-none cursor-pointer"
               style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-2)" }}
             >
               <option value="">Jederzeit</option>
@@ -235,7 +248,7 @@ export function LeadsTable() {
                   setCustomDate(e.target.value);
                   setPage(1);
                 }}
-                className="rounded-lg px-3 py-2 text-sm border outline-none cursor-pointer animate-fade-in"
+                className="rounded-xl px-2.5 py-1.5 text-xs sm:text-sm border outline-none cursor-pointer animate-fade-in"
                 style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-2)" }}
               />
             )}
@@ -248,7 +261,7 @@ export function LeadsTable() {
               setStatusFilter(e.target.value);
               setPage(1);
             }}
-            className="rounded-lg px-3 py-2 text-sm font-medium border outline-none cursor-pointer"
+            className="rounded-xl px-2.5 py-1.5 text-xs sm:text-sm font-medium border outline-none cursor-pointer"
             style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-2)" }}
           >
             <option value="">Alle Status</option>
@@ -262,10 +275,10 @@ export function LeadsTable() {
             <button
               type="button"
               onClick={() => setIsIndustryDropdownOpen(!isIndustryDropdownOpen)}
-              className="rounded-lg px-3 py-2 text-sm font-medium border outline-none cursor-pointer flex items-center gap-2 transition-colors hidden md:flex"
+              className="rounded-xl px-2.5 py-1.5 text-xs sm:text-sm font-medium border outline-none cursor-pointer flex items-center gap-1.5 transition-colors hidden md:flex"
               style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-2)" }}
             >
-              <Filter className="w-4 h-4" />
+              <Filter className="w-3.5 h-3.5" />
               <span>
                 {industryFilters.length === 0
                   ? "Branchen"
@@ -366,21 +379,21 @@ export function LeadsTable() {
             onClick={() => fetchLeads()}
             disabled={loading}
             title="Leads aktualisieren"
-            className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium border outline-none transition-all cursor-pointer hover:bg-[var(--surface-2)] active:scale-95 disabled:opacity-50"
-            style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-2)" }}
+            className="flex items-center justify-center rounded-xl p-2 sm:px-2.5 sm:py-1.5 text-xs sm:text-sm font-medium border outline-none transition-all cursor-pointer hover:bg-[var(--surface-2)] active:scale-95 disabled:opacity-50"
+            style={{ background: "var(--surface)", borderColor: "var(--border)" }}
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin text-[var(--accent)]" : ""}`} />
-            <span className="hidden sm:inline">Aktualisieren</span>
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-[var(--accent)]" : ""}`} style={{ color: "var(--text-2)" }} />
+            <span className="hidden xl:inline ml-1.5" style={{ color: "var(--text-2)" }}>Aktualisieren</span>
           </button>
 
           {/* New Lead Button */}
           <button
             onClick={() => setIsFormOpen(true)}
-            className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow-sm transition-all"
+            className="flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs sm:text-sm font-semibold shadow-sm transition-all hover:opacity-90 active:scale-95 shrink-0"
             style={{ background: "var(--accent)", color: "var(--bg)" }}
           >
             <Plus className="w-4 h-4" />
-            Neuer Lead
+            <span>Neuer Lead</span>
           </button>
         </div>
       </div>

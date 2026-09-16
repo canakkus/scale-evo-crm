@@ -83,30 +83,58 @@ async function searchRestaurantsViaPlaces(
   const apiKey = process.env.GOOGLE_PLACES_API_KEY;
   if (!apiKey) return null;
 
-  try {
-    const response = await fetch(PLACES_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Goog-Api-Key": apiKey,
-        "X-Goog-FieldMask": FIELD_MASK,
-      },
-      body: JSON.stringify({
-        textQuery: category === "Alle" 
-          ? `Beauty Salon, Friseur, Restaurant, Cafe in ${city}` 
-          : `${category} in ${city}`,
-        languageCode: "de",
-        regionCode: process.env.GOOGLE_PLACES_REGION?.trim() || "AT",
-        maxResultCount: Math.min(20, Math.max(1, maxResults)),
-      }),
-      cache: "no-store",
-    });
-    if (!response.ok) return null;
-    const payload: { places?: RawPlace[] } = await response.json();
-    return (payload.places ?? []).map(mapPlaceToSuggestion);
-  } catch {
-    return null;
+  async function fetchCategory(catQuery: string, limit: number) {
+    try {
+      const response = await fetch(PLACES_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Goog-Api-Key": apiKey as string,
+          "X-Goog-FieldMask": FIELD_MASK,
+        },
+        body: JSON.stringify({
+          textQuery: catQuery,
+          languageCode: "de",
+          regionCode: process.env.GOOGLE_PLACES_REGION?.trim() || "AT",
+          maxResultCount: Math.min(20, Math.max(1, limit)),
+        }),
+        cache: "no-store",
+      });
+      if (!response.ok) return [];
+      const payload: { places?: RawPlace[] } = await response.json();
+      return (payload.places ?? []).map(mapPlaceToSuggestion);
+    } catch {
+      return [];
+    }
   }
+
+  // "Discovery" Mode: parallel high-quality search across major local sectors
+  if (category === "Discovery") {
+    const sectors = ["Restaurant", "Café", "Barber", "Friseur", "Kosmetik", "Zahnarzt", "Fitnessstudio", "Einzelhandel"];
+    const results = await Promise.all(
+      sectors.map(sector => fetchCategory(`${sector} in ${city}`, 20))
+    );
+    const allPlaces = results.flat();
+    
+    // Deduplicate by googleMapsUri
+    const uniquePlaces = Array.from(new Map(allPlaces.map(p => [p.googleMapsUri ?? p.name, p])).values());
+    
+    // Sort by rating & review count to maintain high quality
+    uniquePlaces.sort((a, b) => {
+      const scoreA = (a.rating ?? 0) * Math.log10(Math.max(10, a.reviewCount ?? 1));
+      const scoreB = (b.rating ?? 0) * Math.log10(Math.max(10, b.reviewCount ?? 1));
+      return scoreB - scoreA;
+    });
+    
+    return uniquePlaces.slice(0, Math.max(maxResults, 50)); // Allow up to 50 or maxResults for Discovery
+  }
+
+  const textQuery = category === "Alle" 
+    ? `Beauty Salon, Friseur, Restaurant, Cafe in ${city}` 
+    : `${category} in ${city}`;
+
+  const places = await fetchCategory(textQuery, maxResults);
+  return places.length > 0 ? places : null;
 }
 
 function placesToVenues(places: PlaceSuggestion[], city: string): TreatwellVenue[] {
