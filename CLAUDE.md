@@ -78,6 +78,8 @@
 - **Proximity Sorting:** Supports `sortBy: "distance"` for optimal walk-in route scouting in addition to `sortBy: "rating"`.
 - **Direct Status Assignment & Walk-In Flagging:** Category dropdown for all pipeline statuses + checkbox **"Als Walk-In Vormerken"** (`acquisitionType: "WALK_IN"`, defaults to `WALK_IN_PLANNED` with optional `nfcDemoUrl`).
 - **Menu Radar:** Automatically verifies digital menus (HTML/PDF/Lieferando/Wolt) from Google Places results.
+- **City Autocomplete:** Saves past searched cities per user session and provides an HTML `<datalist>` for fast location input, combining major default cities with user history.
+- **Broad Discovery Mode:** A special category option that parallel-fetches multiple categories at once (restaurants, barbers, retail, etc.), deduplicates results, and uses a weighted scoring algorithm (`rating * log10(reviewCount)`) to rank quality regardless of category limits (supports up to 100 max results).
 
 ### 5. Walk-In Acquisition System & Dual-Pipeline (`/pipeline`, `/leads`, `src/lib/constants.ts`)
 - **Schema & Enums:** `AcquisitionType` (`CALL`, `WALK_IN`), optional `nfcDemoUrl`, and specialized Walk-In statuses:
