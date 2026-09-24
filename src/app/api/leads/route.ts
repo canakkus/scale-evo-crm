@@ -3,6 +3,7 @@ import { getOptionalUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import type { LeadStatus, Priority, WebPresence } from "@prisma/client";
 import { INDUSTRIES } from "@/lib/constants";
+import { parseCoordinates } from "@/lib/geo";
 
 export async function GET(request: Request) {
   try {
@@ -180,6 +181,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Firmenname ist erforderlich." }, { status: 400 });
     }
 
+    // Gratis-Verortung: Scout- und Places-Autofill-Pfade liefern die Koordinaten
+    // aus einem Treffer, der ohnehin schon bezahlt wurde. Nur wenn BEIDE Werte
+    // plausibel sind, gilt der Lead als verortet — ein halbes Paar waere eine
+    // Koordinate im Nullmeridian-Nirgendwo.
+    const coords = parseCoordinates(data.latitude, data.longitude);
+
     const lead = await prisma.lead.create({
       data: {
         companyName: data.companyName.trim(),
@@ -205,6 +212,16 @@ export async function POST(request: Request) {
         status: data.status || "NEW",
         priority: data.priority || "MEDIUM",
         score: data.score != null ? parseInt(data.score, 10) : 0,
+        ...(coords
+          ? {
+              latitude: coords.latitude,
+              longitude: coords.longitude,
+              geoSource: "places",
+              geoPrecision: "ROOFTOP",
+              geoStatus: "ok",
+              geoAttemptedAt: new Date(),
+            }
+          : {}),
         createdById: dbUser.id,
       },
     });

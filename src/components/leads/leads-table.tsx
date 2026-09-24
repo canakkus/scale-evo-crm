@@ -24,6 +24,7 @@ import { StatusBadge, PriorityDot } from "@/components/ui/status-badge";
 import { LeadFormModal } from "@/components/leads/lead-form-modal";
 import { LeadDetailModal } from "@/components/leads/lead-detail-modal";
 import { STATUS_LABELS, INDUSTRIES } from "@/lib/constants";
+import { getMapsUrl } from "@/lib/maps-url";
 import { formatDate, timeAgo } from "@/lib/utils";
 import type { LeadStatus } from "@prisma/client";
 
@@ -89,15 +90,6 @@ export function LeadsTable() {
     navigator.clipboard.writeText(url);
     setCopiedNfcId(leadId);
     setTimeout(() => setCopiedNfcId(null), 2000);
-  }
-
-  function getMapsUrl(lead: any): string | null {
-    if (lead.googleMapsUrl) return lead.googleMapsUrl;
-    if (lead.address || lead.city) {
-      const queryParts = [lead.companyName, lead.address, lead.city].filter(Boolean);
-      return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(queryParts.join(", "))}`;
-    }
-    return null;
   }
 
   useEffect(() => {

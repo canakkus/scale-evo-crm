@@ -166,6 +166,26 @@ model Lead {
   menuCheckedAt          DateTime?
   acquisitionType        AcquisitionType         @default(CALL)
   nfcDemoUrl             String?
+
+  // --- Verortung (Lead-Karte /map) -----------------------------------------
+  // Koordinaten kommen entweder gratis aus Google Places (Scout/Autofill) oder
+  // einmalig aus dem Backfill-Skript (Google Geocoding).
+  latitude               Float?
+  longitude              Float?
+  /** "places" | "geocode" | "manual" — woher die Koordinaten stammen. */
+  geoSource              String?
+  /** ROOFTOP | RANGE_INTERPOLATED | GEOMETRIC_CENTER | APPROXIMATE (Google location_type). */
+  geoPrecision           String?
+  /**
+   * Ein-Versuch-Garantie: wird bei JEDEM Geocoding-Versuch gesetzt, auch bei
+   * Fehlschlag. `latitude: null` ist NIE der Merker — sonst wuerde jeder
+   * Backfill-Lauf dieselben erfolglosen Adressen erneut kostenpflichtig fragen.
+   * (Gleiches Muster wie richSourceAttemptedAt in snapshot-cache.ts.)
+   */
+  geoAttemptedAt         DateTime?
+  /** pending | ok | no_result | no_address | error — nur "error" ist retry-faehig. */
+  geoStatus              String                  @default("pending")
+
   addedAt                DateTime                @default(now())
   createdAt              DateTime                @default(now())
   updatedAt              DateTime                @updatedAt
@@ -189,6 +209,7 @@ model Lead {
   @@index([webPresence])
   @@index([createdById])
   @@index([assignedToId])
+  @@index([createdById, latitude])
 }
 
 model User {

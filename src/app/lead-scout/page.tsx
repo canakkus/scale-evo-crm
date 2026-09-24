@@ -3,8 +3,9 @@ import { LeadScoutComponent } from "@/components/scout/lead-scout-component";
 
 export const metadata = { title: "Lead Scout 3.0 | Scale Evo CRM" };
 
-export default async function LeadScoutPage() {
+export default async function LeadScoutPage({ searchParams }: { searchParams: Promise<{ tab?: string | string[] }> }) {
   await requireAuth();
+  const { tab } = await searchParams;
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
@@ -17,7 +18,7 @@ export default async function LeadScoutPage() {
         </p>
       </div>
 
-      <LeadScoutComponent />
+      <LeadScoutComponent initialTab={tab === "instagram" ? "instagram" : "standard"} />
     </div>
   );
 }

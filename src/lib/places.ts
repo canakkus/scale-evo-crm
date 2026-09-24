@@ -21,7 +21,10 @@ export type RawPlace = {
   userRatingCount?: number;
   googleMapsUri?: string;
   types?: string[];
+  primaryType?: string;
   primaryTypeDisplayName?: { text?: string };
+  /** OPERATIONAL | CLOSED_TEMPORARILY | CLOSED_PERMANENTLY — nur wenn in der FieldMask. */
+  businessStatus?: string;
   location?: {
     latitude?: number;
     longitude?: number;

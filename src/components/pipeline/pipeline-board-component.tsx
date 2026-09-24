@@ -12,6 +12,7 @@ import {
   ACQUISITION_TYPE_LABELS,
 } from "@/lib/constants";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { getMapsUrl } from "@/lib/maps-url";
 import { LeadDetailModal } from "@/components/leads/lead-detail-modal";
 import {
   Phone,
@@ -147,15 +148,6 @@ export function PipelineBoardComponent() {
     navigator.clipboard.writeText(url);
     setCopiedNfcId(leadId);
     setTimeout(() => setCopiedNfcId(null), 2000);
-  }
-
-  function getMapsUrl(lead: any): string | null {
-    if (lead.googleMapsUrl) return lead.googleMapsUrl;
-    if (lead.address || lead.city) {
-      const queryParts = [lead.companyName, lead.address, lead.city].filter(Boolean);
-      return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(queryParts.join(", "))}`;
-    }
-    return null;
   }
 
   // --- Drag & Drop Handlers ---

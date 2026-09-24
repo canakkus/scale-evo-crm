@@ -1,32 +1,26 @@
 "use client";
 
-import { useCallback, useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import {
-  AlertTriangle,
-  AtSign,
-  CalendarClock,
-  Check,
-  ExternalLink,
-  Globe,
-  Loader2,
-  Mail,
-  MapPin,
-  Phone,
-  Plus,
-  Radar,
-  Sparkles,
-  Star,
-  X,
-  History,
-  Filter,
-  Navigation,
-  Settings,
-} from "lucide-react";
+import type { LeadStatus } from "@prisma/client";
+import { AlertTriangle, AtSign, History, Loader2, MapPin, Navigation, Radar, Settings } from "lucide-react";
 import { cn, timeAgo } from "@/lib/utils";
-import { formatDistance } from "@/lib/distance";
 import { useUserLocation } from "@/lib/location-context";
-import { RESTAURANT_CATEGORIES, type LeadScoutResponse, type ScoutResult, type ScoutStepStatus } from "@/lib/lead-scout-types";
+import {
+  RESTAURANT_CATEGORIES,
+  SCOUT_LIMITS,
+  instagramStateOf,
+  type LeadScoutResponse,
+  type ScoutBudget,
+  type ScoutFunnel as ScoutFunnelData,
+  type ScoutRadiusKm,
+  type ScoutResult,
+} from "@/lib/lead-scout-types";
+import { radiusAvailability } from "@/lib/scout-radius";
+import { InstagramResults } from "./instagram-results";
+import { ScoutFunnel } from "./scout-funnel";
+import { ScoutResultCard } from "./scout-result-card";
+import { Segment, ToggleChip } from "./scout-ui";
 
 const CATEGORIES = [
   { label: "Alle Kategorien (Beauty & Gastro)", slug: "Alle" },
@@ -44,807 +38,707 @@ const CATEGORIES = [
   { label: "Gastronomie", slug: "Gastronomie" },
 ];
 
-type AuditCheck = { key: keyof NonNullable<ScoutResult["audit"]>; label: string };
+export type ScoutTab = "standard" | "instagram";
+type TriFilter = "all" | "yes" | "no";
+type RadiusChoice = "city" | "3" | "5";
 
-const AUDIT_CHECKS: AuditCheck[] = [
-  { key: "hasImprint", label: "Impressum" },
-  { key: "hasPrivacy", label: "Datenschutz" },
-  { key: "hasConsent", label: "Cookie-Banner" },
-  { key: "hasBooking", label: "Online-Buchung" },
-  { key: "hasCta", label: "CTA" },
-  { key: "https", label: "HTTPS" },
-];
+type SessionSummary = {
+  id: string;
+  name: string | null;
+  searchQuery: string;
+  city: string | null;
+  resultCount: number;
+  createdAt: string;
+};
 
-function StepBadge({ status, labels }: { status: ScoutStepStatus; labels?: Partial<Record<ScoutStepStatus, string>> }) {
-  if (status === "ok") return <span className="inline-flex items-center gap-1 rounded-full bg-emerald-950/60 px-2 py-0.5 text-[11px] font-bold text-emerald-300"><Check className="w-3 h-3" /> OK</span>;
-  if (status === "warn") return <span className="inline-flex items-center gap-1 rounded-full bg-amber-950/60 px-2 py-0.5 text-[11px] font-bold text-amber-300"><AlertTriangle className="w-3 h-3" /> Prüfen</span>;
-  if (status === "fail") return <span className="inline-flex items-center gap-1 rounded-full bg-red-950/60 px-2 py-0.5 text-[11px] font-bold text-red-300"><X className="w-3 h-3" /> Fehlt</span>;
-  return <span className="inline-flex items-center gap-1 rounded-full bg-neutral-800 px-2 py-0.5 text-[11px] font-bold text-neutral-300">Übersprungen</span>;
+type StoredFilters = {
+  funnel?: ScoutFunnelData;
+  budget?: ScoutBudget;
+  notices?: string[];
+  sourceUrl?: string;
+} | null;
+
+type IgPresets = { noWebsite: boolean; withInstagram: boolean; hideChains: boolean; onlyNew: boolean };
+
+const INPUT_STYLE = { background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" };
+
+function errorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error && error.message ? error.message : fallback;
 }
 
-function Stars({ rating }: { rating: number | null }) {
-  if (rating === null) return <span className="text-xs" style={{ color: "var(--text-3)" }}>–</span>;
-  return (
-    <span className="inline-flex items-center gap-1 text-xs font-semibold">
-      <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-      {rating.toFixed(1)}
-    </span>
-  );
+/** Zaehler am IG-Reiter: Treffer mit Handle oder Kandidaten. */
+function instagramHits(response: LeadScoutResponse | null): number | null {
+  if (!response) return null;
+  return response.results.filter((result) => {
+    const state = instagramStateOf(result.instagramProfile);
+    return state === "found" || state === "choose";
+  }).length;
 }
 
-import { STATUS_LABELS } from "@/lib/constants";
-import type { LeadStatus } from "@prisma/client";
-
-function ResultCard({
-  result,
-  onAdd,
-  added,
-  adding,
-}: {
-  result: ScoutResult;
-  onAdd: (status: LeadStatus, acquisitionType: "CALL" | "WALK_IN", nfcDemoUrl?: string) => void;
-  added: boolean;
-  adding: boolean;
-}) {
-  const { venue, duplicate, maps, website, menu, audit, contacts, instagramProfile } = result;
-  const isDuplicate = duplicate.matches.some((match) => match.confidence === "high");
-  const possibleDuplicate = duplicate.matches.length > 0 && !isDuplicate;
-
-  const [status, setStatus] = useState<LeadStatus>("NEW");
-  const [isWalkIn, setIsWalkIn] = useState(false);
-  const [nfcDemoUrl, setNfcDemoUrl] = useState("");
-  const [showNfcInput, setShowNfcInput] = useState(false);
-
-  const handleWalkInToggle = (checked: boolean) => {
-    setIsWalkIn(checked);
-    if (checked && status === "NEW") {
-      setStatus("WALK_IN_PLANNED");
-    } else if (!checked && status === "WALK_IN_PLANNED") {
-      setStatus("NEW");
-    }
-  };
-
-  const handleAdd = () => {
-    if (possibleDuplicate && !window.confirm("Als mögliches Duplikat trotzdem als neuen Lead anlegen?")) return;
-    onAdd(status, isWalkIn ? "WALK_IN" : "CALL", nfcDemoUrl.trim() || undefined);
-  };
-
-  return (
-    <div className="rounded-xl border p-5 transition hover:shadow-lg space-y-4" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <div className="flex flex-wrap items-center gap-2.5">
-            <h3 className="text-base font-bold" style={{ color: "var(--text)" }}>{venue.name}</h3>
-            <Stars rating={venue.rating} />
-            <span className="text-xs" style={{ color: "var(--text-3)" }}>{venue.reviewCount} Bewertungen</span>
-            {result.distanceKm != null && (
-              <span
-                className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-wide"
-                style={{
-                  background: "rgba(56, 189, 248, 0.12)",
-                  color: "#38bdf8",
-                  border: "1px solid rgba(56, 189, 248, 0.25)",
-                }}
-              >
-                <Navigation className="w-3 h-3" />
-                {formatDistance(result.distanceKm)} entfernt
-              </span>
-            )}
-          </div>
-          <div className="mt-1 flex items-center gap-1.5 text-xs" style={{ color: "var(--text-2)" }}>
-            <MapPin className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--text-3)" }} />
-            {venue.addressLine || "Adresse unbekannt"}
-          </div>
-          <div className="mt-1.5 flex items-center gap-3 text-xs font-semibold">
-            {venue.treatwellUrl && (
-              <a
-                href={venue.treatwellUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 underline-offset-2 hover:underline"
-                style={{ color: "var(--status-new-tx)" }}
-              >
-                Treatwell-Profil <ExternalLink className="w-3 h-3" />
-              </a>
-            )}
-            {maps.place?.googleMapsUri && (
-              <a
-                href={maps.place.googleMapsUri}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 underline-offset-2 hover:underline"
-                style={{ color: "var(--status-new-tx)" }}
-              >
-                Google Maps <ExternalLink className="w-3 h-3" />
-              </a>
-            )}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {isDuplicate ? (
-            <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold" style={{ background: "var(--status-lost-bg)", color: "var(--status-lost-tx)" }}>
-              <X className="w-3 h-3" /> Duplikat im CRM
-            </span>
-          ) : possibleDuplicate ? (
-            <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold" style={{ background: "var(--status-planned-bg)", color: "var(--status-planned-tx)" }}>
-              <AlertTriangle className="w-3 h-3" /> Mögliches Duplikat
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold" style={{ background: "var(--status-warm-bg)", color: "var(--status-warm-tx)" }}>
-              <Sparkles className="w-3 h-3" /> Neuer Kandidat
-            </span>
-          )}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-5">
-        <div className="rounded-lg border p-3" style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}>
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--text-3)" }}>Duplikat-Check</span>
-            <StepBadge status={duplicate.status} />
-          </div>
-          {duplicate.matches.length > 0 ? (
-            <div className="mt-1.5 space-y-1 text-xs">
-              {duplicate.matches.map((m) => (
-                <div key={m.id} style={{ color: "var(--status-planned-tx)" }}>
-                  {m.companyName} ({m.confidence})
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="mt-1 text-xs" style={{ color: "var(--text-3)" }}>Kein Duplikat</p>
-          )}
-        </div>
-
-        <div className="rounded-lg border p-3" style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}>
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--text-3)" }}>Google Maps</span>
-            <StepBadge status={maps.status} />
-          </div>
-          <p className="mt-1 text-xs truncate" style={{ color: "var(--text-2)" }}>{maps.matchReason}</p>
-        </div>
-
-        <div className="rounded-lg border p-3" style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}>
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--text-3)" }}>Website</span>
-            <StepBadge status={website.status} />
-          </div>
-          {website.url ? (
-            <a
-              href={website.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-1 flex items-center gap-1 text-xs font-semibold underline truncate"
-              style={{ color: "var(--status-new-tx)" }}
-            >
-              <Globe className="w-3 h-3 shrink-0" />
-              {website.url.replace(/^https?:\/\/(www\.)?/, "").slice(0, 25)}
-            </a>
-          ) : (
-            <p className="mt-1 text-xs" style={{ color: "var(--status-lost-tx)" }}>Keine Website</p>
-          )}
-        </div>
-
-        <div className="rounded-lg border p-3" style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}>
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--text-3)" }}>Instagram</span>
-            <StepBadge status={instagramProfile?.status ?? "skip"} labels={{ fail: "Keins" }} />
-          </div>
-          {instagramProfile?.handle ? (
-            <a
-              href={`https://www.instagram.com/${instagramProfile.handle}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-1 flex items-center gap-1 truncate font-mono text-xs font-semibold underline"
-              style={{ color: "var(--status-contacted-tx)" }}
-            >
-              <AtSign className="w-3 h-3 shrink-0" />
-              {instagramProfile.handle}
-            </a>
-          ) : instagramProfile?.candidates?.length ? (
-            <div className="mt-1 space-y-1">
-              <p className="text-[11px]" style={{ color: "var(--status-planned-tx)" }}>
-                Mehrdeutig — bitte prüfen:
-              </p>
-              {instagramProfile.candidates.slice(0, 3).map((candidate) => (
-                <a
-                  key={candidate.handle}
-                  href={candidate.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block truncate font-mono text-[11px] underline"
-                  style={{ color: "var(--text-2)" }}
-                >
-                  @{candidate.handle}
-                </a>
-              ))}
-            </div>
-          ) : (
-            <p className="mt-1 text-xs" style={{ color: "var(--text-3)" }}>Kein Profil gefunden</p>
-          )}
-        </div>
-
-        <div className="rounded-lg border p-3" style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}>
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--text-3)" }}>Kontakt</span>
-            <span className="text-xs font-semibold" style={{ color: contacts.phone ? "var(--status-warm-tx)" : "var(--text-3)" }}>
-              {contacts.phone ? "Vorhanden" : "Keine"}
-            </span>
-          </div>
-          <div className="mt-1 space-y-0.5 text-xs truncate" style={{ color: "var(--text-2)" }}>
-            {contacts.phone && <div className="font-mono">{contacts.phone}</div>}
-            {contacts.email && <div className="truncate">{contacts.email}</div>}
-          </div>
-        </div>
-      </div>
-
-      {/* Walk-In & NFC Demo URL expanded row */}
-      {isWalkIn && (
-        <div className="rounded-lg border p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-fade-in" style={{ background: "var(--surface-2)", borderColor: "rgba(56, 189, 248, 0.3)" }}>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold px-2 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">
-              🚶 Walk-In Lead
-            </span>
-            <span className="text-xs" style={{ color: "var(--text-2)" }}>
-              Lead wird als Vor-Ort-Akquise markiert.
-            </span>
-          </div>
-
-          <div className="w-full sm:w-auto flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setShowNfcInput(!showNfcInput)}
-              className="text-xs font-semibold underline hover:no-underline cursor-pointer"
-              style={{ color: "var(--accent)" }}
-            >
-              {showNfcInput ? "NFC URL verbergen" : "+ NFC Demo URL hinzufügen"}
-            </button>
-            {showNfcInput && (
-              <input
-                type="url"
-                placeholder="https://scaleevo.at/demo/..."
-                value={nfcDemoUrl}
-                onChange={(e) => setNfcDemoUrl(e.target.value)}
-                className="rounded-md px-2.5 py-1 text-xs border outline-none w-full sm:w-64"
-                style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}
-              />
-            )}
-          </div>
-        </div>
-      )}
-
-      <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t" style={{ borderColor: "var(--border)" }}>
-        {/* Walk-In Checkbox Selector */}
-        <label className="flex items-center gap-2 text-xs font-semibold cursor-pointer select-none">
-          <input
-            type="checkbox"
-            checked={isWalkIn}
-            disabled={isDuplicate || added || adding}
-            onChange={(e) => handleWalkInToggle(e.target.checked)}
-            className="rounded accent-[var(--accent)] cursor-pointer w-4 h-4"
-          />
-          <span style={{ color: isWalkIn ? "var(--accent)" : "var(--text-2)" }}>
-            Als Walk-In Vormerken
-          </span>
-        </label>
-
-        <div className="flex flex-wrap items-center justify-end gap-3">
-          {added && (
-            <span className="inline-flex items-center gap-1 text-xs font-semibold" style={{ color: "var(--status-warm-tx)" }}>
-              <Check className="w-4 h-4" /> Als Lead angelegt
-            </span>
-          )}
-
-          {/* Status Dropdown with all Categories */}
-          <div className="flex items-center gap-2">
-            <label className="text-xs font-semibold" style={{ color: "var(--text-3)" }}>
-              Status:
-            </label>
-            <select
-              value={status}
-              disabled={isDuplicate || added || adding}
-              onChange={(e) => setStatus(e.target.value as LeadStatus)}
-              className="rounded-lg px-2.5 py-1.5 text-xs font-semibold border outline-none cursor-pointer transition-colors disabled:opacity-50"
-              style={{
-                background: "var(--surface-2)",
-                borderColor: "var(--border)",
-                color: "var(--text)",
-              }}
-            >
-              {Object.entries(STATUS_LABELS).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <button
-            disabled={isDuplicate || added || adding}
-            onClick={handleAdd}
-            className="flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all disabled:opacity-50 cursor-pointer shadow-sm active:scale-95"
-            style={{ background: "var(--accent)", color: "var(--bg)" }}
-          >
-            {adding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
-            {isDuplicate ? "Duplikat im CRM" : added ? "Bereits Angelegt" : `Als Lead anlegen (${STATUS_LABELS[status]})`}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export function LeadScoutComponent() {
+export function LeadScoutComponent({ initialTab = "standard" }: { initialTab?: ScoutTab }) {
   const {
     mode: locationMode,
     coords: locationCoords,
     label: locationLabel,
+    address: locationAddress,
     fixedAddress,
     loadingGps,
     requestLiveLocation,
     useFixedLocation,
-    useDefaultLocation,
   } = useUserLocation();
+
+  const [tab, setTab] = useState<ScoutTab>(initialTab);
 
   const [category, setCategory] = useState("Barber");
   const [city, setCity] = useState("Wien");
   const isRestaurant = RESTAURANT_CATEGORIES.includes(category) || category === "Alle";
   const source = isRestaurant ? "places" : "treatwell";
 
-  // Filter options
   const [minRating, setMinRating] = useState("4.0");
   const [minReviews, setMinReviews] = useState("10");
   const [maxResults, setMaxResults] = useState("10");
-  const [sortBy, setSortBy] = useState<"rating" | "distance">("rating");
-  const [hasWebsiteFilter, setHasWebsiteFilter] = useState<"all" | "yes" | "no">("all");
-  const [hasTreatwellFilter, setHasTreatwellFilter] = useState<"all" | "yes" | "no">("all");
-  const [hasPhoneFilter, setHasPhoneFilter] = useState<"all" | "yes" | "no">("all");
-  const [hasInstagramFilter, setHasInstagramFilter] = useState<"all" | "yes" | "no">("all");
+  const [radius, setRadius] = useState<RadiusChoice>("city");
 
+  // Standard-Filter
+  const [sortBy, setSortBy] = useState<"rating" | "distance">("rating");
+  const [hasWebsiteFilter, setHasWebsiteFilter] = useState<TriFilter>("all");
+  const [hasTreatwellFilter, setHasTreatwellFilter] = useState<TriFilter>("all");
+  const [hasPhoneFilter, setHasPhoneFilter] = useState<TriFilter>("all");
+  const [hasInstagramFilter, setHasInstagramFilter] = useState<TriFilter>("all");
+  const [hideChainsStandard, setHideChainsStandard] = useState(false);
+
+  // Instagram-Presets
+  const [presets, setPresets] = useState<IgPresets>({ noWebsite: true, withInstagram: true, hideChains: true, onlyNew: true });
+  const togglePreset = (key: keyof IgPresets) => setPresets((previous) => ({ ...previous, [key]: !previous[key] }));
+
+  // Jeder Reiter hat seine eigene Antwort — ein Reiterwechsel sucht nie.
+  const [responses, setResponses] = useState<Record<ScoutTab, LeadScoutResponse | null>>({ standard: null, instagram: null });
+  const [versions, setVersions] = useState<Record<ScoutTab, number>>({ standard: 0, instagram: 0 });
+  const [errors, setErrors] = useState<Record<ScoutTab, string | null>>({ standard: null, instagram: null });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [response, setResponse] = useState<LeadScoutResponse | null>(null);
+  // Laeuft im IG-Reiter eine Aktion (Anlegen, Vorschau, bezahlte Pruefung),
+  // sind Reiterwechsel, neue Suche und Session-Laden gesperrt.
+  const [igLocked, setIgLocked] = useState(false);
+  const locked = loading || igLocked;
+  const LOCK_TITLE = "Bitte warten, bis die laufende Aktion im Instagram-Reiter fertig ist.";
+
   const [addingId, setAddingId] = useState<string | null>(null);
   const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
 
-  // Sessions History
-  const [sessions, setSessions] = useState<any[]>([]);
+  const [sessions, setSessions] = useState<SessionSummary[]>([]);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
 
-  const fetchSessions = useCallback(async () => {
+  const response = responses[tab];
+  const error = errors[tab];
+
+  const availability = radiusAvailability({ mode: locationMode, address: locationAddress, coords: locationCoords, city });
+  const radiusKm: ScoutRadiusKm | null = radius === "city" ? null : (Number(radius) as ScoutRadiusKm);
+  const effectiveRadius = radiusKm && availability.hasLocation && availability.appliesToCity ? radiusKm : null;
+
+  const setResponseFor = (target: ScoutTab, next: LeadScoutResponse) => {
+    setResponses((previous) => ({ ...previous, [target]: next }));
+    setVersions((previous) => ({ ...previous, [target]: previous[target] + 1 }));
+  };
+  const setErrorFor = (target: ScoutTab, message: string | null) => setErrors((previous) => ({ ...previous, [target]: message }));
+
+  const switchTab = (next: ScoutTab) => {
+    if (igLocked && next !== tab) return;
+    setTab(next);
+    const url = new URL(window.location.href);
+    if (next === "instagram") url.searchParams.set("tab", "instagram");
+    else url.searchParams.delete("tab");
+    window.history.replaceState(window.history.state, "", url);
+  };
+
+  const refreshSessions = useCallback(async () => {
     try {
       const res = await fetch("/api/scout/sessions");
-      if (res.ok) {
-        const data = await res.json();
-        setSessions(data.sessions || []);
-      }
+      if (!res.ok) return;
+      const data = (await res.json()) as { sessions?: SessionSummary[] };
+      setSessions(data.sessions ?? []);
     } catch (err) {
       console.error(err);
     }
   }, []);
 
   useEffect(() => {
-    fetchSessions();
-  }, [fetchSessions]);
+    let active = true;
+    fetch("/api/scout/sessions")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { sessions?: SessionSummary[] } | null) => {
+        if (active && data) setSessions(data.sessions ?? []);
+      })
+      .catch((err) => console.error(err));
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const loadSession = async (sessionId: string) => {
+    if (locked) return;
+    const target = tab;
     setLoading(true);
-    setError(null);
+    setErrorFor(target, null);
     setSelectedSessionId(sessionId);
 
     try {
-      const res = await fetch(`/api/scout/sessions?id=${sessionId}`);
-      if (!res.ok) throw new Error("Session konnte nicht geladen werden.");
-      const data = await res.json();
+      const res = await fetch(`/api/scout/sessions?id=${encodeURIComponent(sessionId)}`);
+      const data = (await res.json()) as {
+        session?: { id: string; filters: StoredFilters };
+        results?: ScoutResult[];
+        notice?: string | null;
+        error?: string;
+      };
+      if (!res.ok || !data.session) throw new Error(data.error ?? "Session konnte nicht geladen werden.");
 
-      const session = data.session;
-      if (session) {
-        // Reconstruct results format from DB ScoutResult records
-        const results: ScoutResult[] = session.results.map((r: any) => r.rawData as ScoutResult);
-        setResponse({
-          sessionId: session.id,
-          sourceUrl: `https://www.treatwell.at/orte/bei-${session.searchQuery.toLowerCase()}/in-${session.city?.toLowerCase()}-at/`,
-          totalFound: session.resultCount,
-          filteredCount: session.resultCount,
-          results,
-          placesConfigured: true,
-        });
-      }
-    } catch (err: any) {
-      setError(err.message || "Fehler beim Laden der Session.");
+      const filters = data.session.filters;
+      const results = data.results ?? [];
+      setAddedIds(new Set());
+      setResponseFor(target, {
+        sessionId: data.session.id,
+        sourceUrl: filters?.sourceUrl ?? "",
+        totalFound: filters?.funnel?.found ?? results.length,
+        results,
+        funnel: filters?.funnel,
+        budget: filters?.budget,
+        notices: [...(filters?.notices ?? []), ...(data.notice ? [data.notice] : [])],
+        placesConfigured: true,
+      });
+    } catch (err) {
+      setErrorFor(target, errorMessage(err, "Fehler beim Laden der Session."));
     } finally {
       setLoading(false);
     }
   };
 
-  const runScout = useCallback(async () => {
+  const runScout = async () => {
+    if (locked) return;
+    const target = tab;
     setLoading(true);
-    setError(null);
+    setErrorFor(target, null);
     setSelectedSessionId(null);
-    setAddedIds(new Set());
+    if (target === "standard") setAddedIds(new Set());
+
+    const common = {
+      category,
+      city,
+      minRating: Number(minRating),
+      minReviews: Number(minReviews),
+      maxResults: Number(maxResults),
+      source,
+      baseLat: locationCoords?.lat ?? null,
+      baseLng: locationCoords?.lng ?? null,
+      radiusKm: effectiveRadius,
+    };
+    const filters =
+      target === "instagram"
+        ? {
+            sortBy: "rating",
+            hasWebsiteFilter: presets.noWebsite ? "no" : "all",
+            hasInstagramFilter: presets.withInstagram ? "yes" : "all",
+            hasTreatwellFilter: "all",
+            hasPhoneFilter: "all",
+            hideChains: presets.hideChains,
+            onlyNew: presets.onlyNew,
+          }
+        : {
+            sortBy,
+            hasWebsiteFilter,
+            hasTreatwellFilter,
+            hasPhoneFilter,
+            hasInstagramFilter,
+            hideChains: hideChainsStandard,
+            onlyNew: false,
+          };
 
     try {
       const res = await fetch("/api/lead-scout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          category,
-          city,
-          minRating: Number(minRating),
-          minReviews: Number(minReviews),
-          maxResults: Number(maxResults),
-          source,
-          sortBy,
-          baseLat: locationCoords?.lat ?? null,
-          baseLng: locationCoords?.lng ?? null,
-          hasWebsiteFilter,
-          hasTreatwellFilter,
-          hasPhoneFilter,
-          hasInstagramFilter,
-        }),
+        body: JSON.stringify({ ...common, ...filters }),
       });
-
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Lead-Scout fehlgeschlagen.");
-      setResponse(data);
-      fetchSessions(); // Refresh sessions list
-    } catch (err: any) {
-      setError(err.message || "Lead-Scout fehlgeschlagen.");
+      setResponseFor(target, data as LeadScoutResponse);
+      void refreshSessions();
+    } catch (err) {
+      setErrorFor(target, errorMessage(err, "Lead-Scout fehlgeschlagen."));
     } finally {
       setLoading(false);
     }
-  }, [category, city, minRating, minReviews, maxResults, source, sortBy, locationCoords, hasWebsiteFilter, hasTreatwellFilter, hasPhoneFilter, hasInstagramFilter, fetchSessions]);
+  };
 
   const addLead = async (
     result: ScoutResult,
-    customStatus?: LeadStatus,
-    acquisitionType: "CALL" | "WALK_IN" = "CALL",
-    nfcDemoUrl?: string
+    customStatus: LeadStatus,
+    acquisitionType: "CALL" | "WALK_IN",
+    nfcDemoUrl?: string,
   ) => {
     setAddingId(result.venue.key);
     try {
-      const payload = {
-        ...result.leadDraft,
-        status: customStatus || (result.leadDraft as any).status || "NEW",
-        acquisitionType,
-        nfcDemoUrl: nfcDemoUrl || (result.leadDraft as any).nfcDemoUrl || null,
-      };
       const res = await fetch("/api/leads", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          ...result.leadDraft,
+          status: customStatus,
+          acquisitionType,
+          nfcDemoUrl: nfcDemoUrl || result.leadDraft.nfcDemoUrl || null,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Lead konnte nicht angelegt werden.");
       setAddedIds((ids) => new Set(ids).add(result.venue.key));
-    } catch (err: any) {
-      setError(err.message || "Lead konnte nicht angelegt werden.");
+    } catch (err) {
+      setErrorFor("standard", errorMessage(err, "Lead konnte nicht angelegt werden."));
     } finally {
       setAddingId(null);
     }
   };
 
+  const notices = response ? [response.treatsWellError, ...(response.notices ?? [])].filter((notice): notice is string => Boolean(notice)) : [];
+  const standardCount = responses.standard?.results.length ?? null;
+  const instagramCount = instagramHits(responses.instagram);
+
+  const tabs: Array<{ key: ScoutTab; label: string; icon: React.ReactNode; count: number | null }> = [
+    { key: "standard", label: "Standard", icon: <Radar className="w-4 h-4" />, count: standardCount },
+    { key: "instagram", label: "Instagram", icon: <AtSign className="w-4 h-4" />, count: instagramCount },
+  ];
+
   return (
     <div className="space-y-6">
-      {/* Search Form Card */}
-      <div className="rounded-xl border p-6 space-y-6" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
-        <div className="flex items-center justify-between">
-          <h2 className="font-heading text-lg font-bold flex items-center gap-2" style={{ color: "var(--text)" }}>
-            <Radar className="w-5 h-5" style={{ color: "var(--accent)" }} />
-            Neuen Scout-Durchlauf starten
-          </h2>
-          {sessions.length > 0 && (
-            <span className="text-xs" style={{ color: "var(--text-3)" }}>
-              {sessions.length} gespeicherte Sessions
-            </span>
+      {/* ---- Reiter-Umschalter (Pipeline-Switcher-Stil) ---- */}
+      <div
+        role="tablist"
+        aria-label="Scout-Modus"
+        className="inline-flex max-w-fit rounded-xl border p-1 shadow-inner"
+        style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}
+      >
+        {tabs.map((entry) => {
+          const active = tab === entry.key;
+          return (
+            <button
+              key={entry.key}
+              type="button"
+              role="tab"
+              id={`scout-tab-${entry.key}`}
+              aria-selected={active}
+              aria-controls="scout-tab-panel"
+              onClick={() => switchTab(entry.key)}
+              disabled={igLocked && !active}
+              title={igLocked && !active ? LOCK_TITLE : undefined}
+              className={`flex items-center gap-2 rounded-lg px-4 text-xs font-bold transition-all disabled:cursor-not-allowed disabled:opacity-40 ${active ? "shadow-md" : "opacity-75 hover:opacity-100"}`}
+              style={{
+                minHeight: 44,
+                background: active ? "var(--accent)" : "transparent",
+                color: active ? "var(--bg)" : "var(--text-2)",
+              }}
+            >
+              {entry.icon}
+              <span>{entry.label}</span>
+              {entry.count !== null && (
+                <span
+                  className="rounded-full px-2 py-0.5 text-[10px] font-bold"
+                  style={{
+                    background: active ? "rgba(0,0,0,0.2)" : "var(--surface-3)",
+                    color: active ? "var(--bg)" : "var(--text-3)",
+                  }}
+                >
+                  {entry.count}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      <div id="scout-tab-panel" role="tabpanel" aria-labelledby={`scout-tab-${tab}`} className="space-y-6">
+        {/* ---- Suchkarte ---- */}
+        <div className="rounded-xl border p-6 space-y-6" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+          <div className="flex items-center justify-between">
+            <h2 className="font-heading text-lg font-bold flex items-center gap-2" style={{ color: "var(--text)" }}>
+              {tab === "instagram" ? (
+                <AtSign className="w-5 h-5" style={{ color: "var(--accent)" }} />
+              ) : (
+                <Radar className="w-5 h-5" style={{ color: "var(--accent)" }} />
+              )}
+              {tab === "instagram" ? "Instagram-Kandidaten suchen" : "Neuen Scout-Durchlauf starten"}
+            </h2>
+            {sessions.length > 0 && (
+              <span className="text-xs" style={{ color: "var(--text-3)" }}>
+                {sessions.length} gespeicherte Sessions
+              </span>
+            )}
+          </div>
+
+          {/* ---- Standort + Umkreis ---- */}
+          <div className="space-y-1.5">
+            <div
+              className="rounded-lg p-3 border flex flex-col lg:flex-row lg:items-center justify-between gap-3 text-xs"
+              style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <span
+                  className={`w-2 h-2 rounded-full shrink-0 ${
+                    locationMode === "live" ? "bg-sky-400 animate-ping" : locationMode === "fixed" ? "bg-emerald-400" : "bg-amber-400"
+                  }`}
+                />
+                <span className="font-medium text-[var(--text-3)] shrink-0">
+                  {effectiveRadius ? "Suchmittelpunkt:" : "Distanz-Ausgangspunkt:"}
+                </span>
+                <span className="font-bold truncate text-[var(--text)]" title={locationLabel}>
+                  {locationLabel}
+                </span>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={requestLiveLocation}
+                  disabled={loadingGps}
+                  title="Live-GPS-Standort abfragen"
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold border transition-all cursor-pointer ${
+                    locationMode === "live"
+                      ? "bg-sky-500/20 text-sky-400 border-sky-500/30 font-bold"
+                      : "bg-[var(--surface)] text-[var(--text-2)] border-[var(--border)] hover:text-[var(--text)]"
+                  }`}
+                >
+                  {loadingGps ? <Loader2 className="w-3 h-3 animate-spin" /> : <Navigation className="w-3 h-3" />}
+                  <span>Live-GPS</span>
+                </button>
+
+                {fixedAddress && (
+                  <button
+                    type="button"
+                    onClick={useFixedLocation}
+                    title={`Fixen Standort (${fixedAddress}) nutzen`}
+                    className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold border transition-all cursor-pointer ${
+                      locationMode === "fixed"
+                        ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30 font-bold"
+                        : "bg-[var(--surface)] text-[var(--text-2)] border-[var(--border)] hover:text-[var(--text)]"
+                    }`}
+                  >
+                    <MapPin className="w-3 h-3" />
+                    <span>Fixe Adresse</span>
+                  </button>
+                )}
+
+                <span aria-hidden className="mx-1 h-6 w-px" style={{ background: "var(--border)" }} />
+
+                <Segment<RadiusChoice>
+                  ariaLabel="Suchgebiet"
+                  value={radius}
+                  onChange={setRadius}
+                  options={[
+                    { value: "city", label: "Stadtweit" },
+                    ...(["3", "5"] as const).map((km) => ({
+                      value: km,
+                      label: `${km} km`,
+                      disabled: !availability.hasLocation,
+                      title: availability.hasLocation ? `Umkreis ${km} km um den Standort` : "Kein Standort — Live-GPS oder fixe Adresse wählen",
+                    })),
+                  ]}
+                />
+
+                <Link
+                  href="/settings"
+                  title="Standort in den Einstellungen ändern"
+                  className="flex items-center justify-center rounded-md text-[var(--text-3)] hover:text-[var(--text)] transition-colors hover:bg-[var(--surface)]"
+                  style={{ minWidth: 44, minHeight: 44 }}
+                >
+                  <Settings className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+            </div>
+            {radiusKm && availability.hasLocation && !availability.appliesToCity && (
+              <p className="text-[11px]" style={{ color: "var(--status-planned-tx)" }}>
+                Umkreis gilt nur rund um deinen Standort — für „{city}“ wird stadtweit gesucht.
+              </p>
+            )}
+            {radiusKm && !availability.hasLocation && (
+              <p className="text-[11px]" style={{ color: "var(--status-planned-tx)" }}>
+                Kein Standort — Live-GPS oder fixe Adresse wählen. Bis dahin wird stadtweit gesucht.
+              </p>
+            )}
+          </div>
+
+          {/* ---- Obere Felder (beide Reiter identisch) ---- */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            <div>
+              <label htmlFor="scout-category" className="block text-xs font-medium mb-1" style={{ color: "var(--text-2)" }}>Nische / Kategorie</label>
+              <select
+                id="scout-category"
+                className="w-full rounded-md px-3 py-2 text-sm border outline-none cursor-pointer"
+                style={INPUT_STYLE}
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+              >
+                {CATEGORIES.map((item) => (
+                  <option key={item.slug} value={item.slug}>{item.label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="scout-city" className="block text-xs font-medium mb-1" style={{ color: "var(--text-2)" }}>Stadt</label>
+              <input
+                id="scout-city"
+                type="text"
+                className="w-full rounded-md px-3 py-2 text-sm border outline-none"
+                style={INPUT_STYLE}
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                placeholder="z. B. Wien"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="scout-min-rating" className="block text-xs font-medium mb-1" style={{ color: "var(--text-2)" }}>Mindest-Bewertung</label>
+              <input
+                id="scout-min-rating"
+                type="number"
+                min={0}
+                max={5}
+                step={0.1}
+                className="w-full rounded-md px-3 py-2 text-sm border outline-none"
+                style={INPUT_STYLE}
+                value={minRating}
+                onChange={(e) => setMinRating(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="scout-min-reviews" className="block text-xs font-medium mb-1" style={{ color: "var(--text-2)" }}>Min. Bewertungen</label>
+              <input
+                id="scout-min-reviews"
+                type="number"
+                min={0}
+                className="w-full rounded-md px-3 py-2 text-sm border outline-none"
+                style={INPUT_STYLE}
+                value={minReviews}
+                onChange={(e) => setMinReviews(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="scout-max-results" className="block text-xs font-medium mb-1" style={{ color: "var(--text-2)" }}>Max. Ergebnisse</label>
+              <input
+                id="scout-max-results"
+                type="number"
+                min={1}
+                max={SCOUT_LIMITS.maxResults}
+                className="w-full rounded-md px-3 py-2 text-sm border outline-none"
+                style={INPUT_STYLE}
+                value={maxResults}
+                onChange={(e) => setMaxResults(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* ---- Filterzeile je Reiter ---- */}
+          {tab === "instagram" ? (
+            <div className="pt-4 border-t flex flex-wrap gap-2" style={{ borderColor: "var(--border)" }} aria-label="Voreinstellungen">
+              <ToggleChip active={presets.noWebsite} onClick={() => togglePreset("noWebsite")}>Ohne eigene Website</ToggleChip>
+              <ToggleChip active={presets.withInstagram} onClick={() => togglePreset("withInstagram")}>Mit Instagram</ToggleChip>
+              <ToggleChip active={presets.hideChains} onClick={() => togglePreset("hideChains")}>Ketten ausblenden</ToggleChip>
+              <ToggleChip active={presets.onlyNew} onClick={() => togglePreset("onlyNew")}>Nur neue</ToggleChip>
+            </div>
+          ) : (
+            <div className="pt-4 border-t grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 gap-4" style={{ borderColor: "var(--border)" }}>
+              <FilterSelect
+                label="Sortierung"
+                value={sortBy}
+                onChange={(value) => setSortBy(value as "rating" | "distance")}
+                options={[
+                  ["rating", "Beste Bewertung (Standard)"],
+                  ["distance", "Kürzeste Distanz (Walk-In)"],
+                ]}
+              />
+              <FilterSelect
+                label="Website-Filter"
+                value={hasWebsiteFilter}
+                onChange={(value) => setHasWebsiteFilter(value as TriFilter)}
+                options={[
+                  ["all", "Alle anzeigen"],
+                  ["no", "Nur OHNE eigene Website (Top Akquise!)"],
+                  ["yes", "Nur MIT eigener Website"],
+                ]}
+              />
+              <FilterSelect
+                label="Treatwell-Profil"
+                value={hasTreatwellFilter}
+                onChange={(value) => setHasTreatwellFilter(value as TriFilter)}
+                options={[
+                  ["all", "Alle"],
+                  ["yes", "Nur auf Treatwell"],
+                  ["no", "Nicht auf Treatwell"],
+                ]}
+              />
+              <FilterSelect
+                label="Telefon-Kontakt"
+                value={hasPhoneFilter}
+                onChange={(value) => setHasPhoneFilter(value as TriFilter)}
+                options={[
+                  ["all", "Alle"],
+                  ["yes", "Nur mit Telefonnummer"],
+                  ["no", "Ohne Telefonnummer"],
+                ]}
+              />
+              <FilterSelect
+                label="Instagram-Kontakt"
+                value={hasInstagramFilter}
+                onChange={(value) => setHasInstagramFilter(value as TriFilter)}
+                options={[
+                  ["all", "Alle"],
+                  ["yes", "Nur mit Instagram"],
+                  ["no", "Ohne Instagram"],
+                ]}
+              />
+              <FilterSelect
+                label="Ketten"
+                value={hideChainsStandard ? "hide" : "all"}
+                onChange={(value) => setHideChainsStandard(value === "hide")}
+                options={[
+                  ["all", "Alle anzeigen"],
+                  ["hide", "Kettenverdacht ausblenden"],
+                ]}
+              />
+            </div>
+          )}
+
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+            <p className="text-xs" style={{ color: "var(--text-3)" }}>
+              Suchläufe werden automatisch gespeichert · höchstens {SCOUT_LIMITS.maxScoutedVenues} Betriebe pro Lauf.
+            </p>
+
+            <button
+              onClick={() => void runScout()}
+              disabled={locked}
+              title={igLocked ? LOCK_TITLE : undefined}
+              className="flex items-center gap-2 rounded-md px-5 text-xs font-semibold shadow-md transition-all cursor-pointer"
+              style={{ minHeight: 44, background: "var(--accent)", color: "var(--bg)", opacity: loading ? 0.7 : 1 }}
+            >
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : tab === "instagram" ? <AtSign className="w-4 h-4" /> : <Radar className="w-4 h-4" />}
+              {loading ? "Scout läuft…" : "Scout Starten"}
+            </button>
+          </div>
+
+          {error && (
+            <div
+              className="p-3 rounded-md text-xs font-medium border flex items-center gap-2"
+              style={{ background: "var(--status-lost-bg)", color: "var(--status-lost-tx)", borderColor: "var(--status-lost-tx)" }}
+              role="alert"
+            >
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              {error}
+            </div>
           )}
         </div>
 
-        {/* Location Reference Banner */}
-        <div
-          className="rounded-lg p-3 border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
-          style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}
-        >
-          <div className="flex items-center gap-2 min-w-0">
-            <span
-              className={`w-2 h-2 rounded-full shrink-0 ${
-                locationMode === "live"
-                  ? "bg-sky-400 animate-ping"
-                  : locationMode === "fixed"
-                  ? "bg-emerald-400"
-                  : "bg-amber-400"
-              }`}
-            />
-            <span className="font-medium text-[var(--text-3)] shrink-0">Distanz-Ausgangspunkt:</span>
-            <span className="font-bold truncate text-[var(--text)]" title={locationLabel}>
-              {locationLabel}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-1.5 shrink-0">
-            {/* Quick Live GPS toggle */}
-            <button
-              type="button"
-              onClick={requestLiveLocation}
-              disabled={loadingGps}
-              title="Live-GPS-Standort abfragen"
-              className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold border transition-all cursor-pointer ${
-                locationMode === "live"
-                  ? "bg-sky-500/20 text-sky-400 border-sky-500/30 font-bold"
-                  : "bg-[var(--surface)] text-[var(--text-2)] border-[var(--border)] hover:text-[var(--text)]"
-              }`}
-            >
-              {loadingGps ? <Loader2 className="w-3 h-3 animate-spin" /> : <Navigation className="w-3 h-3" />}
-              <span>Live-GPS</span>
-            </button>
-
-            {/* Quick Fixed location toggle */}
-            {fixedAddress && (
-              <button
-                type="button"
-                onClick={useFixedLocation}
-                title={`Fixen Standort (${fixedAddress}) nutzen`}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold border transition-all cursor-pointer ${
-                  locationMode === "fixed"
-                    ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30 font-bold"
-                    : "bg-[var(--surface)] text-[var(--text-2)] border-[var(--border)] hover:text-[var(--text)]"
-                }`}
-              >
-                <MapPin className="w-3 h-3" />
-                <span>Fixe Adresse</span>
-              </button>
-            )}
-
-            {/* Settings Link */}
-            <Link
-              href="/settings"
-              title="Standort in den Einstellungen ändern"
-              className="p-1 rounded-md text-[var(--text-3)] hover:text-[var(--text)] transition-colors hover:bg-[var(--surface)]"
-            >
-              <Settings className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          <div>
-            <label className="block text-xs font-medium mb-1" style={{ color: "var(--text-2)" }}>Nische / Kategorie</label>
-            <select
-              className="w-full rounded-md px-3 py-2 text-sm border outline-none cursor-pointer"
-              style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-            >
-              {CATEGORIES.map((item) => (
-                <option key={item.slug} value={item.slug}>{item.label}</option>
+        {/* ---- Gespeicherte Sessions ---- */}
+        {sessions.length > 0 && (
+          <div className="rounded-xl border p-4 space-y-3" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+            <h3 className="text-xs font-semibold flex items-center gap-2" style={{ color: "var(--text)" }}>
+              <History className="w-4 h-4" style={{ color: "var(--accent)" }} />
+              Gespeicherte Scout-Sessions (Persistent)
+            </h3>
+            <div className="flex items-center gap-2 overflow-x-auto pb-1">
+              {sessions.map((s) => (
+                <button
+                  key={s.id}
+                  onClick={() => void loadSession(s.id)}
+                  disabled={locked}
+                  title={igLocked ? LOCK_TITLE : undefined}
+                  className={cn(
+                    "flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-medium shrink-0 transition-all disabled:cursor-not-allowed disabled:opacity-40",
+                    selectedSessionId === s.id
+                      ? "border-[var(--accent)] bg-[var(--surface-3)] text-[var(--text)]"
+                      : "border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-2)] hover:text-[var(--text)]",
+                  )}
+                >
+                  <span>{s.name || `${s.searchQuery} in ${s.city}`}</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: "var(--surface-3)", color: "var(--text-3)" }}>
+                    {s.resultCount} Leads
+                  </span>
+                  <span className="text-[10px]" style={{ color: "var(--text-3)" }}>
+                    {timeAgo(s.createdAt)}
+                  </span>
+                </button>
               ))}
-            </select>
+            </div>
           </div>
+        )}
 
-          <div>
-            <label className="block text-xs font-medium mb-1" style={{ color: "var(--text-2)" }}>Stadt</label>
-            <input
-              type="text"
-              className="w-full rounded-md px-3 py-2 text-sm border outline-none"
-              style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-              placeholder="z. B. Wien"
+        {/* ---- Ergebnisse ---- */}
+        {/* Bleibt beim Reiterwechsel gemountet (nur versteckt): angelegte Leads,
+            Auswahl und laufende Pruefung duerfen nicht verloren gehen. */}
+        {responses.instagram && (
+          <div hidden={tab !== "instagram"}>
+            <InstagramResults
+              key={`ig-${versions.instagram}`}
+              response={responses.instagram}
+              onLockChange={setIgLocked}
+              externalLock={loading}
             />
           </div>
+        )}
 
-          <div>
-            <label className="block text-xs font-medium mb-1" style={{ color: "var(--text-2)" }}>Mindest-Bewertung</label>
-            <input
-              type="number"
-              min={0}
-              max={5}
-              step={0.1}
-              className="w-full rounded-md px-3 py-2 text-sm border outline-none"
-              style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
-              value={minRating}
-              onChange={(e) => setMinRating(e.target.value)}
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium mb-1" style={{ color: "var(--text-2)" }}>Min. Bewertungen</label>
-            <input
-              type="number"
-              min={0}
-              className="w-full rounded-md px-3 py-2 text-sm border outline-none"
-              style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
-              value={minReviews}
-              onChange={(e) => setMinReviews(e.target.value)}
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium mb-1" style={{ color: "var(--text-2)" }}>Max. Ergebnisse</label>
-            <input
-              type="number"
-              min={1}
-              max={30}
-              className="w-full rounded-md px-3 py-2 text-sm border outline-none"
-              style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
-              value={maxResults}
-              onChange={(e) => setMaxResults(e.target.value)}
-            />
-          </div>
-        </div>
-
-        {/* Extended Filter Controls */}
-        <div className="pt-4 border-t grid grid-cols-1 sm:grid-cols-5 gap-4" style={{ borderColor: "var(--border)" }}>
-          <div>
-            <label className="block text-[11px] font-semibold mb-1" style={{ color: "var(--text-3)" }}>Sortierung</label>
-            <select
-              className="w-full rounded-md px-2.5 py-1.5 text-xs border outline-none cursor-pointer"
-              style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as "rating" | "distance")}
-            >
-              <option value="rating">Beste Bewertung (Standard)</option>
-              <option value="distance">Kürzeste Distanz (Walk-In)</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-semibold mb-1" style={{ color: "var(--text-3)" }}>Website-Filter</label>
-            <select
-              className="w-full rounded-md px-2.5 py-1.5 text-xs border outline-none cursor-pointer"
-              style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
-              value={hasWebsiteFilter}
-              onChange={(e) => setHasWebsiteFilter(e.target.value as any)}
-            >
-              <option value="all">Alle anzeigen</option>
-              <option value="no">Nur OHNE eigene Website (Top Akquise!)</option>
-              <option value="yes">Nur MIT eigener Website</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-semibold mb-1" style={{ color: "var(--text-3)" }}>Treatwell-Profil</label>
-            <select
-              className="w-full rounded-md px-2.5 py-1.5 text-xs border outline-none cursor-pointer"
-              style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
-              value={hasTreatwellFilter}
-              onChange={(e) => setHasTreatwellFilter(e.target.value as any)}
-            >
-              <option value="all">Alle</option>
-              <option value="yes">Nur auf Treatwell</option>
-              <option value="no">Nicht auf Treatwell</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-semibold mb-1" style={{ color: "var(--text-3)" }}>Telefon-Kontakt</label>
-            <select
-              className="w-full rounded-md px-2.5 py-1.5 text-xs border outline-none cursor-pointer"
-              style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
-              value={hasPhoneFilter}
-              onChange={(e) => setHasPhoneFilter(e.target.value as any)}
-            >
-              <option value="all">Alle</option>
-              <option value="yes">Nur mit Telefonnummer</option>
-              <option value="no">Ohne Telefonnummer</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-semibold mb-1" style={{ color: "var(--text-3)" }}>Instagram-Kontakt</label>
-            <select
-              className="w-full rounded-md px-2.5 py-1.5 text-xs border outline-none cursor-pointer"
-              style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
-              value={hasInstagramFilter}
-              onChange={(e) => setHasInstagramFilter(e.target.value as any)}
-            >
-              <option value="all">Alle</option>
-              <option value="yes">Nur mit Instagram</option>
-              <option value="no">Ohne Instagram</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between pt-2">
-          <p className="text-xs" style={{ color: "var(--text-3)" }}>
-            Suchläufe werden automatisch in der Datenbank gespeichert.
-          </p>
-
-          <button
-            onClick={runScout}
-            disabled={loading}
-            className="flex items-center gap-2 rounded-md px-5 py-2 text-xs font-semibold shadow-md transition-all cursor-pointer"
-            style={{ background: "var(--accent)", color: "var(--bg)", opacity: loading ? 0.7 : 1 }}
-          >
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Radar className="w-4 h-4" />}
-            {loading ? "Scout läuft…" : "Scout Starten"}
-          </button>
-        </div>
-
-        {error && (
-          <div className="p-3 rounded-md text-xs font-medium border flex items-center gap-2" style={{ background: "var(--status-lost-bg)", color: "var(--status-lost-tx)", borderColor: "rgba(224,104,104,0.3)" }}>
-            <AlertTriangle className="w-4 h-4 shrink-0" />
-            {error}
+        {response && tab === "standard" && (
+          <div className="space-y-4">
+            <ScoutFunnel response={response} finalLabel="Treffer" />
+            {notices.length > 0 && (
+              <ul className="space-y-1 px-2" role="status">
+                {notices.map((notice) => (
+                  <li key={notice} className="text-[11px]" style={{ color: "var(--status-planned-tx)" }}>{notice}</li>
+                ))}
+              </ul>
+            )}
+            {response.results.length > 0 ? (
+              response.results.map((result) => (
+                <ScoutResultCard
+                  key={result.venue.key}
+                  result={result}
+                  onAdd={(selectedStatus, acquisitionType, nfcDemoUrl) => void addLead(result, selectedStatus, acquisitionType, nfcDemoUrl)}
+                  added={addedIds.has(result.venue.key)}
+                  adding={addingId === result.venue.key}
+                />
+              ))
+            ) : (
+              <div className="rounded-xl border p-12 text-center text-xs" style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-3)" }}>
+                Keine passenden Kandidaten — der Trichter oben zeigt, wo sie hängen bleiben.
+              </div>
+            )}
           </div>
         )}
       </div>
-
-      {/* Saved Sessions History Bar */}
-      {sessions.length > 0 && (
-        <div className="rounded-xl border p-4 space-y-3" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
-          <h3 className="text-xs font-semibold flex items-center gap-2" style={{ color: "var(--text)" }}>
-            <History className="w-4 h-4" style={{ color: "var(--accent)" }} />
-            Gespeicherte Scout-Sessions (Persistent)
-          </h3>
-          <div className="flex items-center gap-2 overflow-x-auto pb-1">
-            {sessions.map((s) => (
-              <button
-                key={s.id}
-                onClick={() => loadSession(s.id)}
-                className={cn(
-                  "flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-medium shrink-0 transition-all",
-                  selectedSessionId === s.id
-                    ? "border-[var(--accent)] bg-[var(--surface-3)] text-[var(--text)]"
-                    : "border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-2)] hover:text-[var(--text)]"
-                )}
-              >
-                <span>{s.name || `${s.searchQuery} in ${s.city}`}</span>
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: "var(--surface-3)", color: "var(--text-3)" }}>
-                  {s.resultCount} Leads
-                </span>
-                <span className="text-[10px]" style={{ color: "var(--text-3)" }}>
-                  {timeAgo(s.createdAt)}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Results Header */}
-      {response && (
-        <div className="flex items-center justify-between px-2">
-          <div className="flex items-center gap-2 text-xs font-semibold" style={{ color: "var(--text)" }}>
-            <Sparkles className="w-4 h-4" style={{ color: "var(--status-warm-tx)" }} />
-            {response.results.length} Kandidaten gefunden ({response.filteredCount} nach Filter)
-          </div>
-          {response.sourceUrl && (
-            <a
-              href={response.sourceUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="text-xs font-semibold flex items-center gap-1 hover:underline"
-              style={{ color: "var(--status-new-tx)" }}
-            >
-              Quelle öffnen <ExternalLink className="w-3 h-3" />
-            </a>
-          )}
-        </div>
-      )}
-
-      {/* Results List */}
-      {response && response.results.length > 0 && (
-        <div className="space-y-4">
-          {response.results.map((result) => (
-            <ResultCard
-              key={result.venue.key}
-              result={result}
-              onAdd={(selectedStatus, acquisitionType, nfcDemoUrl) =>
-                addLead(result, selectedStatus, acquisitionType, nfcDemoUrl)
-              }
-              added={addedIds.has(result.venue.key)}
-              adding={addingId === result.venue.key}
-            />
-          ))}
-        </div>
-      )}
-
-      {response && response.results.length === 0 && (
-        <div className="rounded-xl border p-12 text-center text-xs" style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-3)" }}>
-          Keine passenden Kandidaten für diese Filtereinstellungen gefunden.
-        </div>
-      )}
     </div>
+  );
+}
+
+function FilterSelect({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: Array<[string, string]>;
+}) {
+  return (
+    <label className="block">
+      <span className="block text-[11px] font-semibold mb-1" style={{ color: "var(--text-3)" }}>{label}</span>
+      <select
+        className="w-full rounded-md px-2.5 py-1.5 text-xs border outline-none cursor-pointer"
+        style={INPUT_STYLE}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      >
+        {options.map(([optionValue, optionLabel]) => (
+          <option key={optionValue} value={optionValue}>{optionLabel}</option>
+        ))}
+      </select>
+    </label>
   );
 }

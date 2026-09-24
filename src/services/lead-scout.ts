@@ -1,31 +1,50 @@
 import { WebPresence } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { mapPlaceToSuggestion, type PlaceSuggestion, type RawPlace } from "@/lib/places";
-import { normalizeInstagramHandle, normalizePhone, normalizeUrl } from "@/lib/utils";
+import { instagramProfileUrl, normalizeInstagramHandle, normalizePhone, normalizeUrl } from "@/lib/utils";
 import {
+  SCOUT_LIMITS,
+  instagramStateOf,
+  type InstagramState,
   type LeadScoutOptions,
   type LeadScoutResponse,
+  type PrefilterReason,
+  type ScoutBudget,
+  type ScoutFunnel,
+  type ScoutFunnelStage,
+  type ScoutRadiusKm,
   type ScoutResult,
   type TreatwellVenue,
 } from "@/lib/lead-scout-types";
+import { categorySearchesFor, matchesCategoryTypes, type ScoutCategorySearch } from "@/lib/scout-categories";
+import { hasSolidWebsite } from "@/services/instagram/enrichment";
 import { findDuplicates } from "./dedup";
 import { searchTreatwell } from "./treatwell";
-import { searchFirstExternalUrl, searchInstagramProfiles } from "./web-search";
+import { searchFirstExternalUrlDetailed, searchInstagramProfilesDetailed } from "./web-search";
 import { WebsiteAuditProvider } from "./audit/website-provider";
 import type { AuditResult } from "./audit/types";
 import { calculateDistanceKm } from "@/lib/distance";
+import { buildChainContext, chainDomainOf, detectChain, type ChainContext } from "./scout/chain";
+import {
+  PlacesCallBudget,
+  fetchPlacesPage,
+  isPlacesConfigured,
+  mapsSearchUrl,
+  type PlacesArea,
+} from "./scout/places-search";
+import { attachInstagramInsights } from "./scout/instagram-insights";
 
 export type { LeadScoutOptions, LeadScoutResponse, ScoutResult, TreatwellVenue };
 
+// ---------------------------------------------------------------------------
+// Einzel-Abgleich Treatwell-Betrieb -> Google-Maps-Eintrag
+// (1 Call pro Betrieb, gedeckelt ueber SCOUT_LIMITS.maxScoutedVenues)
+// ---------------------------------------------------------------------------
+
 const PLACES_URL = "https://places.googleapis.com/v1/places:searchText";
-const FIELD_MASK =
+const MATCH_FIELD_MASK =
   "places.displayName,places.formattedAddress,places.internationalPhoneNumber,places.websiteUri," +
   "places.rating,places.userRatingCount,places.googleMapsUri,places.types,places.primaryTypeDisplayName,places.location";
-
-function mapsSearchUrl(category: string, city: string) {
-  const query = category === "Alle" ? `Beauty Salon, Friseur, Restaurant, Cafe in ${city}` : `${category} in ${city}`;
-  return `https://www.google.com/maps/search/${encodeURIComponent(query)}`;
-}
 
 function norm(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9äöü]/g, "");
@@ -57,13 +76,13 @@ async function searchPlaces(query: string): Promise<PlaceSuggestion[] | null> {
       headers: {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": apiKey,
-        "X-Goog-FieldMask": FIELD_MASK,
+        "X-Goog-FieldMask": MATCH_FIELD_MASK,
       },
       body: JSON.stringify({
         textQuery: query,
         languageCode: "de",
         regionCode: process.env.GOOGLE_PLACES_REGION?.trim() || "AT",
-        maxResultCount: 5,
+        pageSize: 5,
       }),
       cache: "no-store",
     });
@@ -75,65 +94,42 @@ async function searchPlaces(query: string): Promise<PlaceSuggestion[] | null> {
   }
 }
 
-async function searchRestaurantsViaPlaces(
-  category: string,
-  city: string,
-  maxResults: number,
-): Promise<PlaceSuggestion[] | null> {
-  const apiKey = process.env.GOOGLE_PLACES_API_KEY;
-  if (!apiKey) return null;
-
-  try {
-    const response = await fetch(PLACES_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Goog-Api-Key": apiKey,
-        "X-Goog-FieldMask": FIELD_MASK,
-      },
-      body: JSON.stringify({
-        textQuery: category === "Alle" 
-          ? `Beauty Salon, Friseur, Restaurant, Cafe in ${city}` 
-          : `${category} in ${city}`,
-        languageCode: "de",
-        regionCode: process.env.GOOGLE_PLACES_REGION?.trim() || "AT",
-        maxResultCount: Math.min(20, Math.max(1, maxResults)),
-      }),
-      cache: "no-store",
-    });
-    if (!response.ok) return null;
-    const payload: { places?: RawPlace[] } = await response.json();
-    return (payload.places ?? []).map(mapPlaceToSuggestion);
-  } catch {
-    return null;
-  }
-}
-
-function placesToVenues(places: PlaceSuggestion[], city: string): TreatwellVenue[] {
-  return places.map((place) => {
-    const street = place.address.split(",")[0]?.trim() || null;
-    const postal = place.address.match(/\b\d{4}\b/)?.[0] ?? null;
-    return {
-      key: place.googleMapsUri ?? `${place.name}-${place.address}`,
-      name: place.name,
-      source: "places",
-      treatwellUrl: null,
-      googleMapsUri: place.googleMapsUri,
-      rating: place.rating,
-      reviewCount: place.reviewCount,
-      streetAddress: street,
-      locality: place.city || city,
-      postalCode: postal,
-      addressLine: place.address,
-      phone: place.phone,
-      website: place.website,
-      latitude: place.latitude,
-      longitude: place.longitude,
-    };
-  });
+function rawToVenue(raw: RawPlace, city: string): TreatwellVenue {
+  const place = mapPlaceToSuggestion(raw);
+  const street = place.address.split(",")[0]?.trim() || null;
+  const postal = place.address.match(/\b\d{4}\b/)?.[0] ?? null;
+  return {
+    key: place.googleMapsUri ?? `${place.name}-${place.address}`,
+    name: place.name,
+    source: "places",
+    treatwellUrl: null,
+    googleMapsUri: place.googleMapsUri,
+    rating: place.rating,
+    reviewCount: place.reviewCount,
+    streetAddress: street,
+    locality: place.city || city,
+    postalCode: postal,
+    addressLine: place.address,
+    phone: place.phone,
+    website: place.website,
+    latitude: place.latitude,
+    longitude: place.longitude,
+    types: raw.types ?? [],
+    businessStatus: raw.businessStatus ?? null,
+    industry: place.industry,
+  };
 }
 
 type LeadRow = Awaited<ReturnType<typeof prisma.lead.findMany>>[number];
+
+/** Eine Website zaehlt fuer den Dublettencheck nur, wenn sie einen Betrieb identifiziert. */
+function identityWebsite(url: string | null): string | null {
+  // "instagram.com", "linktr.ee" oder "booksy.com" teilen sich viele Betriebe.
+  // Als "Gleiche Website" (harte ID, 100 Punkte) wuerde sonst jeder Salon mit
+  // Instagram-Link zum sicheren Duplikat — und "Nur neue" wuerfe genau die
+  // Zielgruppe raus.
+  return chainDomainOf(url) ? url : null;
+}
 
 function findScoutDuplicates(
   venue: TreatwellVenue,
@@ -147,7 +143,7 @@ function findScoutDuplicates(
       city: venue.locality ?? undefined,
       treatwellUrl: venue.treatwellUrl,
       phone: collected.phone,
-      website: collected.website,
+      website: identityWebsite(collected.website),
       googleMapsUrl: collected.googleMapsUrl,
       instagram: collected.instagram,
     },
@@ -155,7 +151,16 @@ function findScoutDuplicates(
   );
 }
 
-async function scoutVenue(venue: TreatwellVenue, options: LeadScoutOptions, leads: LeadRow[]): Promise<ScoutResult> {
+type Candidate = { venue: TreatwellVenue; search: ScoutCategorySearch };
+
+type ScoutContext = {
+  options: LeadScoutOptions;
+  leads: LeadRow[];
+  chain: ChainContext;
+};
+
+async function scoutVenue({ venue, search }: Candidate, context: ScoutContext): Promise<ScoutResult> {
+  const { options, leads } = context;
   let place: PlaceSuggestion | null = null;
   let mapsStatus: ScoutResult["maps"]["status"] = "fail";
   let matchReason = "Kein Google-Maps-Eintrag gefunden.";
@@ -171,7 +176,7 @@ async function scoutVenue(venue: TreatwellVenue, options: LeadScoutOptions, lead
       rating: venue.rating,
       reviewCount: venue.reviewCount,
       googleMapsUri: venue.googleMapsUri,
-      industry: options.category,
+      industry: venue.industry ?? search.industry,
       latitude: venue.latitude,
       longitude: venue.longitude,
     };
@@ -203,13 +208,15 @@ async function scoutVenue(venue: TreatwellVenue, options: LeadScoutOptions, lead
 
   let websiteUrl: string | null = place?.website ? normalizeUrl(place.website) : null;
   let websiteSource: "maps" | "search" | null = websiteUrl ? "maps" : null;
+  let websiteSearchFailed = false;
 
   if (!websiteUrl) {
-    const found = await searchFirstExternalUrl(`${venue.name} ${options.city} website`, { venueName: venue.name });
-    if (found) {
-      websiteUrl = normalizeUrl(found);
+    const found = await searchFirstExternalUrlDetailed(`${venue.name} ${options.city} website`, { venueName: venue.name });
+    if (found.url) {
+      websiteUrl = normalizeUrl(found.url);
       websiteSource = "search";
     }
+    websiteSearchFailed = found.failed;
   }
 
   let audit: AuditResult | null = null;
@@ -230,27 +237,28 @@ async function scoutVenue(venue: TreatwellVenue, options: LeadScoutOptions, lead
   // Website (verlaesslich). Fehlt der, wird ueber die Suchmaschinen gesucht —
   // bewusst nicht ueber Instagram selbst. Mehrdeutige Treffer werden NICHT
   // automatisch uebernommen, sondern in der UI zur Auswahl gestellt.
+  // Haben beide Suchmaschinen nicht geantwortet, heisst das "unbekannt" —
+  // nicht "kein Profil".
   const websiteHandle = normalizeInstagramHandle(instagram);
   let instagramProfile: ScoutResult["instagramProfile"] = websiteHandle
-    ? {
-        status: "ok",
-        handle: websiteHandle,
-        source: "website",
-        candidates: [],
-      }
+    ? { status: "ok", handle: websiteHandle, source: "website", candidates: [] }
     : { status: "fail", handle: null, source: null, candidates: [] };
 
   if (!websiteHandle) {
     try {
-      const candidates = await searchInstagramProfiles(venue.name, options.city);
-      const best = candidates[0];
-      if (best?.confidence === "high") {
-        instagramProfile = { status: "ok", handle: best.handle, source: "search", candidates };
+      const { candidates, failed } = await searchInstagramProfilesDetailed(venue.name, options.city);
+      // Nur EIN sicherer Treffer ist eindeutig. Zwei "high" heisst: wir wissen
+      // es nicht — dann entscheidet der Nutzer, statt dass wir den ersten raten.
+      const highs = candidates.filter((candidate) => candidate.confidence === "high");
+      if (highs.length === 1) {
+        instagramProfile = { status: "ok", handle: highs[0].handle, source: "search", candidates };
       } else if (candidates.length > 0) {
         instagramProfile = { status: "warn", handle: null, source: "search", candidates };
+      } else if (failed) {
+        instagramProfile = { status: "skip", handle: null, source: null, candidates: [], searchFailed: true };
       }
     } catch {
-      instagramProfile = { status: "skip", handle: null, source: null, candidates: [] };
+      instagramProfile = { status: "skip", handle: null, source: null, candidates: [], searchFailed: true };
     }
   }
 
@@ -260,7 +268,9 @@ async function scoutVenue(venue: TreatwellVenue, options: LeadScoutOptions, lead
       phone,
       website: websiteUrl,
       googleMapsUrl: place?.googleMapsUri ? normalizeUrl(place.googleMapsUri) : null,
-      instagram,
+      // Auch das per Suche eindeutig gefundene Handle — sonst feuert das
+      // 80-Punkte-Signal "Gleicher Instagram-Account" in dedup.ts nie.
+      instagram: instagram ?? instagramProfile.handle,
     },
     leads,
   );
@@ -278,6 +288,7 @@ async function scoutVenue(venue: TreatwellVenue, options: LeadScoutOptions, lead
   };
 
   const hasWebsite = Boolean(websiteUrl);
+  const solidWebsite = hasSolidWebsite(websiteUrl);
   const hasContact = Boolean(phone || email || instagram);
 
   const menu: ScoutResult["menu"] = audit
@@ -304,9 +315,13 @@ async function scoutVenue(venue: TreatwellVenue, options: LeadScoutOptions, lead
       : `Treatwell: ${venue.rating ?? "–"}★ (${venue.reviewCount ?? 0} Bewertungen)`,
     venue.treatwellUrl ? `Treatwell-Profil: ${venue.treatwellUrl}` : null,
     venue.addressLine ? `Adresse: ${venue.addressLine}` : null,
-    hasWebsite
+    solidWebsite
       ? `Website via ${websiteSource === "maps" ? "Google Maps" : "Websuche"} gefunden.`
-      : "Keine eigene Website gefunden.",
+      : hasWebsite
+        ? "Keine eigene Website — nur Social-/Plattform-Link."
+        : websiteSearchFailed
+          ? "Website unbekannt — Websuche nicht beantwortet."
+          : "Keine eigene Website gefunden.",
     menuNote,
     mapsMatched ? `Maps-Abgleich: ${matchReason}` : null,
     !hasContact ? "Keine Kontaktmöglichkeit gefunden." : null,
@@ -331,17 +346,26 @@ async function scoutVenue(venue: TreatwellVenue, options: LeadScoutOptions, lead
     distanceKm,
     duplicate,
     maps: { status: mapsStatus, place, matchReason },
-    website: { status: hasWebsite ? "ok" : "fail", url: websiteUrl, source: websiteSource },
+    website: {
+      status: hasWebsite ? "ok" : websiteSearchFailed ? "skip" : "fail",
+      url: websiteUrl,
+      source: websiteSource,
+      solid: solidWebsite,
+      searchFailed: !hasWebsite && websiteSearchFailed,
+    },
     menu,
     audit,
     contacts: { phone, email, instagram },
     instagramProfile,
+    chain: detectChain({ name: venue.name, website: websiteUrl }, context.chain),
     leadDraft: {
       companyName: venue.name,
-      industry: options.category,
+      // Echte Branche aus den Google-Typen (mapIndustry), nie die Suchkategorie:
+      // "Alle" als Branche loeste in score.ts ein falsches INDUSTRY_MATCH aus.
+      industry: place?.industry ?? venue.industry ?? search.industry,
       address: place?.address ?? (venue.addressLine || null),
       city: place?.city ?? options.city,
-      webPresence: hasWebsite
+      webPresence: solidWebsite
         ? WebPresence.WEBSITE
         : venue.treatwellUrl
           ? WebPresence.TREATWELL_ONLY
@@ -350,83 +374,149 @@ async function scoutVenue(venue: TreatwellVenue, options: LeadScoutOptions, lead
       treatwellUrl: normalizeUrl(venue.treatwellUrl),
       phone: normalizePhone(phone),
       email,
-      instagram: instagram ?? (instagramProfile.handle ? `https://www.instagram.com/${instagramProfile.handle}` : null),
+      instagram: instagram ?? instagramProfileUrl(instagramProfile.handle),
       googleMapsUrl: place?.googleMapsUri ? normalizeUrl(place.googleMapsUri) : null,
       googleRating: place?.rating ?? null,
       googleReviewCount: place?.reviewCount ?? null,
+      // Gratis-Verortung: lat/lng liegen aus dem Places-Treffer bereits vor.
+      latitude: lat,
+      longitude: lng,
       source: venue.source === "places" ? "Google Places Lead-Scout" : "Treatwell Lead-Scout",
       notes,
     },
   };
 }
 
-export async function runLeadScout(options: LeadScoutOptions, userId: string): Promise<LeadScoutResponse> {
-  const usePlaces = options.source === "places";
-  let venues: TreatwellVenue[] = [];
-  let url = "";
-  let error: string | undefined;
+// ---------------------------------------------------------------------------
+// Optionen, Umkreis, Vorfilter
+// ---------------------------------------------------------------------------
 
-  if (usePlaces) {
-    const places = await searchRestaurantsViaPlaces(options.category, options.city, options.maxResults * 3);
-    if (places === null) {
-      error = "Google-Places-Suche nicht verfügbar (API-Key fehlt oder Fehler).";
-    } else {
-      venues = placesToVenues(places, options.city);
-      url = mapsSearchUrl(options.category, options.city);
-    }
-  } else {
-    const result = await searchTreatwell(options.category, options.city);
-    venues = result.venues;
-    url = result.url;
-    error = result.error;
+function clampMaxResults(value: unknown): number {
+  const parsed = Math.floor(Number(value));
+  return Math.min(SCOUT_LIMITS.maxResults, Math.max(1, Number.isFinite(parsed) && parsed > 0 ? parsed : 10));
+}
 
-    // ── Google Places Fallback ──────────────────────────────────────────────
-    // If Treatwell returns 0 results (blocked, wrong URL, or no listings),
-    // automatically fall back to Google Places so the scout still finds leads.
-    if (venues.length === 0) {
-      const places = await searchRestaurantsViaPlaces(options.category, options.city, options.maxResults * 3);
-      if (places && places.length > 0) {
-        venues = placesToVenues(places, options.city);
-        url = mapsSearchUrl(options.category, options.city);
-        error = undefined; // Clear Treatwell error since Places succeeded
-      }
+function resolveArea(options: LeadScoutOptions): PlacesArea {
+  const radius = options.radiusKm;
+  const lat = options.baseLat;
+  const lng = options.baseLng;
+  const validCoords =
+    typeof lat === "number" && typeof lng === "number" &&
+    Number.isFinite(lat) && Number.isFinite(lng) &&
+    Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
+  if ((radius === 3 || radius === 5) && validCoords) {
+    return { mode: "radius", city: options.city, lat, lng, radiusKm: radius };
+  }
+  return { mode: "city", city: options.city };
+}
+
+function distanceFromBase(venue: TreatwellVenue, area: PlacesArea): number | null {
+  if (area.mode !== "radius" || venue.latitude == null || venue.longitude == null) return null;
+  return calculateDistanceKm({ lat: venue.latitude, lng: venue.longitude }, { lat: area.lat, lng: area.lng });
+}
+
+/**
+ * Gratis-Vorfilter VOR scoutVenue — spart Websuche, Audit, Instagram-Suche
+ * und (bei Treatwell) den Places-Abgleich. Arbeitet nur mit Daten, die
+ * bereits vorliegen. Fehlende Daten (keine Typen, kein Status) filtern nie.
+ */
+function prefilterReason(candidate: Candidate, options: LeadScoutOptions, context: ScoutContext, area: PlacesArea): PrefilterReason | null {
+  const { venue, search } = candidate;
+  if (venue.businessStatus === "CLOSED_PERMANENTLY" || venue.businessStatus === "CLOSED_TEMPORARILY") return "closed";
+  if (matchesCategoryTypes(venue.types, search.matchTypes) === false) return "type";
+  const distance = distanceFromBase(venue, area);
+  if (area.mode === "radius" && distance != null && distance > area.radiusKm) return "distance";
+  if ((venue.rating ?? 0) < options.minRating || (venue.reviewCount ?? 0) < options.minReviews) return "rating";
+  if (options.hasTreatwellFilter === "yes" && !venue.treatwellUrl) return "treatwell";
+  if (options.hasTreatwellFilter === "no" && venue.treatwellUrl) return "treatwell";
+  if (options.hideChains && detectChain({ name: venue.name, website: venue.website }, context.chain).suspected) return "chain";
+  // Nur der sichere Fall: Places meldet eine belastbare eigene Website.
+  if (options.hasWebsiteFilter === "no" && hasSolidWebsite(venue.website)) return "website";
+  if (options.onlyNew) {
+    const matches = findScoutDuplicates(
+      venue,
+      {
+        phone: venue.phone,
+        website: venue.website,
+        googleMapsUrl: venue.googleMapsUri ? normalizeUrl(venue.googleMapsUri) : null,
+        instagram: null,
+      },
+      context.leads,
+    );
+    if (matches.some((match) => match.confidence === "high")) return "duplicate";
+  }
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// Nachfilter + ehrlicher Trichter
+// ---------------------------------------------------------------------------
+
+function countStates(results: ScoutResult[]): Record<InstagramState, number> {
+  const counts: Record<InstagramState, number> = { found: 0, choose: 0, none: 0, failed: 0 };
+  for (const result of results) counts[instagramStateOf(result.instagramProfile)] += 1;
+  return counts;
+}
+
+/** Website unbekannt = keine eigene gefunden UND die Websuche war nicht beantwortet. */
+function websiteUnknown(result: ScoutResult): boolean {
+  return !result.website.url && Boolean(result.website.searchFailed);
+}
+
+function applyPostFilters(scouted: ScoutResult[], options: LeadScoutOptions) {
+  const stages: ScoutFunnelStage[] = [];
+  let current = scouted;
+
+  const step = (key: ScoutFunnelStage["key"], kind: ScoutFunnelStage["kind"], label: string, keep: (r: ScoutResult) => boolean) => {
+    const next = current.filter(keep);
+    const stage: ScoutFunnelStage = { key, kind, label, count: next.length, removed: current.length - next.length };
+    if (key === "instagram") {
+      const counts = countStates(next);
+      stage.instagram = { found: counts.found, choose: counts.choose, failed: counts.failed };
     }
+    stages.push(stage);
+    current = next;
+  };
+
+  // "Unbekannt" ist nie "nein": fehlgeschlagene Suchen bleiben in BEIDEN
+  // Richtungen sichtbar und werden hinten einsortiert.
+  if (options.hasInstagramFilter === "yes") {
+    step("instagram", "keep", "mit Instagram", (r) => instagramStateOf(r.instagramProfile) !== "none");
+  } else if (options.hasInstagramFilter === "no") {
+    step("instagram", "keep", "ohne Instagram", (r) => {
+      const state = instagramStateOf(r.instagramProfile);
+      return state === "none" || state === "failed";
+    });
+  }
+  if (options.hasWebsiteFilter === "no") {
+    step("website", "keep", "ohne eigene Website", (r) => !hasSolidWebsite(r.website.url));
+  } else if (options.hasWebsiteFilter === "yes") {
+    step("website", "keep", "mit eigener Website", (r) => hasSolidWebsite(r.website.url) || websiteUnknown(r));
+  }
+  if (options.hideChains) {
+    step("chain", "remove", "Ketten", (r) => !r.chain?.suspected);
+  }
+  if (options.hasPhoneFilter === "yes") step("phone", "keep", "mit Telefon", (r) => Boolean(r.contacts.phone));
+  if (options.hasPhoneFilter === "no") step("phone", "keep", "ohne Telefon", (r) => !r.contacts.phone);
+  if (options.onlyNew) {
+    step("new", "keep", "neu", (r) => r.duplicate.status !== "fail");
   }
 
-  let filtered = venues.filter(
-    (venue) => (venue.rating ?? 0) >= options.minRating && (venue.reviewCount ?? 0) >= options.minReviews,
-  );
+  return { results: current, stages };
+}
 
-  // Apply optional website/treatwell/phone filters if specified
-  if (options.hasTreatwellFilter === "yes") filtered = filtered.filter((v) => Boolean(v.treatwellUrl));
-  if (options.hasTreatwellFilter === "no") filtered = filtered.filter((v) => !v.treatwellUrl);
+function uncertainty(result: ScoutResult, options: LeadScoutOptions): number {
+  let score = 0;
+  if (options.hasInstagramFilter && options.hasInstagramFilter !== "all" && instagramStateOf(result.instagramProfile) === "failed") score += 1;
+  if (options.hasWebsiteFilter && options.hasWebsiteFilter !== "all" && websiteUnknown(result)) score += 1;
+  return score;
+}
 
-  const selected = filtered.slice(0, options.maxResults);
+function sortResults(results: ScoutResult[], options: LeadScoutOptions) {
+  results.sort((a, b) => {
+    const uncertain = uncertainty(a, options) - uncertainty(b, options);
+    if (uncertain !== 0) return uncertain;
 
-  const leads = await prisma.lead.findMany({
-    where: {
-      OR: [
-        { createdById: userId },
-        { assignedToId: userId },
-      ],
-    },
-  });
-  const CONCURRENCY = 5;
-  const results: ScoutResult[] = [];
-  for (let i = 0; i < selected.length; i += CONCURRENCY) {
-    const batch = selected.slice(i, i + CONCURRENCY);
-    results.push(...(await Promise.all(batch.map((venue) => scoutVenue(venue, options, leads)))));
-  }
-
-  let finalResults = results;
-  if (options.hasWebsiteFilter === "no") finalResults = finalResults.filter((r) => !r.website.url);
-  if (options.hasWebsiteFilter === "yes") finalResults = finalResults.filter((r) => Boolean(r.website.url));
-  if (options.hasPhoneFilter === "yes") finalResults = finalResults.filter((r) => Boolean(r.contacts.phone));
-  if (options.hasPhoneFilter === "no") finalResults = finalResults.filter((r) => !r.contacts.phone);
-  if (options.hasInstagramFilter === "yes") finalResults = finalResults.filter((r) => Boolean(r.contacts.instagram));
-  if (options.hasInstagramFilter === "no") finalResults = finalResults.filter((r) => !r.contacts.instagram);
-
-  finalResults.sort((a, b) => {
     if (options.sortBy === "distance") {
       const aDist = a.distanceKm ?? Infinity;
       const bDist = b.distanceKm ?? Infinity;
@@ -434,56 +524,253 @@ export async function runLeadScout(options: LeadScoutOptions, userId: string): P
       return (b.venue.rating ?? 0) - (a.venue.rating ?? 0);
     }
 
-    const aHasSite = a.website.url ? 1 : 0;
-    const bHasSite = b.website.url ? 1 : 0;
+    const aHasSite = hasSolidWebsite(a.website.url) ? 1 : 0;
+    const bHasSite = hasSolidWebsite(b.website.url) ? 1 : 0;
     if (aHasSite !== bHasSite) return aHasSite - bHasSite;
     return (b.venue.rating ?? 0) - (a.venue.rating ?? 0);
   });
+}
 
-  // Ensure DB User exists
-  let dbUser = await prisma.user.findUnique({ where: { id: userId } });
-  if (!dbUser) {
-    dbUser = await prisma.user.create({
-      data: { id: userId, email: "scout@scaleevo.at", displayName: "Scout User" },
-    });
+// ---------------------------------------------------------------------------
+// Hauptlauf
+// ---------------------------------------------------------------------------
+
+type SearchCursor = { search: ScoutCategorySearch; nextPageToken: string | null; done: boolean };
+
+const CONCURRENCY = 5;
+
+/**
+ * Scout-Lauf mit harter Obergrenze (SCOUT_LIMITS):
+ *  - hoechstens 40 gepruefte Betriebe,
+ *  - hoechstens 3 Places-Listenaufrufe (Folgeseiten und "Alle" eingeschlossen),
+ *  - nach 45 s startet kein neuer Pruef-Block mehr.
+ *
+ * Gefiltert wird NACH dem Pruefen, und es wird nachgeprueft, bis genug
+ * Treffer die Filter bestehen oder ein Limit greift. Ein erschoepftes
+ * Budget wird in `budget` gemeldet, nicht verschwiegen.
+ */
+export async function runLeadScout(rawOptions: LeadScoutOptions, userId: string): Promise<LeadScoutResponse> {
+  const startedAt = Date.now();
+  const deadline = startedAt + SCOUT_LIMITS.timeBudgetMs;
+  const target = clampMaxResults(rawOptions.maxResults);
+  const options: LeadScoutOptions = { ...rawOptions, maxResults: target };
+
+  const area = resolveArea(options);
+  const searches = categorySearchesFor(options.category);
+  const placesBudget = new PlacesCallBudget(SCOUT_LIMITS.maxPlacesListCalls);
+  const notices: string[] = [];
+  let error: string | undefined;
+  let url = "";
+
+  const seen = new Set<string>();
+  const pool: Candidate[] = [];
+  const queue: Candidate[] = [];
+  const addCandidates = (venues: TreatwellVenue[], search: ScoutCategorySearch) => {
+    for (const venue of venues) {
+      if (seen.has(venue.key)) continue;
+      seen.add(venue.key);
+      const candidate = { venue, search };
+      pool.push(candidate);
+      queue.push(candidate);
+    }
+  };
+
+  const cursors: SearchCursor[] = [];
+  const fetchCursor = async (cursor: SearchCursor): Promise<TreatwellVenue[]> => {
+    const page = await fetchPlacesPage(cursor.search, area, placesBudget, cursor.nextPageToken ?? undefined);
+    if (!page.ok) {
+      notices.push(page.reason);
+      cursor.done = true;
+      return [];
+    }
+    const venues = page.places.map((raw) => rawToVenue(raw, options.city));
+    cursor.nextPageToken = page.nextPageToken;
+    cursor.done = !page.nextPageToken;
+    // DISTANCE-Ranking: liegt schon diese Seite teils ausserhalb des Umkreises,
+    // liegt jede Folgeseite komplett draussen — also nicht weiter blaettern.
+    if (area.mode === "radius" && venues.some((venue) => (distanceFromBase(venue, area) ?? 0) > area.radiusKm)) {
+      cursor.done = true;
+    }
+    return venues;
+  };
+
+  const startPlaces = async () => {
+    const fresh = searches.map((search) => ({ search, nextPageToken: null, done: false }) as SearchCursor);
+    cursors.push(...fresh);
+    const pages = await Promise.all(fresh.map((cursor) => fetchCursor(cursor)));
+    // Reissverschluss statt Aneinanderhaengen: bei "Alle" wechseln sich die
+    // Branchen ab, statt dass 20 Friseure das Pruefbudget aufbrauchen.
+    const longest = Math.max(0, ...pages.map((page) => page.length));
+    for (let index = 0; index < longest; index++) {
+      pages.forEach((page, searchIndex) => {
+        if (page[index]) addCandidates([page[index]], fresh[searchIndex].search);
+      });
+    }
+    url = mapsSearchUrl(searches, area);
+    if (pool.length === 0 && notices.length > 0) error = notices.join(" ");
+  };
+
+  // Umkreis geht nur ueber Places — Treatwell kennt keine Koordinaten, und
+  // ein Places-Abgleich pro Treatwell-Betrieb waere der teuerste Weg dorthin.
+  const usePlaces = options.source === "places" || area.mode === "radius";
+
+  if (usePlaces) {
+    if (!isPlacesConfigured()) error = "Google-Places-Suche nicht verfügbar (API-Key fehlt).";
+    else await startPlaces();
+  } else {
+    const result = await searchTreatwell(options.category, options.city);
+    addCandidates(result.venues, searches[0]);
+    url = result.url;
+    error = result.error;
+
+    // Treatwell leer (Block, falsche URL, keine Eintraege) -> Places-Fallback,
+    // jetzt ebenfalls getypt und im selben Budget.
+    if (pool.length === 0 && isPlacesConfigured()) {
+      await startPlaces();
+      if (pool.length > 0) error = undefined;
+    }
   }
 
-  // Persist Scout Session in DB so search runs are saved forever!
-  const session = await prisma.scoutSession.create({
-    data: {
-      name: `${options.category} in ${options.city}`,
-      searchQuery: options.category,
-      city: options.city,
-      radiusKm: null,
-      filters: JSON.parse(JSON.stringify(options)),
-      resultCount: finalResults.length,
-      createdById: dbUser.id,
-      results: {
-        create: finalResults.map((r) => ({
-          companyName: r.venue.name,
-          address: r.leadDraft.address,
-          city: r.leadDraft.city,
-          phone: r.contacts.phone,
-          website: r.website.url,
-          googleMapsUrl: r.leadDraft.googleMapsUrl,
-          googleRating: r.venue.rating,
-          reviewCount: r.venue.reviewCount,
-          industry: options.category,
-          hasTreatwell: Boolean(r.venue.treatwellUrl),
-          instagramHandle: r.instagramProfile.handle,
-          rawData: JSON.parse(JSON.stringify(r)),
-        })),
-      },
-    },
+  const leads = await prisma.lead.findMany({
+    where: { OR: [{ createdById: userId }, { assignedToId: userId }] },
   });
 
+  const context: ScoutContext = {
+    options,
+    leads,
+    chain: buildChainContext(pool.map((candidate) => candidate.venue), options.city),
+  };
+
+  const prefiltered: Partial<Record<PrefilterReason, number>> = {};
+  const scouted: ScoutResult[] = [];
+  let passing = 0;
+  let stoppedBy: ScoutBudget["stoppedBy"] = "no-more-candidates";
+
+  for (;;) {
+    if (passing >= target) { stoppedBy = "target"; break; }
+    if (scouted.length >= SCOUT_LIMITS.maxScoutedVenues) { stoppedBy = "venues"; break; }
+    if (Date.now() >= deadline) { stoppedBy = "time"; break; }
+
+    const room = Math.min(CONCURRENCY, SCOUT_LIMITS.maxScoutedVenues - scouted.length);
+    const batch: Candidate[] = [];
+    while (batch.length < room && queue.length > 0) {
+      const next = queue.shift()!;
+      const reason = prefilterReason(next, options, context, area);
+      if (reason) {
+        prefiltered[reason] = (prefiltered[reason] ?? 0) + 1;
+        continue;
+      }
+      batch.push(next);
+    }
+
+    if (batch.length === 0) {
+      const cursor = cursors.find((entry) => !entry.done && entry.nextPageToken);
+      if (!cursor) { stoppedBy = "no-more-candidates"; break; }
+      if (placesBudget.remaining === 0) { stoppedBy = "places-calls"; break; }
+      addCandidates(await fetchCursor(cursor), cursor.search);
+      context.chain = buildChainContext(pool.map((candidate) => candidate.venue), options.city);
+      continue;
+    }
+
+    const results = await Promise.all(batch.map((candidate) => scoutVenue(candidate, context)));
+    scouted.push(...results);
+    passing = applyPostFilters(scouted, options).results.length;
+  }
+
+  // Kettenverdacht mit dem ENDGUELTIGEN Pool neu bewerten — spaetere Seiten
+  // koennen weitere Filialen desselben Namens geliefert haben.
+  const finalChain = buildChainContext(pool.map((candidate) => candidate.venue), options.city);
+  const rescored = scouted.map((result) => ({
+    ...result,
+    chain: detectChain({ name: result.venue.name, website: result.website.url }, finalChain),
+  }));
+
+  const { results: finalResults, stages } = applyPostFilters(rescored, options);
+  sortResults(finalResults, options);
+
+  const prefilterTotal = Object.values(prefiltered).reduce((sum, count) => sum + (count ?? 0), 0);
+  const funnel: ScoutFunnel = {
+    found: pool.length,
+    prefiltered: { total: prefilterTotal, byReason: prefiltered },
+    scouted: scouted.length,
+    stages,
+    final: finalResults.length,
+    instagram: countStates(rescored),
+  };
+
+  const budget: ScoutBudget = {
+    scouted: scouted.length,
+    maxScouted: SCOUT_LIMITS.maxScoutedVenues,
+    placesCalls: placesBudget.used,
+    maxPlacesCalls: SCOUT_LIMITS.maxPlacesListCalls,
+    elapsedMs: Date.now() - startedAt,
+    timeBudgetMs: SCOUT_LIMITS.timeBudgetMs,
+    target,
+    stoppedBy,
+    exhausted: finalResults.length < target && (stoppedBy === "venues" || stoppedBy === "places-calls" || stoppedBy === "time"),
+  };
+
+  const radiusApplied: ScoutRadiusKm | null = area.mode === "radius" ? (area.radiusKm as ScoutRadiusKm) : null;
+
+  // Session speichern. Scheitert das, ist der (bezahlte) Lauf trotzdem nicht
+  // verloren — die Ergebnisse gehen mit Hinweis an die Oberflaeche.
+  let sessionId: string | undefined;
+  try {
+    let dbUser = await prisma.user.findUnique({ where: { id: userId } });
+    if (!dbUser) {
+      dbUser = await prisma.user.create({
+        data: { id: userId, email: "scout@scaleevo.at", displayName: "Scout User" },
+      });
+    }
+
+    const session = await prisma.scoutSession.create({
+      data: {
+        name: radiusApplied ? `${options.category} · ${radiusApplied} km um Standort` : `${options.category} in ${options.city}`,
+        searchQuery: options.category,
+        city: options.city,
+        radiusKm: radiusApplied,
+        filters: JSON.parse(JSON.stringify({ ...options, funnel, budget, notices, sourceUrl: url })),
+        resultCount: finalResults.length,
+        createdById: dbUser.id,
+        results: {
+          create: finalResults.map((r) => ({
+            companyName: r.venue.name,
+            address: r.leadDraft.address,
+            city: r.leadDraft.city,
+            phone: r.contacts.phone,
+            website: r.website.url,
+            googleMapsUrl: r.leadDraft.googleMapsUrl,
+            googleRating: r.venue.rating,
+            reviewCount: r.venue.reviewCount,
+            industry: r.leadDraft.industry,
+            hasTreatwell: Boolean(r.venue.treatwellUrl),
+            instagramHandle: r.instagramProfile.handle,
+            // Snapshot-Daten bewusst NICHT persistieren: sie werden beim Laden
+            // frisch aus dem Cache gelesen, sonst zeigte die Session veraltete Werte.
+            rawData: JSON.parse(JSON.stringify({ ...r, instagramInsight: undefined })),
+          })),
+        },
+      },
+    });
+    sessionId = session.id;
+  } catch (persistError) {
+    console.error("[lead-scout] Session konnte nicht gespeichert werden:", persistError);
+    notices.push("Suchlauf konnte nicht gespeichert werden — die Ergebnisse unten sind nur in dieser Ansicht verfügbar.");
+  }
+
+  const withInsights = await attachInstagramInsights(finalResults, userId, leads);
+  if (withInsights.notice) notices.push(withInsights.notice);
+
   return {
-    sessionId: session.id,
+    sessionId,
     sourceUrl: url,
-    totalFound: venues.length,
-    filteredCount: filtered.length,
-    results: finalResults,
+    totalFound: pool.length,
+    results: withInsights.results,
     treatsWellError: error,
-    placesConfigured: Boolean(process.env.GOOGLE_PLACES_API_KEY),
+    notices,
+    funnel,
+    budget,
+    radiusApplied,
+    placesConfigured: isPlacesConfigured(),
   };
 }
