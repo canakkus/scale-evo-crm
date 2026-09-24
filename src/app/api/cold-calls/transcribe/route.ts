@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getOptionalUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { findAccessibleLead } from "@/lib/workspace";
 import { transcribeAndAnalyzeCall } from "@/services/groq";
 
 export async function POST(request: Request) {
@@ -30,7 +31,7 @@ export async function POST(request: Request) {
     // Get lead if provided
     let lead = null;
     if (leadId) {
-      lead = await prisma.lead.findUnique({ where: { id: leadId } });
+      lead = await findAccessibleLead(user, leadId);
     }
 
     const targetCompanyName = lead?.companyName || companyNameInput || file.name;

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { mapPlaceToSuggestion, type RawPlace } from "@/lib/places";
 import { parseCoordinates } from "@/lib/geo";
 import { pushToAppleEcosystem, isAppleSyncUser } from "@/services/apple-bridge";
+import { findAccessibleLead, leadScope } from "@/lib/workspace";
 
 async function getPlaceDetailsFromUrl(url: string, defaultName: string): Promise<RawPlace | null> {
   const apiKey = process.env.GOOGLE_PLACES_API_KEY;
@@ -74,8 +75,8 @@ export async function GET(
     }
 
     const { id } = await params;
-    const lead = await prisma.lead.findUnique({
-      where: { id },
+    const lead = await prisma.lead.findFirst({
+      where: { id, ...(await leadScope(user)) },
       include: {
         createdBy: { select: { id: true, displayName: true, email: true } },
         assignedTo: { select: { id: true, displayName: true, email: true } },
@@ -84,7 +85,8 @@ export async function GET(
           include: { createdBy: { select: { displayName: true } } },
         },
         audits: { orderBy: { createdAt: "desc" }, take: 1 },
-        tasks: { orderBy: { createdAt: "desc" } },
+        // Tasks sind persoenlich — auch am geteilten Lead nur die eigenen.
+        tasks: { where: { userId: user.id }, orderBy: { createdAt: "desc" } },
         callRecordings: { orderBy: { createdAt: "desc" } },
       },
     });
@@ -113,7 +115,7 @@ export async function PATCH(
     const { id } = await params;
     const data = await request.json();
 
-    const existingLead = await prisma.lead.findUnique({ where: { id } });
+    const existingLead = await findAccessibleLead(user, id);
     if (!existingLead) {
       return NextResponse.json({ error: "Lead nicht gefunden." }, { status: 404 });
     }
@@ -294,6 +296,9 @@ export async function DELETE(
     }
 
     const { id } = await params;
+    if (!(await findAccessibleLead(user, id))) {
+      return NextResponse.json({ error: "Lead nicht gefunden." }, { status: 404 });
+    }
     await prisma.lead.delete({ where: { id } });
     return NextResponse.json({ success: true });
   } catch (error) {

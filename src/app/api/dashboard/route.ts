@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getOptionalUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { leadScope as workspaceLeadScope } from "@/lib/workspace";
 
 export async function GET() {
   try {
@@ -9,12 +10,7 @@ export async function GET() {
       return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
     }
 
-    const leadScope = {
-      OR: [
-        { createdById: user.id },
-        { assignedToId: user.id },
-      ],
-    };
+    const leadScope = await workspaceLeadScope(user);
 
     const [
       totalLeads,

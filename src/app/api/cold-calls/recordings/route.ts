@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getOptionalUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { findAccessibleLead } from "@/lib/workspace";
 
 export async function GET(request: Request) {
   try {
@@ -12,8 +13,16 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const leadId = searchParams.get("leadId");
 
-    const where: any = { createdById: user.id };
-    if (leadId) where.leadId = leadId;
+    // Ohne leadId: eigene Aufnahmen. Mit leadId: alle Aufnahmen dieses Leads,
+    // sofern er im Arbeitsbereich liegt — sonst sieht der Partner die Calls
+    // am geteilten Lead nicht.
+    let where: any = { createdById: user.id };
+    if (leadId) {
+      if (!(await findAccessibleLead(user, leadId))) {
+        return NextResponse.json({ recordings: [] });
+      }
+      where = { leadId };
+    }
 
     const recordings = await prisma.callRecording.findMany({
       where,

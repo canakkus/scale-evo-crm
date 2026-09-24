@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getOptionalUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { leadScope } from "@/lib/workspace";
 import { chatWithAssistant, type CrmContext } from "@/services/groq";
 
 export async function GET() {
@@ -44,12 +45,7 @@ export async function POST(request: Request) {
     }
 
     // Build CRM Context Snapshot (scoped to user)
-    const userScope = {
-      OR: [
-        { createdById: dbUser.id },
-        { assignedToId: dbUser.id },
-      ],
-    };
+    const userScope = await leadScope(dbUser);
 
     const [totalLeads, openFollowUps, openTasks, topLeads, recentInteractions, chatHistory] = await Promise.all([
       prisma.lead.count({ where: userScope }),

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getOptionalUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { leadScope } from "@/lib/workspace";
 import { ensureDbUser } from "@/lib/outreach-user";
 import { normalizeInstagramHandle } from "@/lib/utils";
 import { APIFY_MAX_BATCH, getHourlyFetchLimit } from "@/services/instagram/apify-provider";
@@ -62,7 +63,7 @@ export async function POST(request: Request) {
     const leads = await prisma.lead.findMany({
       where: {
         id: { in: leadIds },
-        OR: [{ createdById: dbUser.id }, { assignedToId: dbUser.id }],
+        ...(await leadScope(dbUser)),
       },
       select: { id: true, companyName: true, instagram: true, website: true, industry: true, city: true },
     });

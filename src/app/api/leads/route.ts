@@ -5,6 +5,7 @@ import type { LeadStatus, Priority, WebPresence } from "@prisma/client";
 import { INDUSTRIES } from "@/lib/constants";
 import { parseCoordinates } from "@/lib/geo";
 import { pushToAppleEcosystem, isAppleSyncUser } from "@/services/apple-bridge";
+import { leadScope } from "@/lib/workspace";
 
 export async function GET(request: Request) {
   try {
@@ -26,14 +27,8 @@ export async function GET(request: Request) {
     const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "25", 10)));
 
-    const andClauses: any[] = [
-      {
-        OR: [
-          { createdById: user.id },
-          { assignedToId: user.id },
-        ],
-      },
-    ];
+    const scope = await leadScope(user);
+    const andClauses: any[] = [scope];
 
     if (search) {
       andClauses.push({
@@ -131,7 +126,7 @@ export async function GET(request: Request) {
       prisma.lead.findMany({
         where: {
           industry: { not: null },
-          OR: [{ createdById: user.id }, { assignedToId: user.id }],
+          ...scope,
         },
         distinct: ["industry"],
         select: { industry: true },

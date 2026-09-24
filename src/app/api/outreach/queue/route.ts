@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getOptionalUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { leadScope } from "@/lib/workspace";
 import { ensureDbUser } from "@/lib/outreach-user";
 import { WARMUP_TASK_PREFIX, warmupStateFrom } from "@/lib/outreach-shared";
 import { normalizeInstagramHandle } from "@/lib/utils";
@@ -13,7 +14,7 @@ export async function GET() {
     if (!user) return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
 
     const dbUser = await ensureDbUser(user);
-    const mine = { OR: [{ createdById: dbUser.id }, { assignedToId: dbUser.id }] };
+    const mine = await leadScope(dbUser);
 
     const leads = await prisma.lead.findMany({
       where: {

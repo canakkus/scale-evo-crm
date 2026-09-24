@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getOptionalUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { leadScope } from "@/lib/workspace";
 import { ensureDbUser } from "@/lib/outreach-user";
 import { readSnapshotSafe } from "@/services/instagram/snapshot-cache";
 import { hasSolidWebsite } from "@/services/instagram/enrichment";
@@ -31,7 +32,7 @@ export async function POST(request: Request) {
     const dbUser = await ensureDbUser(user);
 
     const lead = await prisma.lead.findFirst({
-      where: { id: leadId, OR: [{ createdById: dbUser.id }, { assignedToId: dbUser.id }] },
+      where: { id: leadId, ...(await leadScope(dbUser)) },
     });
     if (!lead) return NextResponse.json({ error: "Lead nicht gefunden." }, { status: 404 });
 

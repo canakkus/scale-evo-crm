@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getOptionalUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { leadScope as workspaceLeadScope } from "@/lib/workspace";
 
 /**
  * Datenquelle der Lead-Karte. Genau EINE Query, `select`-Whitelist, kein
@@ -38,9 +39,7 @@ export async function GET() {
 
     // Wortgleiche Mandanten-Klausel wie in GET /api/leads.
     const leads = await prisma.lead.findMany({
-      where: {
-        OR: [{ createdById: user.id }, { assignedToId: user.id }],
-      },
+      where: await workspaceLeadScope(user),
       select: {
         id: true,
         companyName: true,

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getOptionalUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { findAccessibleLead } from "@/lib/workspace";
 import { detectRestaurantMenu } from "@/lib/menu-detector";
 
 export async function POST(
@@ -14,7 +15,7 @@ export async function POST(
     }
 
     const { id } = await params;
-    const lead = await prisma.lead.findUnique({ where: { id } });
+    const lead = await findAccessibleLead(user, id);
 
     if (!lead) {
       return NextResponse.json({ error: "Lead nicht gefunden." }, { status: 404 });

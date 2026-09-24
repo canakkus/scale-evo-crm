@@ -1,5 +1,6 @@
 import { WebPresence } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { leadScopeForUserId } from "@/lib/workspace";
 import { mapPlaceToSuggestion, type PlaceSuggestion, type RawPlace } from "@/lib/places";
 import { instagramProfileUrl, normalizeInstagramHandle, normalizePhone, normalizeUrl } from "@/lib/utils";
 import {
@@ -645,7 +646,7 @@ export async function runLeadScout(rawOptions: LeadScoutOptions, userId: string)
   }
 
   const leads = await prisma.lead.findMany({
-    where: { OR: [{ createdById: userId }, { assignedToId: userId }] },
+    where: await leadScopeForUserId(userId),
   });
 
   const context: ScoutContext = {

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { leadScopeForUserId } from "@/lib/workspace";
 import { mapPlaceToSuggestion, type PlaceSuggestion, type RawPlace } from "@/lib/places";
 import { normalizePhone, normalizeUrl } from "@/lib/utils";
 import { detectRestaurantMenu, type MenuDetectionResult } from "@/lib/menu-detector";
@@ -108,6 +109,9 @@ export async function runRestaurantScout(
     });
   }
 
+  // Einmal vor der Schleife — pro Treffer waeren das zwei DB-Abfragen mehr.
+  const scope = await leadScopeForUserId(userId);
+
   // Step 3: Run Menu Detection on candidates in batches of 5
   const BATCH_SIZE = 5;
   const menuResults: Map<string, MenuDetectionResult> = new Map();
@@ -150,12 +154,7 @@ export async function runRestaurantScout(
     const existingLead = await prisma.lead.findFirst({
       where: {
         AND: [
-          {
-            OR: [
-              { createdById: userId },
-              { assignedToId: userId },
-            ],
-          },
+          scope,
           {
             OR: [
               ...(normMaps ? [{ googleMapsUrl: normMaps }] : []),

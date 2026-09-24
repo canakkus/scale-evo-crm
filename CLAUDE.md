@@ -39,6 +39,9 @@
 ### 2. Multi-Tenancy & Workspace Isolation
 - Leads, pipeline stages, dashboard metrics, tasks, scout sessions, and AI context are scoped per user (`createdById: user.id` or `assignedToId: user.id`).
 - When a new user logs in, they start with a clean isolated workspace.
+- **Geteilte Arbeitsbereiche (`src/lib/workspace.ts`):** `SHARED_WORKSPACE_EMAILS` verknüpft Accounts (Mitglieder mit `,`, Gruppen mit `;`), die gegenseitig **alle** Leads sehen und bearbeiten — inklusive Interaktionen, Aufnahmen und Audits. Tasks, Scout-Sessions und DM-Entwürfe bleiben persönlich.
+- **Lead-Zugriff ausschließlich über `leadScope()` / `findAccessibleLead()`** — nie selbst `OR: [{ createdById }, { assignedToId }]` bauen, nie `findUnique({ where: { id } })` auf einen Lead ohne Scope. Routen mit Lead-ID antworten bei fremden Leads mit 404. Achtung beim Spreaden: `leadScope()` liefert ein Top-Level-`OR`; ein zweites `OR` im selben Objekt überschreibt es still — dann in `AND: [...]` kapseln.
+- Die Gruppe gilt nur, wenn Session-E-Mail und DB-E-Mail des Accounts übereinstimmen. `SESSION_SECRET` hat **keinen** Rückfall auf öffentliche Keys; fehlt es in Produktion, schlägt der Login fehl (gewollt).
 
 ### 3. Groq AI & Automatic Key Rotation (`src/lib/groq-key-manager.ts` & `src/services/groq.ts`)
 - **Key Rotation System:** Supports `GROQ_API_KEY_1` through `GROQ_API_KEY_10` (or single `GROQ_API_KEY`).

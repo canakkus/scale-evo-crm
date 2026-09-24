@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getOptionalUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { findAccessibleLead } from "@/lib/workspace";
 
 export async function PATCH(
   request: Request,
@@ -20,7 +21,8 @@ export async function PATCH(
     }
 
     const existing = await prisma.interaction.findUnique({ where: { id } });
-    if (!existing) {
+    // Nur Interaktionen an Leads, die dieser Account sehen darf.
+    if (!existing || !(await findAccessibleLead(user, existing.leadId))) {
       return NextResponse.json({ error: "Interaktion nicht gefunden" }, { status: 404 });
     }
 

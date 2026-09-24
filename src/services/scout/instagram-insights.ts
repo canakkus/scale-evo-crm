@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { leadScopeForUserId } from "@/lib/workspace";
 import { normalizeInstagramHandle } from "@/lib/utils";
 import type { InstagramInsight, InstagramSnapshotView, ScoutResult } from "@/lib/lead-scout-types";
 import { hasSolidWebsite } from "@/services/instagram/enrichment";
@@ -72,7 +73,7 @@ function indexLeadsByHandle(leads: LeadRef[]): Map<string, LeadRef> {
 
 export async function loadUserInstagramLeads(userId: string): Promise<LeadRef[]> {
   return prisma.lead.findMany({
-    where: { OR: [{ createdById: userId }, { assignedToId: userId }], instagram: { not: null } },
+    where: { ...(await leadScopeForUserId(userId)), instagram: { not: null } },
     select: { id: true, instagram: true, acquisitionType: true },
   });
 }
