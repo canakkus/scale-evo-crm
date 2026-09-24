@@ -473,7 +473,7 @@ export function LeadsTable() {
                         <div className="flex flex-col gap-2 items-start">
                           <StatusBadge status={lead.status} />
                           <span
-                            className="text-xs font-medium px-2 py-1 rounded-md"
+                            className="text-xs font-medium px-2 py-1 rounded-md whitespace-nowrap"
                             style={
                               lead.acquisitionType === "DM"
                                 ? { background: "var(--channel-dm-bg)", color: "var(--channel-dm-tx)" }

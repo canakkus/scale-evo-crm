@@ -1228,7 +1228,7 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
               ) : activeTab === "timeline" ? (
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 items-start">
                   {/* Left sub-column: Notes */}
-                  <div className="space-y-3">
+                  <div className="min-w-0 space-y-3">
                     <div className="flex items-center justify-between">
                       <label className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--text-2)" }}>
                         Notizen & Besonderheiten
@@ -1253,7 +1253,7 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                   </div>
 
                   {/* Right sub-column: Timeline */}
-                  <div className="space-y-4 xl:border-l xl:pl-8" style={{ borderColor: "var(--border)" }}>
+                  <div className="min-w-0 space-y-4 xl:border-l xl:pl-8" style={{ borderColor: "var(--border)" }}>
                     <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--text-2)" }}>
                       Kontakt-Timeline ({lead.interactions?.length || 0})
                     </h3>
@@ -1274,7 +1274,7 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                         type="text"
                         required
                         placeholder="Neue Interaktion protokollieren..."
-                        className="flex-1 rounded-md px-3 py-1.5 text-xs border outline-none"
+                        className="min-w-0 flex-1 rounded-md px-3 py-1.5 text-xs border outline-none"
                         style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
                         value={newInteractionNote}
                         onChange={(e) => setNewInteractionNote(e.target.value)}
@@ -1282,7 +1282,7 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                       <button
                         type="submit"
                         disabled={addingInteraction}
-                        className="px-4 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1 transition-all active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed disabled:active:scale-100"
+                        className="shrink-0 px-4 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1 transition-all active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed disabled:active:scale-100"
                         style={{ background: "var(--accent)", color: "var(--bg)" }}
                       >
                         {addingInteraction ? (
