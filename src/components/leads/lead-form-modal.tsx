@@ -158,8 +158,8 @@ export function LeadFormModal({ isOpen, onClose, onSuccess }: LeadFormModalProps
                 value={formData.acquisitionType}
                 onChange={(e) => setFormData({ ...formData, acquisitionType: e.target.value as AcquisitionType })}
               >
-                <option value="CALL">📞 Cold Call</option>
-                <option value="WALK_IN">🚶‍♂️ Walk-In</option>
+                <option value="CALL">Cold Call</option>
+                <option value="WALK_IN">Walk-In</option>
               </select>
             </div>
 
@@ -244,6 +244,18 @@ export function LeadFormModal({ isOpen, onClose, onSuccess }: LeadFormModalProps
                 style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
                 value={formData.website}
                 onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium mb-1" style={{ color: "var(--text-2)" }}>Treatwell Link</label>
+              <input
+                type="url"
+                placeholder="https://www.treatwell.at/ort/..."
+                className="w-full rounded-md px-3 py-2 text-sm border outline-none"
+                style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
+                value={formData.treatwellUrl}
+                onChange={(e) => setFormData({ ...formData, treatwellUrl: e.target.value })}
               />
             </div>
 

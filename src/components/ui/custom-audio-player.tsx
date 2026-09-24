@@ -47,6 +47,21 @@ export function CustomAudioPlayer({
   const [hoverPosition, setHoverPosition] = useState(0);
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
   const [showVolumeSlider, setShowVolumeSlider] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setReducedMotion(mediaQuery.matches);
+    const handler = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener("change", handler);
+      return () => mediaQuery.removeEventListener("change", handler);
+    } else if ((mediaQuery as any).addListener) {
+      (mediaQuery as any).addListener(handler);
+      return () => (mediaQuery as any).removeListener(handler);
+    }
+  }, []);
 
   // Format seconds to mm:ss or hh:mm:ss
   const formatTime = (timeInSeconds: number) => {
@@ -242,7 +257,7 @@ export function CustomAudioPlayer({
                   height: isPlaying ? `${Math.max(20, (height + idx * 10) % 100)}%` : "20%",
                   background: isPlaying ? "var(--status-warm-tx)" : "var(--text-3)",
                   opacity: isPlaying ? 0.9 : 0.4,
-                  animation: isPlaying ? `pulse 0.8s ease-in-out infinite alternate ${idx * 0.15}s` : "none",
+                  animation: isPlaying && !reducedMotion ? `pulse 0.8s ease-in-out infinite alternate ${idx * 0.15}s` : "none",
                 }}
               />
             ))}
@@ -281,7 +296,7 @@ export function CustomAudioPlayer({
           >
             {/* Scrubber Thumb */}
             <div
-              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3.5 h-3.5 rounded-full bg-white shadow-md border-2 border-[#121212] transition-transform scale-90 group-hover:scale-125"
+              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3.5 h-3.5 rounded-full bg-white shadow-md border-2 border-[#121212] transition-transform scale-90 "
             />
           </div>
 
@@ -376,7 +391,7 @@ export function CustomAudioPlayer({
               color: "var(--text-2)",
             }}
           >
-            <RotateCcw className="w-4 h-4 transition-transform group-hover:-rotate-12" />
+            <RotateCcw className="w-4 h-4 transition-transform " />
             <span className="absolute -bottom-1 text-[8px] font-bold font-mono tracking-tighter" style={{ color: "var(--text-3)" }}>
               10
             </span>
@@ -420,7 +435,7 @@ export function CustomAudioPlayer({
               color: "var(--text-2)",
             }}
           >
-            <RotateCw className="w-4 h-4 transition-transform group-hover:rotate-12" />
+            <RotateCw className="w-4 h-4 transition-transform " />
             <span className="absolute -bottom-1 text-[8px] font-bold font-mono tracking-tighter" style={{ color: "var(--text-3)" }}>
               10
             </span>

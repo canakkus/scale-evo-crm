@@ -48,14 +48,21 @@ function pickResult(links: Array<{ title: string; href: string }>, venueName: st
   return null;
 }
 
+const SEARCH_HEADERS = {
+  "User-Agent": USER_AGENT,
+  Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+  "Accept-Language": "de-DE,de;q=0.9",
+};
+/** Kurz gehalten: der Lead Scout ruft das pro Treffer auf und laeuft auf Vercel mit maxDuration. */
+const SEARCH_TIMEOUT_MS = 3000;
+
+/** null = nicht beantwortet (Block/Timeout/HTTP-Fehler), [] = beantwortet, aber ohne Treffer. */
 async function searchDuckDuckGo(query: string): Promise<Array<{ title: string; href: string }> | null> {
   const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 8000);
   try {
     const response = await fetch(url, {
-      headers: { "User-Agent": USER_AGENT, Accept: "text/html" },
-      signal: controller.signal,
+      headers: SEARCH_HEADERS,
+      signal: AbortSignal.timeout(SEARCH_TIMEOUT_MS),
       cache: "no-store",
     });
     // DuckDuckGo beantwortet Bot-Verdacht mit HTTP 202 und einer Captcha-Seite
@@ -63,45 +70,41 @@ async function searchDuckDuckGo(query: string): Promise<Array<{ title: string; h
     if (!response.ok || response.status === 202) return null;
     const html = await response.text();
     const $ = cheerio.load(html);
-    return $(".result")
-      .map((_, element) => {
-        const link = $(element).find(".result__a").first();
-        return { title: link.text().trim(), href: link.attr("href") ?? "" };
-      })
-      .get();
+    const links: Array<{ title: string; href: string }> = [];
+    $(".result").each((_, element) => {
+      const link = $(element).find(".result__a").first();
+      const title = link.text().trim();
+      const href = link.attr("href") ?? "";
+      if (title && href) links.push({ title, href });
+    });
+    return links;
   } catch {
     return null;
-  } finally {
-    clearTimeout(timeout);
   }
 }
 
 async function searchBing(query: string): Promise<Array<{ title: string; href: string }> | null> {
   const url = `https://www.bing.com/search?q=${encodeURIComponent(query)}&count=10&setlang=de`;
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 8000);
   try {
     const response = await fetch(url, {
-      headers: { "User-Agent": USER_AGENT, "Accept-Language": "de-DE,de;q=0.9" },
-      signal: controller.signal,
+      headers: SEARCH_HEADERS,
+      signal: AbortSignal.timeout(SEARCH_TIMEOUT_MS),
       cache: "no-store",
     });
     if (!response.ok) return null;
     const html = await response.text();
     const $ = cheerio.load(html);
     const links: Array<{ title: string; href: string }> = [];
-    $("li.b_algo h2 a, h2 a, a[href^='http']").each((_, element) => {
+    // Nur echte organische Treffer — breitere Selektoren sammeln Navigations- und Werbelinks.
+    $("li.b_algo h2 a").each((_, element) => {
       const href = $(element).attr("href") ?? "";
       const title = $(element).text().trim();
       if (!href || !title) return;
-      if (/bing\.com|microsoft|msn|go\.microsoft|bingj\.com/i.test(href)) return;
       links.push({ title: title.slice(0, 120), href });
     });
     return links;
   } catch {
     return null;
-  } finally {
-    clearTimeout(timeout);
   }
 }
 

@@ -7,7 +7,6 @@ import { AlertTriangle, AtSign, History, Loader2, MapPin, Navigation, Radar, Set
 import { cn, timeAgo } from "@/lib/utils";
 import { useUserLocation } from "@/lib/location-context";
 import {
-  RESTAURANT_CATEGORIES,
   SCOUT_LIMITS,
   instagramStateOf,
   type LeadScoutResponse,
@@ -21,6 +20,14 @@ import { InstagramResults } from "./instagram-results";
 import { ScoutFunnel } from "./scout-funnel";
 import { ScoutResultCard } from "./scout-result-card";
 import { Segment, ToggleChip } from "./scout-ui";
+
+const TREATWELL_CATEGORIES = ["Barber", "Friseur", "Spa & Wellness", "Nagelstudio", "Kosmetik", "Massage", "Wimpern"];
+
+const CITIES = [
+  "Wien", "Graz", "Linz", "Salzburg", "Innsbruck", "Klagenfurt", "Villach", "Wels", "St. Pölten", "Dornbirn",
+  "Berlin", "München", "Hamburg", "Köln", "Frankfurt", "Stuttgart", "Düsseldorf", "Leipzig",
+  "Zürich", "Genf", "Basel", "Bern",
+];
 
 const CATEGORIES = [
   { label: "Alle Kategorien (Beauty & Gastro)", slug: "Alle" },
@@ -91,8 +98,10 @@ export function LeadScoutComponent({ initialTab = "standard" }: { initialTab?: S
 
   const [category, setCategory] = useState("Barber");
   const [city, setCity] = useState("Wien");
-  const isRestaurant = RESTAURANT_CATEGORIES.includes(category) || category === "Alle";
-  const source = isRestaurant ? "places" : "treatwell";
+  // Treatwell nur fuer die Beauty-Nischen, die es dort gibt. Freie Eingaben
+  // ("Shisha Bar") und Gastro laufen ueber Places.
+  const isTreatwell = TREATWELL_CATEGORIES.includes(category);
+  const source = isTreatwell ? "treatwell" : "places";
 
   const [minRating, setMinRating] = useState("4.0");
   const [minReviews, setMinReviews] = useState("10");
@@ -466,17 +475,23 @@ export function LeadScoutComponent({ initialTab = "standard" }: { initialTab?: S
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
             <div>
               <label htmlFor="scout-category" className="block text-xs font-medium mb-1" style={{ color: "var(--text-2)" }}>Nische / Kategorie</label>
-              <select
+              {/* Freitext mit Vorschlaegen: eigene Nischen ("Shisha Bar") laufen
+                  als ungetypte Places-Suche (categorySearchesFor). */}
+              <input
                 id="scout-category"
-                className="w-full rounded-md px-3 py-2 text-sm border outline-none cursor-pointer"
+                type="text"
+                list="scout-category-list"
+                className="w-full rounded-md px-3 py-2 text-sm border outline-none"
                 style={INPUT_STYLE}
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-              >
+                placeholder="z. B. Barber, Shisha Bar"
+              />
+              <datalist id="scout-category-list">
                 {CATEGORIES.map((item) => (
                   <option key={item.slug} value={item.slug}>{item.label}</option>
                 ))}
-              </select>
+              </datalist>
             </div>
 
             <div>
@@ -489,7 +504,13 @@ export function LeadScoutComponent({ initialTab = "standard" }: { initialTab?: S
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
                 placeholder="z. B. Wien"
+                list="scout-city-list"
               />
+              <datalist id="scout-city-list">
+                {CITIES.map((item) => (
+                  <option key={item} value={item} />
+                ))}
+              </datalist>
             </div>
 
             <div>

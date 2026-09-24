@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { getOptionalUser } from "@/lib/auth";
 import { runRestaurantScout } from "@/services/restaurant-scout";
 
+export const maxDuration = 60;
+export const dynamic = "force-dynamic";
+
 export async function POST(request: Request) {
   try {
     const user = await getOptionalUser();

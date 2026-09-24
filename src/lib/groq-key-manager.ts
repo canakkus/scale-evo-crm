@@ -214,7 +214,7 @@ export async function withGroqClient<T>(
       const status = manager.getStatus();
       const waitSec = status.nextAvailableIn ?? 65;
       throw new Error(
-        `⚠️ Alle ${status.totalKeys} Groq API Keys sind aktuell rate-limited. ` +
+        `Achtung: Alle ${status.totalKeys} Groq API Keys sind aktuell rate-limited. ` +
         `Bitte warte ~${waitSec} Sekunden und versuche es erneut.`
       );
     }

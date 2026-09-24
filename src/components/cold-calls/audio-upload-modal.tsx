@@ -18,6 +18,16 @@ export function AudioUploadModal({ isOpen, onClose, onSuccess }: AudioUploadModa
   const [error, setError] = useState("");
 
   useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    if (isOpen) {
+      window.addEventListener("keydown", handleKeyDown);
+    }
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+
+  useEffect(() => {
     if (isOpen) {
       fetch("/api/leads?limit=100")
         .then((res) => res.json())
@@ -115,7 +125,7 @@ export function AudioUploadModal({ isOpen, onClose, onSuccess }: AudioUploadModa
       >
         <div className="flex items-center justify-between px-6 py-4 border-b shrink-0" style={{ borderColor: "var(--border)" }}>
           <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5" style={{ color: "var(--status-warm-tx)" }} />
+            <Upload className="w-5 h-5" style={{ color: "var(--status-warm-tx)" }} />
             <h2 className="font-heading text-lg font-bold" style={{ color: "var(--text)" }}>
               Call-Aufnahme hochladen
             </h2>
@@ -171,7 +181,7 @@ export function AudioUploadModal({ isOpen, onClose, onSuccess }: AudioUploadModa
           {/* Lead Selector */}
           <div>
             <label className="block text-xs font-medium mb-1" style={{ color: "var(--text-2)" }}>
-              Mit Lead verknüpfen (Optional)
+              Lead (optional)
             </label>
             <select
               className="w-full rounded-md px-3 py-2 text-xs border outline-none cursor-pointer"
@@ -183,7 +193,7 @@ export function AudioUploadModal({ isOpen, onClose, onSuccess }: AudioUploadModa
                 if (selected) setCompanyName(selected.companyName);
               }}
             >
-              <option value="">— Nicht zugeordnet / Allgemein —</option>
+              <option value="">Ohne Zuordnung</option>
               {leads.map((lead) => (
                 <option key={lead.id} value={lead.id}>
                   {lead.companyName} ({lead.city || "—"})
@@ -195,13 +205,13 @@ export function AudioUploadModal({ isOpen, onClose, onSuccess }: AudioUploadModa
           {!leadId && (
             <div>
               <label className="block text-xs font-medium mb-1" style={{ color: "var(--text-2)" }}>
-                Firmenname / Bezeichnung (Optional)
+                Firmenname (optional)
               </label>
               <input
                 type="text"
                 className="w-full rounded-md px-3 py-2 text-xs border outline-none"
                 style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
-                placeholder='z. B. "Erstgespräch mit Salon X"'
+                placeholder="Name der Firma"
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
               />
@@ -232,12 +242,12 @@ export function AudioUploadModal({ isOpen, onClose, onSuccess }: AudioUploadModa
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Gemini analysiert Call…
+                  Analysieren…
                 </>
               ) : (
                 <>
                   <Upload className="w-4 h-4" />
-                  Transkribieren & Analysieren
+                  Audio analysieren
                 </>
               )}
             </button>

@@ -2,6 +2,7 @@ import { GoogleGenerativeAI, type GenerativeModel, SchemaType } from "@google/ge
 import { prisma } from "@/lib/prisma";
 import { runLeadScout } from "./lead-scout";
 import { runRestaurantScout } from "./restaurant-scout";
+import { pushToAppleEcosystem, isAppleSyncUser } from "@/services/apple-bridge";
 
 // Singleton Gemini client
 let _client: GoogleGenerativeAI | null = null;
@@ -62,12 +63,26 @@ export async function transcribeAndAnalyzeCall(
   const model = getFlashModel();
   const context = companyName ? `Der Call war mit ${companyName}.` : "";
 
-  const prompt = `Du bist ein Vertriebsassistent und Rhetorik-Coach. ${context}
+  const prompt = `Du bist ein hochpräziser Vertriebsassistent und Call-Analyst für B2B Cold Calls. ${context}
 
-Analysiere diesen Verkaufscall und antworte NUR mit gültigem JSON ohne Markdown-Blöcke:
+STRIKTE ROLLEN- UND SPRECHERERKENNUNG (CRITICAL - ROLE DISAMBIGUATION):
+In jedem Verkaufs-/Telefon-Call gibt es ZWEI fest definierte Parteien. Verwechsle deren Rollen NIEMALS:
+
+1. **[Anrufer / Verkäufer]** (z.B. Can / Scale Evo Vertrieb):
+   - Der Anrufer startet den Pitch, stellt sich namentlich vor ("Hier ist Can...", "Ich rufe an von..."), pitched Produkte/Software/Dienstleistungen, stellt Qualifizierungsfragen, behandelt Einwände und schlägt Termine vor.
+2. **[Kunde / Ansprechpartner]** (z.B. Inhaber/Mitarbeiter bei "${companyName || 'dem angerufenen Unternehmen'}"):
+   - Der Angerufene hebt ab (oft mit Firmennamen z.B. "${companyName || 'Firma XYZ'}, Guten Tag" oder "Ja bitte?"), antwortet auf Fragen, äußert Einwände ("keine Zeit", "haben schon eine Agentur", "schicken Sie Unterlagen") oder nimmt Termine an.
+
+CHRONOLOGISCHE REGELN FÜR SPRECHERWECHSEL:
+- REGEL 1 (ABHEBEN): Wer das Telefon abhebt (erste 1-2 Sätze), ist ZWINGEND der **[Kunde / Ansprechpartner]**.
+- REGEL 2 (INTRO & PITCH): Wer danach grüßt, seinen Namen/Firma nennt ("Guten Tag, hier ist Can von Scale Evo...") und das Thema anspricht, ist ZWINGEND der **[Anrufer / Verkäufer]**.
+- REGEL 3 (KONSISTENZ): Ändere die Sprecherbezeichnung NIEMALS mitten im Gespräch. Wer einmal Anrufer ist, bleibt das ganze Gespräch lang Anrufer.
+- REGEL 4 (RHETORIK-FEEDBACK): Das "aiFeedback" (Redegeschwindigkeit, Füllwörter, Tonfall, Tipps) analysiert AUSSCHLIESSLICH die Rhetorik des **[Anrufer / Verkäufer]** (den Vertriebler), NICHT die des Kunden!
+
+Analysiere diesen Verkaufscall und antworte AUSSCHLIESSLICH mit gültigem JSON ohne Markdown-Blöcke:
 
 {
-  "transcription": "vollständige Transkription des Calls",
+  "transcription": "Vollständiges Gespräch als sauber formatierter Dialog (z.B. [Anrufer / Verkäufer]: ...\\n\\n[Kunde / Ansprechpartner]: ...)",
   "summary": "kurze Zusammenfassung in 2-3 Sätzen",
   "nextSteps": ["konkrete nächste Schritte als Array"],
   "sentiment": "POSITIVE|NEUTRAL|NEGATIVE|MIXED",
@@ -78,10 +93,10 @@ Analysiere diesen Verkaufscall und antworte NUR mit gültigem JSON ohne Markdown
     "interestLevel": "HIGH|MEDIUM|LOW|NONE"
   },
   "aiFeedback": {
-    "pace": "Redegeschwindigkeit und Rhythmus des Anrufers (z.B. 'Ruhig und kontrolliert', 'Etwas zu schnell')",
-    "stuttering": "Verwendung von Füllwörtern wie 'äh', 'öhm' oder Stottern (z.B. 'Flüssig, kaum Füllwörter', 'Häufiges Äh-Sagen')",
-    "tone": "Tonfall und Gelassenheit des Anrufers (z.B. 'Sehr gelassen und selbstbewusst', 'Etwas nervös/unsicher')",
-    "tips": ["Konkrete Rhetorik-Tipps zur Verbesserung als Array (z.B. 'Mehr Sprechpausen einbauen')"]
+    "pace": "Redegeschwindigkeit und Rhythmus des Verkäufers",
+    "stuttering": "Verwendung von Füllwörtern wie 'äh', 'öhm' oder Stottern beim Verkäufer",
+    "tone": "Tonfall und Gelassenheit des Verkäufers",
+    "tips": ["Konkrete Rhetorik- und Vertriebstipps für den Verkäufer als Array"]
   }
 }`;
 
@@ -375,13 +390,35 @@ export async function executeAssistantTool(name: string, args: any, userId: stri
         });
 
         if (leadId && category === "FOLLOW_UP") {
-          await prisma.lead.update({
+          const updatedLead = await prisma.lead.update({
             where: { id: leadId },
             data: {
               status: "FOLLOW_UP",
               ...(dueAt && { nextFollowUpAt: new Date(dueAt) }),
             },
           });
+
+          if (dueAt) {
+            const userRecord = await prisma.user.findUnique({
+              where: { id: userId },
+              select: { email: true },
+            });
+            if (userRecord && isAppleSyncUser(userRecord.email)) {
+              pushToAppleEcosystem({
+                userEmail: userRecord.email,
+                title: `Follow-up: ${updatedLead.companyName}`,
+                notes: `AI Task: ${title}`,
+                dueDate: new Date(dueAt),
+                leadId: updatedLead.id,
+                leadCompany: updatedLead.companyName,
+                leadPhone: updatedLead.phone,
+                leadAddress: [updatedLead.address, updatedLead.city].filter(Boolean).join(", "),
+                durationMinutes: 10,
+              }).catch((err) => {
+                console.error("[gemini.createTask] Apple sync error:", err);
+              });
+            }
+          }
         }
 
         return { success: true, taskId: task.id, title: task.title };

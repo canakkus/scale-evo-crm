@@ -152,38 +152,34 @@ export function TasksComponent() {
 
   return (
     <div className="space-y-6">
-      {/* Top Banner / Actions */}
-      <div
-        className="rounded-xl border p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm"
-        style={{ background: "var(--surface)", borderColor: "var(--border)" }}
-      >
+      {/* Top Banner / Actions - Apple HIG Style */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-4 border-b" style={{ borderColor: "var(--border)" }}>
         <div>
-          <h2 className="font-heading text-lg font-bold flex items-center gap-2" style={{ color: "var(--text)" }}>
-            <CheckSquare className="w-5 h-5" style={{ color: "var(--accent)" }} />
-            Productivity Center & Aufgaben
+          <h2 className="text-2xl font-semibold tracking-tight" style={{ color: "var(--text)" }}>
+            Aufgaben
           </h2>
-          <p className="text-xs mt-0.5" style={{ color: "var(--text-2)" }}>
-            Plane deine täglichen Vertriebsaktivitäten und nutze Gemini KI für eine priorisierte Tagesliste.
+          <p className="text-sm mt-1" style={{ color: "var(--text-2)" }}>
+            Plane deine Vertriebsaktivitäten und nutze Gemini KI.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <button
             onClick={handleAiPrioritize}
             disabled={aiPrioritizing}
-            className="flex items-center gap-1.5 rounded-md px-3.5 py-2 text-xs font-semibold border transition-all"
-            style={{ background: "var(--surface-2)", borderColor: "var(--border-2)", color: "var(--text)" }}
+            className="flex items-center gap-1.5 text-sm font-medium transition-opacity hover:opacity-70"
+            style={{ color: "var(--status-warm-tx)" }}
           >
-            {aiPrioritizing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" style={{ color: "var(--status-warm-tx)" }} />}
+            {aiPrioritizing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
             KI-Tagesplan
           </button>
 
           <button
             onClick={() => setIsFormOpen(true)}
-            className="flex items-center gap-1.5 rounded-md px-4 py-2 text-xs font-semibold shadow-md transition-all"
-            style={{ background: "var(--accent)", color: "var(--bg)" }}
+            className="flex items-center gap-1 text-sm font-medium transition-opacity hover:opacity-70"
+            style={{ color: "var(--accent)" }}
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-5 h-5" />
             Neuer Task
           </button>
         </div>
@@ -215,90 +211,67 @@ export function TasksComponent() {
         </div>
       )}
 
-      {/* New Task Form (Collapsible/Inline) */}
+      {/* New Task Form - iOS Settings Style Group */}
       {isFormOpen && (
-        <form onSubmit={handleCreateTask} className="rounded-xl border p-5 space-y-4 animate-fade-in" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
-          <div className="flex items-center justify-between border-b pb-3" style={{ borderColor: "var(--border)" }}>
-            <h3 className="text-sm font-bold" style={{ color: "var(--text)" }}>Neuen Task anlegen</h3>
-            <button type="button" onClick={() => setIsFormOpen(false)} style={{ color: "var(--text-3)" }}>
-              <Plus className="w-4 h-4 rotate-45" />
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <div className="lg:col-span-2">
-              <label className="block text-xs font-medium mb-1" style={{ color: "var(--text-2)" }}>Titel *</label>
+        <form onSubmit={handleCreateTask} className="animate-fade-in mb-6">
+          <div className="rounded-xl overflow-hidden border" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+            <div className="flex flex-col">
               <input
                 required
                 type="text"
-                placeholder='z. B. "Follow-up Call bei Friseur Muster"'
-                className="w-full rounded-md px-3 py-2 text-xs border outline-none"
-                style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
+                placeholder="Titel (z.B. 'Follow-up Call')"
+                className="w-full px-4 py-3 text-[15px] bg-transparent outline-none border-b"
+                style={{ borderColor: "var(--border)", color: "var(--text)" }}
                 value={newTitle}
                 onChange={(e) => setNewTitle(e.target.value)}
               />
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium mb-1" style={{ color: "var(--text-2)" }}>Kategorie</label>
+              <div className="flex flex-col sm:flex-row sm:items-center divide-y sm:divide-y-0 sm:divide-x" style={{ borderColor: "var(--border)" }}>
+                <select
+                  className="flex-1 px-4 py-3 text-[15px] bg-transparent outline-none appearance-none"
+                  style={{ color: "var(--text)" }}
+                  value={newCategory}
+                  onChange={(e) => setNewCategory(e.target.value as TaskCategory)}
+                >
+                  {Object.entries(TASK_CATEGORY_LABELS).map(([k, v]) => (
+                    <option key={k} value={k}>{v}</option>
+                  ))}
+                </select>
+                <select
+                  className="flex-1 px-4 py-3 text-[15px] bg-transparent outline-none appearance-none"
+                  style={{ color: "var(--text)" }}
+                  value={newPriority}
+                  onChange={(e) => setNewPriority(e.target.value as Priority)}
+                >
+                  <option value="LOW">Priorität: Niedrig</option>
+                  <option value="MEDIUM">Priorität: Mittel</option>
+                  <option value="HIGH">Priorität: Hoch</option>
+                </select>
+                <input
+                  type="date"
+                  className="flex-1 px-4 py-3 text-[15px] bg-transparent outline-none appearance-none"
+                  style={{ color: "var(--text)" }}
+                  value={newDueAt}
+                  onChange={(e) => setNewDueAt(e.target.value)}
+                />
+              </div>
               <select
-                className="w-full rounded-md px-3 py-2 text-xs border outline-none cursor-pointer"
-                style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
-                value={newCategory}
-                onChange={(e) => setNewCategory(e.target.value as TaskCategory)}
-              >
-                {Object.entries(TASK_CATEGORY_LABELS).map(([k, v]) => (
-                  <option key={k} value={k}>{v}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium mb-1" style={{ color: "var(--text-2)" }}>Priorität</label>
-              <select
-                className="w-full rounded-md px-3 py-2 text-xs border outline-none cursor-pointer"
-                style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
-                value={newPriority}
-                onChange={(e) => setNewPriority(e.target.value as Priority)}
-              >
-                <option value="LOW">Niedrig</option>
-                <option value="MEDIUM">Mittel</option>
-                <option value="HIGH">Hoch</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium mb-1" style={{ color: "var(--text-2)" }}>Fälligkeitsdatum</label>
-              <input
-                type="date"
-                className="w-full rounded-md px-3 py-2 text-xs border outline-none"
-                style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
-                value={newDueAt}
-                onChange={(e) => setNewDueAt(e.target.value)}
-              />
-            </div>
-
-            <div className="lg:col-span-2">
-              <label className="block text-xs font-medium mb-1" style={{ color: "var(--text-2)" }}>Mit Lead verknüpfen</label>
-              <select
-                className="w-full rounded-md px-3 py-2 text-xs border outline-none cursor-pointer"
-                style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
+                className="w-full px-4 py-3 text-[15px] bg-transparent outline-none border-t appearance-none"
+                style={{ borderColor: "var(--border)", color: "var(--text)" }}
                 value={newLeadId}
                 onChange={(e) => setNewLeadId(e.target.value)}
               >
-                <option value="">— Keiner —</option>
+                <option value="">— Kein Lead verknüpft —</option>
                 {leads.map((l) => (
                   <option key={l.id} value={l.id}>{l.companyName}</option>
                 ))}
               </select>
             </div>
           </div>
-
-          <div className="flex items-center justify-end gap-2 pt-2">
+          <div className="flex items-center justify-end gap-4 mt-3">
             <button
               type="button"
               onClick={() => setIsFormOpen(false)}
-              className="px-3.5 py-1.5 text-xs font-medium rounded hover:bg-[var(--surface-3)]"
+              className="text-[15px] font-medium"
               style={{ color: "var(--text-2)" }}
             >
               Abbrechen
@@ -306,26 +279,26 @@ export function TasksComponent() {
             <button
               type="submit"
               disabled={creating}
-              className="px-4 py-1.5 text-xs font-semibold rounded"
-              style={{ background: "var(--accent)", color: "var(--bg)" }}
+              className="text-[15px] font-semibold"
+              style={{ color: "var(--accent)" }}
             >
-              {creating ? "Erstellt…" : "Task Speichern"}
+              {creating ? "Wird erstellt…" : "Hinzufügen"}
             </button>
           </div>
         </form>
       )}
 
-      {/* Filter Bar */}
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
+      {/* Filter Bar - iOS Segmented Control Style */}
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center p-0.5 rounded-lg border" style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}>
           {["OPEN", "DONE", ""].map((st) => (
             <button
               key={st}
               onClick={() => setStatusFilter(st)}
               className={cn(
-                "px-3 py-1.5 rounded-md text-xs font-medium transition-all",
+                "px-4 py-1 rounded-md text-xs font-medium transition-all",
                 statusFilter === st
-                  ? "bg-[var(--surface-3)] text-[var(--text)] font-semibold"
+                  ? "bg-[var(--surface)] text-[var(--text)] shadow-sm"
                   : "text-[var(--text-2)] hover:text-[var(--text)]"
               )}
             >
@@ -337,8 +310,8 @@ export function TasksComponent() {
         <select
           value={categoryFilter}
           onChange={(e) => setCategoryFilter(e.target.value)}
-          className="rounded-md px-2.5 py-1.5 text-xs border outline-none cursor-pointer"
-          style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-2)" }}
+          className="rounded-lg px-3 py-1.5 text-xs border outline-none bg-transparent"
+          style={{ borderColor: "var(--border)", color: "var(--text)" }}
         >
           <option value="">Alle Kategorien</option>
           {Object.entries(TASK_CATEGORY_LABELS).map(([k, v]) => (
@@ -347,73 +320,76 @@ export function TasksComponent() {
         </select>
       </div>
 
-      {/* Tasks List */}
-      <div className="rounded-xl border overflow-hidden shadow-sm" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+      {/* Tasks List - Apple Reminders Style */}
+      <div className="flex flex-col pt-2">
         {loading ? (
-          <div className="p-12 text-center text-xs" style={{ color: "var(--text-3)" }}>
-            <div className="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin mx-auto mb-2" style={{ borderColor: "var(--border-2)", borderTopColor: "var(--accent)" }} />
-            Tasks werden geladen…
+          <div className="py-8 text-center text-[15px]" style={{ color: "var(--text-3)" }}>
+            <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2 opacity-50" />
+            Laden…
           </div>
         ) : tasks.length === 0 ? (
-          <div className="p-12 text-center text-xs" style={{ color: "var(--text-3)" }}>
-            Keine Tasks gefunden.
+          <div className="py-8 text-center text-[15px]" style={{ color: "var(--text-3)" }}>
+            Keine Aufgaben vorhanden.
           </div>
         ) : (
-          <div className="divide-y" style={{ borderColor: "var(--border)" }}>
-            {tasks.map((task) => {
+          <div className="flex flex-col">
+            {tasks.map((task, idx) => {
               const isDone = task.status === "DONE";
-              const catStyle = categoryColors[task.category as TaskCategory] || categoryColors.OTHER;
               return (
                 <div
                   key={task.id}
-                  className="flex items-center justify-between p-4 transition hover:bg-[var(--surface-3)] group"
+                  className={cn(
+                    "group flex items-start gap-3 py-3 transition-colors",
+                    idx !== tasks.length - 1 && "border-b"
+                  )}
+                  style={{ borderColor: "var(--border)" }}
                 >
-                  <div className="flex items-center gap-3.5 flex-1 min-w-0">
-                    <button
-                      onClick={() => handleToggleTask(task.id, task.status)}
-                      className="shrink-0 transition-transform active:scale-90"
-                    >
-                      {isDone ? (
-                        <CheckCircle2 className="w-5 h-5" style={{ color: "var(--status-warm-tx)" }} />
-                      ) : (
-                        <Circle className="w-5 h-5" style={{ color: "var(--border-2)" }} />
-                      )}
-                    </button>
+                  <button
+                    onClick={() => handleToggleTask(task.id, task.status)}
+                    className="mt-0.5 shrink-0 transition-transform active:scale-90"
+                  >
+                    {isDone ? (
+                      <CheckCircle2 className="w-5 h-5" style={{ color: "var(--accent)", fill: "var(--accent)", stroke: "var(--bg)" }} />
+                    ) : (
+                      <Circle className="w-5 h-5" style={{ color: "var(--border-2)" }} />
+                    )}
+                  </button>
 
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={cn("text-sm font-semibold truncate", isDone && "line-through opacity-50")}
-                          style={{ color: "var(--text)" }}
-                        >
-                          {task.title}
-                        </span>
-                        <span className="px-2 py-0.5 rounded text-[10px] font-bold" style={{ background: catStyle.bg, color: catStyle.tx }}>
-                          {TASK_CATEGORY_LABELS[task.category as TaskCategory] || task.category}
-                        </span>
-                      </div>
-
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5 text-xs" style={{ color: "var(--text-3)" }}>
-                        {task.lead && (
-                          <span style={{ color: "var(--accent)" }}>Lead: {task.lead.companyName}</span>
-                        )}
+                  <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p
+                        className={cn("text-[15px] truncate", isDone ? "opacity-40 line-through" : "font-medium")}
+                        style={{ color: "var(--text)" }}
+                      >
+                        {task.title}
+                      </p>
+                      <div className={cn("flex flex-wrap items-center gap-x-2 gap-y-1 mt-0.5 text-xs", isDone ? "opacity-40" : "")} style={{ color: "var(--text-2)" }}>
                         {task.dueAt && (
-                          <span className="flex items-center gap-1">
-                            <Calendar className="w-3 h-3" />
-                            Fällig: {formatDate(task.dueAt)}
+                          <span className={cn(new Date(task.dueAt) < new Date() && !isDone ? "text-red-500 font-medium" : "")}>
+                            {formatDate(task.dueAt)}
                           </span>
                         )}
+                        {task.lead && (
+                          <>
+                            <span className="opacity-40">•</span>
+                            <span>{task.lead.companyName}</span>
+                          </>
+                        )}
+                        <span className="opacity-40">•</span>
+                        <span>{TASK_CATEGORY_LABELS[task.category as TaskCategory] || task.category}</span>
                       </div>
                     </div>
-                  </div>
 
-                  <button
-                    onClick={() => handleDeleteTask(task.id)}
-                    className="p-1.5 rounded opacity-0 group-hover:opacity-100 hover:bg-[var(--status-lost-bg)] transition-all"
-                    style={{ color: "var(--status-lost-tx)" }}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                    {/* Progressive Disclosure Action */}
+                    <button
+                      onClick={() => handleDeleteTask(task.id)}
+                      className="p-1.5 rounded-md opacity-100 hover:bg-red-500/10 transition-all shrink-0 sm:ml-4"
+                      style={{ color: "var(--status-lost-tx)" }}
+                      title="Aufgabe löschen"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               );
             })}
@@ -423,3 +399,4 @@ export function TasksComponent() {
     </div>
   );
 }
+

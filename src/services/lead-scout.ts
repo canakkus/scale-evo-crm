@@ -42,6 +42,7 @@ export type { LeadScoutOptions, LeadScoutResponse, ScoutResult, TreatwellVenue }
 // ---------------------------------------------------------------------------
 
 const PLACES_URL = "https://places.googleapis.com/v1/places:searchText";
+const TREATWELL_HOST = /treatwell\.(at|de|com|ch|co\.uk)/i;
 const MATCH_FIELD_MASK =
   "places.displayName,places.formattedAddress,places.internationalPhoneNumber,places.websiteUri," +
   "places.rating,places.userRatingCount,places.googleMapsUri,places.types,places.primaryTypeDisplayName,places.location";
@@ -206,7 +207,10 @@ async function scoutVenue({ venue, search }: Candidate, context: ScoutContext): 
     }
   }
 
-  let websiteUrl: string | null = place?.website ? normalizeUrl(place.website) : null;
+  // Ein Treatwell-Profil als "Website" bei Google ist ein Buchungslink, keine
+  // eigene Website — es wandert ins Treatwell-Feld.
+  const placeWebsiteIsTreatwell = place?.website ? TREATWELL_HOST.test(place.website) : false;
+  let websiteUrl: string | null = place?.website && !placeWebsiteIsTreatwell ? normalizeUrl(place.website) : null;
   let websiteSource: "maps" | "search" | null = websiteUrl ? "maps" : null;
   let websiteSearchFailed = false;
 
@@ -226,6 +230,15 @@ async function scoutVenue({ venue, search }: Candidate, context: ScoutContext): 
     } catch {
       audit = null;
     }
+  }
+
+  const detectedTreatwell =
+    venue.treatwellUrl ||
+    audit?.extracted?.treatwellUrl ||
+    (placeWebsiteIsTreatwell ? place?.website : null) ||
+    null;
+  if (detectedTreatwell) {
+    venue.treatwellUrl = normalizeUrl(detectedTreatwell);
   }
 
   const phone = place?.phone ?? audit?.extracted.phone ?? null;
@@ -316,7 +329,7 @@ async function scoutVenue({ venue, search }: Candidate, context: ScoutContext): 
     venue.treatwellUrl ? `Treatwell-Profil: ${venue.treatwellUrl}` : null,
     venue.addressLine ? `Adresse: ${venue.addressLine}` : null,
     solidWebsite
-      ? `Website via ${websiteSource === "maps" ? "Google Maps" : "Websuche"} gefunden.`
+      ? `Website via ${websiteSource === "maps" ? "Google Maps" : "Websuche"} gefunden: ${websiteUrl}`
       : hasWebsite
         ? "Keine eigene Website — nur Social-/Plattform-Link."
         : websiteSearchFailed

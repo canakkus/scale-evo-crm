@@ -30,6 +30,11 @@ import {
   Radio,
   Check,
   Copy,
+  Maximize,
+  Minimize,
+  Bell,
+  CalendarCheck,
+  AlarmClock,
 } from "lucide-react";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { OutreachLeadPanel } from "@/components/outreach/outreach-lead-panel";
@@ -47,6 +52,7 @@ type LeadDetailModalProps = {
 export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalProps) {
   const [lead, setLead] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [notesText, setNotesText] = useState("");
   const [savingNotes, setSavingNotes] = useState(false);
   const [checkingMenu, setCheckingMenu] = useState(false);
@@ -92,6 +98,67 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
   const [editNextFollowUpAt, setEditNextFollowUpAt] = useState("");
   const [savingDetails, setSavingDetails] = useState(false);
   const [copiedNfc, setCopiedNfc] = useState(false);
+
+  // Apple Bridge: Custom Reminder & Calendar State
+  const [reminderOpen, setReminderOpen] = useState(false);
+  const [reminderText, setReminderText] = useState("");
+  const [reminderDateTime, setReminderDateTime] = useState("");
+  const [reminderSetAsFollowUp, setReminderSetAsFollowUp] = useState(true);
+  const [bookingReminder, setBookingReminder] = useState(false);
+  const [reminderSuccess, setReminderSuccess] = useState<string | null>(null);
+  const [reminderError, setReminderError] = useState<string | null>(null);
+
+  const handleBookAppleReminder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!lead || !reminderDateTime || !reminderText.trim()) return;
+    setBookingReminder(true);
+    setReminderError(null);
+    setReminderSuccess(null);
+
+    try {
+      const res = await fetch(`/api/leads/${lead.id}/reminder`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: reminderText.trim(),
+          dueDate: new Date(reminderDateTime).toISOString(),
+          setAsLeadFollowUp: reminderSetAsFollowUp,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Fehler beim Eintragen in Apple.");
+      }
+
+      setReminderSuccess(data.message || "In WORKSHIT & Privat eingetragen!");
+      setReminderText("");
+
+      if (reminderSetAsFollowUp) {
+        setLead((prev: any) =>
+          prev ? { ...prev, nextFollowUpAt: new Date(reminderDateTime).toISOString(), status: prev.status === "NEW" ? "FOLLOW_UP" : prev.status } : prev
+        );
+        onUpdate();
+      }
+
+      // Reload lead details to reflect new interaction timeline
+      fetch(`/api/leads/${lead.id}`)
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.lead) setLead(d.lead);
+        })
+        .catch(console.error);
+
+      setTimeout(() => {
+        setReminderSuccess(null);
+        setReminderOpen(false);
+      }, 3000);
+    } catch (err: any) {
+      setReminderError(err?.message || "Fehler beim Eintragen in Apple.");
+    } finally {
+      setBookingReminder(false);
+    }
+  };
 
   const fetchRecordings = useCallback(async () => {
     if (!leadId) return;
@@ -384,23 +451,33 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col animate-fade-in" style={{ background: "var(--bg)" }}>
-      {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b shrink-0" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
-        <div className="flex items-center gap-3">
-          <h2 className="font-heading text-xl font-bold" style={{ color: "var(--text)" }}>
-            {lead?.companyName || "Lädt…"}
-          </h2>
-          {lead && <StatusBadge status={lead.status} />}
+    <div className={`fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-fade-in ${isFullscreen ? 'p-0' : 'p-4 sm:p-6'}`}>
+      <div className={`w-full flex flex-col shadow-2xl overflow-hidden border ${isFullscreen ? 'h-full rounded-none max-w-none border-none' : 'max-w-6xl max-h-[90vh] rounded-2xl'}`} style={{ background: "var(--bg)", borderColor: "var(--border)" }}>
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b shrink-0" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+          <div className="flex items-center gap-3">
+            <h2 className="font-heading text-xl font-bold" style={{ color: "var(--text)" }}>
+              {lead?.companyName || "Lädt…"}
+            </h2>
+            {lead && <StatusBadge status={lead.status} />}
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setIsFullscreen(!isFullscreen)}
+              className="p-1.5 rounded-lg transition-colors hover:bg-[var(--surface-3)]"
+              style={{ color: "var(--text-2)" }}
+            >
+              {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
+            </button>
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-lg transition-colors hover:bg-[var(--surface-3)]"
+              style={{ color: "var(--text-2)" }}
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
         </div>
-        <button
-          onClick={onClose}
-          className="p-1.5 rounded-md transition-colors hover:bg-[var(--surface-3)]"
-          style={{ color: "var(--text-2)" }}
-        >
-          <X className="w-6 h-6" />
-        </button>
-      </div>
 
       {loading || !lead ? (
         <div className="flex-1 flex flex-col items-center justify-center" style={{ color: "var(--text-3)" }}>
@@ -430,14 +507,14 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
 
             {/* Details List / Edit Form */}
             {!isEditing ? (
-              <div className="space-y-4 text-xs">
-                <div className="flex items-center justify-between border-b pb-2 mb-2" style={{ borderColor: "var(--border)" }}>
-                  <h3 className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--text-3)" }}>
+              <div className="space-y-5 text-sm">
+                <div className="flex items-center justify-between border-b pb-3 mb-3" style={{ borderColor: "var(--border)" }}>
+                  <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--text-3)" }}>
                     Lead-Informationen
                   </h3>
                   <button
                     onClick={() => setIsEditing(true)}
-                    className="text-[10px] font-bold uppercase px-2 py-1 rounded transition-colors hover:bg-[var(--surface-3)]"
+                    className="text-xs font-bold uppercase px-3 py-1.5 rounded-md transition-colors hover:bg-[var(--surface-3)]"
                     style={{ background: "var(--surface-2)", color: "var(--accent)" }}
                   >
                     Bearbeiten
@@ -445,32 +522,31 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                 </div>
 
                 {/* Akquise-Kanal */}
-                <div className="flex flex-col gap-0.5">
-                  <span className="font-semibold" style={{ color: "var(--text-3)" }}>Akquise-Kanal:</span>
+                <div className="flex flex-col gap-1">
+                  <span className="font-semibold text-xs text-[var(--text-3)]">Akquise-Kanal:</span>
                   <div>
                     <span
-                      className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded"
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-md"
                       style={{
                         background: lead.acquisitionType === "WALK_IN" ? "rgba(168, 85, 247, 0.1)" : "rgba(59, 130, 246, 0.1)",
                         color: lead.acquisitionType === "WALK_IN" ? "rgb(192, 132, 252)" : "rgb(96, 165, 250)",
-                        border: lead.acquisitionType === "WALK_IN" ? "1px solid rgba(168, 85, 247, 0.2)" : "1px solid rgba(59, 130, 246, 0.2)",
                       }}
                     >
-                      {lead.acquisitionType === "DM" ? "💬 Instagram DM" : lead.acquisitionType === "WALK_IN" ? "🚶‍♂️ Walk-In" : "📞 Cold Call"}
+                      {lead.acquisitionType === "DM" ? "Instagram DM" : lead.acquisitionType === "WALK_IN" ? "Walk-In" : "Cold Call"}
                     </span>
                   </div>
                 </div>
 
                 {/* NFC Demo URL */}
                 {lead.nfcDemoUrl && (
-                  <div className="flex flex-col gap-1 p-2.5 rounded border" style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}>
-                    <span className="font-semibold text-[10px] uppercase tracking-wider" style={{ color: "var(--text-3)" }}>NFC Demo URL:</span>
-                    <div className="flex items-center justify-between gap-1">
+                  <div className="flex flex-col gap-1.5 p-3 rounded-lg border" style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}>
+                    <span className="font-semibold text-xs uppercase tracking-wider" style={{ color: "var(--text-3)" }}>NFC Demo URL:</span>
+                    <div className="flex items-center justify-between gap-2">
                       <a
                         href={lead.nfcDemoUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-[11px] font-mono hover:underline truncate max-w-[170px]"
+                        className="text-sm font-mono hover:underline truncate max-w-[170px]"
                         style={{ color: "var(--accent)" }}
                       >
                         {lead.nfcDemoUrl.replace(/^https?:\/\//, "")}
@@ -483,21 +559,21 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                             setCopiedNfc(true);
                             setTimeout(() => setCopiedNfc(false), 2000);
                           }}
-                          className="p-1 rounded hover:bg-[var(--surface-3)] transition-colors"
+                          className="p-1.5 rounded-md hover:bg-[var(--surface-3)] transition-colors"
                           title="NFC Link kopieren"
                           style={{ color: copiedNfc ? "var(--status-warm-tx)" : "var(--text-2)" }}
                         >
-                          {copiedNfc ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                          {copiedNfc ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
                         </button>
                         <a
                           href={lead.nfcDemoUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="p-1 rounded hover:bg-[var(--surface-3)] transition-colors"
+                          className="p-1.5 rounded-md hover:bg-[var(--surface-3)] transition-colors"
                           title="NFC Demo öffnen"
                           style={{ color: "var(--text-2)" }}
                         >
-                          <ExternalLink className="w-3.5 h-3.5" />
+                          <ExternalLink className="w-4 h-4" />
                         </a>
                       </div>
                     </div>
@@ -505,25 +581,25 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                 )}
 
                 {lead.companyName && (
-                  <div className="flex flex-col gap-0.5">
-                    <span className="font-semibold" style={{ color: "var(--text-3)" }}>Firma:</span>
+                  <div className="flex flex-col gap-1">
+                    <span className="font-semibold text-xs text-[var(--text-3)]">Firma:</span>
                     <span className="font-medium" style={{ color: "var(--text)" }}>{lead.companyName}</span>
                   </div>
                 )}
 
                 {lead.industry && (
-                  <div className="flex flex-col gap-0.5">
-                    <span className="font-semibold" style={{ color: "var(--text-3)" }}>Branche:</span>
+                  <div className="flex flex-col gap-1">
+                    <span className="font-semibold text-xs text-[var(--text-3)]">Branche:</span>
                     <span style={{ color: "var(--text)" }}>{lead.industry}</span>
                   </div>
                 )}
 
                 {(lead.address || lead.city) && (
                   <div className="flex flex-col gap-1">
-                    <span className="font-semibold" style={{ color: "var(--text-3)" }}>Adresse:</span>
-                    <div className="flex items-start justify-between gap-1.5" style={{ color: "var(--text)" }}>
+                    <span className="font-semibold text-xs text-[var(--text-3)]">Adresse:</span>
+                    <div className="flex items-start justify-between gap-2" style={{ color: "var(--text)" }}>
                       <div className="flex items-start gap-1.5">
-                        <MapPin className="w-3.5 h-3.5 shrink-0 mt-0.5" style={{ color: "var(--text-3)" }} />
+                        <MapPin className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "var(--text-3)" }} />
                         <span>{lead.address ? `${lead.address}, ${lead.city}` : lead.city}</span>
                       </div>
                       <a
@@ -533,11 +609,11 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                         }
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold border shrink-0 hover:bg-[var(--surface-3)] transition-colors text-sky-400"
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border shrink-0 hover:bg-[var(--surface-3)] transition-colors text-sky-400"
                         style={{ borderColor: "var(--border)", background: "var(--surface-2)" }}
                         title="Route auf Google Maps öffnen"
                       >
-                        <Navigation className="w-2.5 h-2.5" />
+                        <Navigation className="w-3 h-3" />
                         <span>Maps</span>
                       </a>
                     </div>
@@ -545,10 +621,10 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                 )}
 
                 {lead.googleMapsUrl && (
-                  <div className="flex flex-col gap-0.5">
-                    <span className="font-semibold" style={{ color: "var(--text-3)" }}>Google Maps:</span>
-                    <div className="flex items-center gap-1.5">
-                      <Globe className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--text-3)" }} />
+                  <div className="flex flex-col gap-1">
+                    <span className="font-semibold text-xs text-[var(--text-3)]">Google Maps:</span>
+                    <div className="flex items-center gap-2">
+                      <Globe className="w-4 h-4 shrink-0" style={{ color: "var(--text-3)" }} />
                       <a href={lead.googleMapsUrl} target="_blank" rel="noreferrer" className="hover:underline truncate" style={{ color: "var(--accent)" }}>
                         Auf Google Maps öffnen
                       </a>
@@ -557,10 +633,10 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                 )}
 
                 {lead.phone && (
-                  <div className="flex flex-col gap-0.5">
-                    <span className="font-semibold" style={{ color: "var(--text-3)" }}>Telefon:</span>
-                    <div className="flex items-center gap-1.5">
-                      <Phone className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--text-3)" }} />
+                  <div className="flex flex-col gap-1">
+                    <span className="font-semibold text-xs text-[var(--text-3)]">Telefon:</span>
+                    <div className="flex items-center gap-2">
+                      <Phone className="w-4 h-4 shrink-0" style={{ color: "var(--text-3)" }} />
                       <a href={`tel:${lead.phone}`} className="hover:underline font-mono" style={{ color: "var(--accent)" }}>
                         {lead.phone}
                       </a>
@@ -569,10 +645,10 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                 )}
 
                 {lead.email && (
-                  <div className="flex flex-col gap-0.5">
-                    <span className="font-semibold" style={{ color: "var(--text-3)" }}>E-Mail:</span>
-                    <div className="flex items-center gap-1.5">
-                      <Mail className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--text-3)" }} />
+                  <div className="flex flex-col gap-1">
+                    <span className="font-semibold text-xs text-[var(--text-3)]">E-Mail:</span>
+                    <div className="flex items-center gap-2">
+                      <Mail className="w-4 h-4 shrink-0" style={{ color: "var(--text-3)" }} />
                       <a href={`mailto:${lead.email}`} className="hover:underline truncate" style={{ color: "var(--accent)" }}>
                         {lead.email}
                       </a>
@@ -581,10 +657,10 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                 )}
 
                 {lead.website && (
-                  <div className="flex flex-col gap-0.5">
-                    <span className="font-semibold" style={{ color: "var(--text-3)" }}>Webseite:</span>
-                    <div className="flex items-center gap-1.5">
-                      <Globe className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--text-3)" }} />
+                  <div className="flex flex-col gap-1">
+                    <span className="font-semibold text-xs text-[var(--text-3)]">Webseite:</span>
+                    <div className="flex items-center gap-2">
+                      <Globe className="w-4 h-4 shrink-0" style={{ color: "var(--text-3)" }} />
                       <a href={lead.website.startsWith("http") ? lead.website : `https://${lead.website}`} target="_blank" rel="noreferrer" className="hover:underline truncate" style={{ color: "var(--accent)" }}>
                         {lead.website.replace(/^https?:\/\//, "")}
                       </a>
@@ -593,10 +669,10 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                 )}
 
                 {lead.instagram && (
-                  <div className="flex flex-col gap-0.5">
-                    <span className="font-semibold" style={{ color: "var(--text-3)" }}>Instagram:</span>
-                    <div className="flex items-center gap-1.5">
-                      <Camera className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--text-3)" }} />
+                  <div className="flex flex-col gap-1">
+                    <span className="font-semibold text-xs text-[var(--text-3)]">Instagram:</span>
+                    <div className="flex items-center gap-2">
+                      <Camera className="w-4 h-4 shrink-0" style={{ color: "var(--text-3)" }} />
                       <a
                         href={instagramProfileUrl(lead.instagram) ?? "#"}
                         target="_blank"
@@ -615,10 +691,10 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                 )}
 
                 {lead.treatwellUrl && (
-                  <div className="flex flex-col gap-0.5">
-                    <span className="font-semibold" style={{ color: "var(--text-3)" }}>Treatwell:</span>
-                    <div className="flex items-center gap-1.5">
-                      <Globe className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--text-3)" }} />
+                  <div className="flex flex-col gap-1">
+                    <span className="font-semibold text-xs text-[var(--text-3)]">Treatwell:</span>
+                    <div className="flex items-center gap-2">
+                      <Globe className="w-4 h-4 shrink-0" style={{ color: "var(--text-3)" }} />
                       <a
                         href={lead.treatwellUrl.startsWith("http") ? lead.treatwellUrl : `https://${lead.treatwellUrl}`}
                         target="_blank"
@@ -633,10 +709,10 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                 )}
 
                 {lead.googleRating != null && (
-                  <div className="flex flex-col gap-0.5">
-                    <span className="font-semibold" style={{ color: "var(--text-3)" }}>Google-Bewertung:</span>
-                    <div className="flex items-center gap-1.5">
-                      <Star className="w-3.5 h-3.5 shrink-0 fill-amber-400 text-amber-400" />
+                  <div className="flex flex-col gap-1">
+                    <span className="font-semibold text-xs text-[var(--text-3)]">Google-Bewertung:</span>
+                    <div className="flex items-center gap-2">
+                      <Star className="w-4 h-4 shrink-0 fill-amber-400 text-amber-400" />
                       <span className="font-semibold" style={{ color: "var(--text)" }}>
                         {lead.googleRating.toFixed(1)}
                       </span>
@@ -648,20 +724,20 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                 )}
 
                 {lead.contactPerson && (
-                  <div className="flex flex-col gap-0.5 pt-2 border-t" style={{ borderColor: "var(--border)" }}>
-                    <span className="font-semibold" style={{ color: "var(--text-3)" }}>Ansprechpartner:</span>
-                    <div className="flex items-center gap-1.5">
-                      <User className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--text-3)" }} />
+                  <div className="flex flex-col gap-1 pt-3 border-t" style={{ borderColor: "var(--border)" }}>
+                    <span className="font-semibold text-xs text-[var(--text-3)]">Ansprechpartner:</span>
+                    <div className="flex items-center gap-2">
+                      <User className="w-4 h-4 shrink-0" style={{ color: "var(--text-3)" }} />
                       <span className="font-medium" style={{ color: "var(--text)" }}>{lead.contactPerson}</span>
                     </div>
                   </div>
                 )}
 
                 {lead.nextFollowUpAt && (
-                  <div className="flex flex-col gap-0.5 pt-2 border-t" style={{ borderColor: "var(--border)" }}>
-                    <span className="font-semibold" style={{ color: "var(--text-3)" }}>Follow-Up am:</span>
-                    <div className="flex items-center gap-1.5" style={{ color: "var(--text)" }}>
-                      <Calendar className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--text-3)" }} />
+                  <div className="flex flex-col gap-1 pt-3 border-t" style={{ borderColor: "var(--border)" }}>
+                    <span className="font-semibold text-xs text-[var(--text-3)]">Follow-Up am:</span>
+                    <div className="flex items-center gap-2" style={{ color: "var(--text)" }}>
+                      <Calendar className="w-4 h-4 shrink-0" style={{ color: "var(--text-3)" }} />
                       <span className="font-medium" style={{ color: "var(--text)" }}>
                         {new Intl.DateTimeFormat("de-AT", { dateStyle: "medium", timeStyle: "short" }).format(new Date(lead.nextFollowUpAt))} Uhr
                       </span>
@@ -669,30 +745,205 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                   </div>
                 )}
 
-                {/* Speisekarte (Gemini AI Detection) */}
-                <div className="pt-3 border-t mt-3 space-y-2" style={{ borderColor: "var(--border)" }}>
+                {/* Apple Reminders & Kalender Bridge */}
+                <div className="pt-4 border-t mt-4 space-y-3" style={{ borderColor: "var(--border)" }}>
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5 font-semibold" style={{ color: "var(--text)" }}>
-                      <UtensilsCrossed className="w-3.5 h-3.5" style={{ color: "var(--accent)" }} />
+                    <div className="flex items-center gap-2 font-semibold text-xs" style={{ color: "var(--text)" }}>
+                      <Bell className="w-4 h-4 text-amber-400" />
+                      <span>Apple Sync</span>
+                    </div>
+                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--surface-3)] text-[var(--text-3)] border border-[var(--border)]">
+                      WORKSHIT • Privat (10m)
+                    </span>
+                  </div>
+
+                  {!reminderOpen ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setReminderOpen(true);
+                        if (!reminderDateTime) {
+                          const d = new Date();
+                          d.setHours(d.getHours() + 2, 0, 0, 0);
+                          const localIso = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+                          setReminderDateTime(localIso);
+                        }
+                      }}
+                      className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold border transition-all hover:bg-[var(--surface-3)] text-amber-400"
+                      style={{
+                        background: "var(--surface-2)",
+                        borderColor: "var(--border)",
+                      }}
+                    >
+                      <AlarmClock className="w-4 h-4" />
+                      <span>Erinnerung & Termin buchen</span>
+                    </button>
+                  ) : (
+                    <form onSubmit={handleBookAppleReminder} className="p-3 rounded-lg border space-y-2.5 animate-fade-in text-xs" style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}>
+                      <div className="flex items-center justify-between pb-1 border-b" style={{ borderColor: "var(--border)" }}>
+                        <span className="font-bold text-[var(--text)] flex items-center gap-1.5">
+                          <CalendarCheck className="w-3.5 h-3.5 text-amber-400" />
+                          Erinnerung buchen
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setReminderOpen(false);
+                            setReminderError(null);
+                            setReminderSuccess(null);
+                          }}
+                          className="text-[var(--text-3)] hover:text-[var(--text)] px-1"
+                        >
+                          ✕
+                        </button>
+                      </div>
+
+                      {/* Quick presets */}
+                      <div className="flex items-center gap-1 flex-wrap">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const d = new Date(Date.now() + 60 * 60 * 1000);
+                            setReminderDateTime(new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16));
+                          }}
+                          className="text-[10px] px-2 py-0.5 rounded border hover:bg-[var(--surface-3)] transition-colors"
+                          style={{ borderColor: "var(--border)", color: "var(--text-2)" }}
+                        >
+                          +1 Std
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const tm = new Date();
+                            tm.setDate(tm.getDate() + 1);
+                            tm.setHours(10, 0, 0, 0);
+                            setReminderDateTime(new Date(tm.getTime() - tm.getTimezoneOffset() * 60000).toISOString().slice(0, 16));
+                          }}
+                          className="text-[10px] px-2 py-0.5 rounded border hover:bg-[var(--surface-3)] transition-colors"
+                          style={{ borderColor: "var(--border)", color: "var(--text-2)" }}
+                        >
+                          Morgen 10:00
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const mo = new Date();
+                            const day = mo.getDay();
+                            const diff = day === 0 ? 1 : 8 - day;
+                            mo.setDate(mo.getDate() + diff);
+                            mo.setHours(10, 0, 0, 0);
+                            setReminderDateTime(new Date(mo.getTime() - mo.getTimezoneOffset() * 60000).toISOString().slice(0, 16));
+                          }}
+                          className="text-[10px] px-2 py-0.5 rounded border hover:bg-[var(--surface-3)] transition-colors"
+                          style={{ borderColor: "var(--border)", color: "var(--text-2)" }}
+                        >
+                          Mo 10:00
+                        </button>
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-semibold mb-1 text-[var(--text-3)]">Datum & Uhrzeit</label>
+                        <input
+                          type="datetime-local"
+                          required
+                          value={reminderDateTime}
+                          onChange={(e) => setReminderDateTime(e.target.value)}
+                          className="w-full text-xs rounded-md px-2 py-1.5 border outline-none"
+                          style={{ background: "var(--surface-3)", borderColor: "var(--border)", color: "var(--text)" }}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-semibold mb-1 text-[var(--text-3)]">Notiz / Text</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="z.B. Zurückrufen wegen NFC Demo..."
+                          value={reminderText}
+                          onChange={(e) => setReminderText(e.target.value)}
+                          className="w-full text-xs rounded-md px-2 py-1.5 border outline-none"
+                          style={{ background: "var(--surface-3)", borderColor: "var(--border)", color: "var(--text)" }}
+                        />
+                      </div>
+
+                      <label className="flex items-center gap-1.5 cursor-pointer text-[11px] text-[var(--text-2)] select-none pt-0.5">
+                        <input
+                          type="checkbox"
+                          checked={reminderSetAsFollowUp}
+                          onChange={(e) => setReminderSetAsFollowUp(e.target.checked)}
+                          className="rounded border-[var(--border)] text-amber-500 focus:ring-0"
+                        />
+                        <span>Auch als fixes Lead Follow-up setzen</span>
+                      </label>
+
+                      {reminderError && (
+                        <div className="text-[11px] text-red-400 p-2 rounded bg-red-500/10 border border-red-500/20 leading-snug">
+                          {reminderError}
+                        </div>
+                      )}
+
+                      {reminderSuccess && (
+                        <div className="text-[11px] text-emerald-400 p-2 rounded bg-emerald-500/10 border border-emerald-500/20 leading-snug flex items-center gap-1.5">
+                          <Check className="w-3.5 h-3.5 shrink-0" />
+                          <span>{reminderSuccess}</span>
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-2 pt-1">
+                        <button
+                          type="submit"
+                          disabled={bookingReminder || !reminderText.trim() || !reminderDateTime}
+                          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold hover:opacity-90 disabled:opacity-50 transition-all text-black bg-amber-400"
+                        >
+                          {bookingReminder ? (
+                            <>
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              <span>Bucht...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Bell className="w-3.5 h-3.5" />
+                              <span>In Apple eintragen</span>
+                            </>
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setReminderOpen(false)}
+                          className="px-2 py-1.5 rounded-md text-xs font-medium hover:bg-[var(--surface-3)]"
+                          style={{ color: "var(--text-3)" }}
+                        >
+                          Abbrechen
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                </div>
+
+                {/* Speisekarte (Gemini AI Detection) */}
+                <div className="pt-4 border-t mt-4 space-y-3" style={{ borderColor: "var(--border)" }}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 font-semibold" style={{ color: "var(--text)" }}>
+                      <UtensilsCrossed className="w-4 h-4" style={{ color: "var(--accent)" }} />
                       <span>Speisekarte (KI-Check)</span>
                     </div>
                     {lead.hasMenu === true ? (
-                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                        🟢 Online
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                        Online
                       </span>
                     ) : lead.hasMenu === false ? (
-                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-500/10 text-red-400 border border-red-500/20">
-                        🔴 Keine Karte
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-red-500/10 text-red-500 border border-red-500/20">
+                        Keine Karte
                       </span>
                     ) : (
-                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-zinc-500/10 text-zinc-400 border border-zinc-500/20">
-                        ⚠️ Nicht geprüft
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-zinc-500/10 text-zinc-500 border border-zinc-500/20">
+                        Nicht geprüft
                       </span>
                     )}
                   </div>
 
                   {lead.menuSnippet && (
-                    <p className="text-[11px] leading-relaxed p-2 rounded border" style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text-2)" }}>
+                    <p className="text-sm leading-relaxed p-3 rounded-lg border" style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text-2)" }}>
                       {lead.menuSnippet}
                     </p>
                   )}
@@ -702,16 +953,16 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                       href={lead.menuUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="flex items-center gap-1 text-[11px] hover:underline"
+                      className="flex items-center gap-1.5 text-sm hover:underline"
                       style={{ color: "var(--accent)" }}
                     >
-                      <ExternalLink className="w-3 h-3" />
+                      <ExternalLink className="w-4 h-4" />
                       <span>Speisekarte öffnen</span>
                     </a>
                   )}
 
                   {lead.menuCheckedAt && (
-                    <div className="text-[10px]" style={{ color: "var(--text-3)" }}>
+                    <div className="text-xs" style={{ color: "var(--text-3)" }}>
                       Zuletzt geprüft: {formatDate(lead.menuCheckedAt)}
                     </div>
                   )}
@@ -720,14 +971,14 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                     type="button"
                     onClick={handleCheckMenu}
                     disabled={checkingMenu || !lead.website}
-                    className="w-full flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-medium border transition-colors hover:bg-[var(--surface-3)] disabled:opacity-50"
+                    className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border transition-colors hover:bg-[var(--surface-3)] disabled:opacity-50"
                     style={{ background: "var(--surface-2)", borderColor: "var(--border-2)", color: "var(--text)" }}
                   >
-                    <RefreshCw className={`w-3 h-3 ${checkingMenu ? "animate-spin text-[var(--accent)]" : ""}`} />
-                    <span>{checkingMenu ? "Prüfe Speisekarte..." : "🔄 Speisekarte neu prüfen"}</span>
+                    <RefreshCw className={`w-4 h-4 ${checkingMenu ? "animate-spin text-[var(--accent)]" : ""}`} />
+                    <span>{checkingMenu ? "Prüfe Speisekarte..." : "Speisekarte neu prüfen"}</span>
                   </button>
                   {!lead.website && (
-                    <span className="block text-[10px] text-center" style={{ color: "var(--text-3)" }}>
+                    <span className="block text-xs text-center" style={{ color: "var(--text-3)" }}>
                       (Website erforderlich für KI-Check)
                     </span>
                   )}
@@ -735,19 +986,19 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
               </div>
             ) : (
               // Edit Form
-              <div className="space-y-4 text-xs">
-                <div className="flex items-center justify-between border-b pb-2 mb-2" style={{ borderColor: "var(--border)" }}>
-                  <h3 className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--text-3)" }}>
+              <div className="space-y-5 text-sm">
+                <div className="flex items-center justify-between border-b pb-3 mb-3" style={{ borderColor: "var(--border)" }}>
+                  <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--text-3)" }}>
                     Lead bearbeiten
                   </h3>
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-4">
                   <div>
-                    <label className="block text-[10px] font-semibold mb-1" style={{ color: "var(--text-3)" }}>Firma</label>
+                    <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text-3)" }}>Firma</label>
                     <input
                       type="text"
-                      className="w-full rounded px-2.5 py-1.5 text-xs border outline-none"
+                      className="w-full rounded-lg px-3 py-2 text-sm border outline-none"
                       style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
                       value={editCompanyName}
                       onChange={(e) => setEditCompanyName(e.target.value)}
@@ -755,25 +1006,25 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-semibold mb-1" style={{ color: "var(--text-3)" }}>Akquise-Kanal</label>
+                    <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text-3)" }}>Akquise-Kanal</label>
                     <select
-                      className="w-full rounded px-2.5 py-1.5 text-xs border outline-none font-medium"
+                      className="w-full rounded-lg px-3 py-2 text-sm border outline-none font-medium"
                       style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
                       value={editAcquisitionType}
                       onChange={(e) => setEditAcquisitionType(e.target.value)}
                     >
-                      <option value="CALL">📞 Cold Call</option>
-                      <option value="WALK_IN">🚶‍♂️ Walk-In</option>
-                      <option value="DM">💬 Instagram DM</option>
+                      <option value="CALL">Cold Call</option>
+                      <option value="WALK_IN">Walk-In</option>
+                      <option value="DM">Instagram DM</option>
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-semibold mb-1" style={{ color: "var(--text-3)" }}>NFC Demo URL</label>
+                    <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text-3)" }}>NFC Demo URL</label>
                     <input
                       type="url"
                       placeholder="https://demo.scale-evo.com/..."
-                      className="w-full rounded px-2.5 py-1.5 text-xs border outline-none font-mono"
+                      className="w-full rounded-lg px-3 py-2 text-sm border outline-none font-mono"
                       style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
                       value={editNfcDemoUrl}
                       onChange={(e) => setEditNfcDemoUrl(e.target.value)}
@@ -781,10 +1032,10 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-semibold mb-1" style={{ color: "var(--text-3)" }}>Branche</label>
+                    <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text-3)" }}>Branche</label>
                     <input
                       type="text"
-                      className="w-full rounded px-2.5 py-1.5 text-xs border outline-none"
+                      className="w-full rounded-lg px-3 py-2 text-sm border outline-none"
                       style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
                       value={editIndustry}
                       onChange={(e) => setEditIndustry(e.target.value)}
@@ -792,10 +1043,10 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-semibold mb-1" style={{ color: "var(--text-3)" }}>Adresse</label>
+                    <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text-3)" }}>Adresse</label>
                     <input
                       type="text"
-                      className="w-full rounded px-2.5 py-1.5 text-xs border outline-none"
+                      className="w-full rounded-lg px-3 py-2 text-sm border outline-none"
                       style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
                       value={editAddress}
                       onChange={(e) => setEditAddress(e.target.value)}
@@ -803,10 +1054,10 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-semibold mb-1" style={{ color: "var(--text-3)" }}>Stadt</label>
+                    <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text-3)" }}>Stadt</label>
                     <input
                       type="text"
-                      className="w-full rounded px-2.5 py-1.5 text-xs border outline-none"
+                      className="w-full rounded-lg px-3 py-2 text-sm border outline-none"
                       style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
                       value={editCity}
                       onChange={(e) => setEditCity(e.target.value)}
@@ -814,11 +1065,11 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-semibold mb-1" style={{ color: "var(--text-3)" }}>Google Maps Link</label>
+                    <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text-3)" }}>Google Maps Link</label>
                     <input
                       type="text"
                       placeholder="https://google.com/maps/..."
-                      className="w-full rounded px-2.5 py-1.5 text-xs border outline-none font-mono"
+                      className="w-full rounded-lg px-3 py-2 text-sm border outline-none font-mono"
                       style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
                       value={editGoogleMapsUrl}
                       onChange={(e) => setEditGoogleMapsUrl(e.target.value)}
@@ -826,10 +1077,10 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-semibold mb-1" style={{ color: "var(--text-3)" }}>Telefon</label>
+                    <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text-3)" }}>Telefon</label>
                     <input
                       type="text"
-                      className="w-full rounded px-2.5 py-1.5 text-xs border outline-none font-mono"
+                      className="w-full rounded-lg px-3 py-2 text-sm border outline-none font-mono"
                       style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
                       value={editPhone}
                       onChange={(e) => setEditPhone(e.target.value)}
@@ -837,10 +1088,10 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-semibold mb-1" style={{ color: "var(--text-3)" }}>E-Mail</label>
+                    <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text-3)" }}>E-Mail</label>
                     <input
                       type="email"
-                      className="w-full rounded px-2.5 py-1.5 text-xs border outline-none"
+                      className="w-full rounded-lg px-3 py-2 text-sm border outline-none"
                       style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
                       value={editEmail}
                       onChange={(e) => setEditEmail(e.target.value)}
@@ -848,10 +1099,10 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-semibold mb-1" style={{ color: "var(--text-3)" }}>Webseite</label>
+                    <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text-3)" }}>Webseite</label>
                     <input
                       type="text"
-                      className="w-full rounded px-2.5 py-1.5 text-xs border outline-none"
+                      className="w-full rounded-lg px-3 py-2 text-sm border outline-none"
                       style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
                       value={editWebsite}
                       onChange={(e) => setEditWebsite(e.target.value)}
@@ -859,10 +1110,10 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-semibold mb-1" style={{ color: "var(--text-3)" }}>Instagram</label>
+                    <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text-3)" }}>Instagram</label>
                     <input
                       type="text"
-                      className="w-full rounded px-2.5 py-1.5 text-xs border outline-none"
+                      className="w-full rounded-lg px-3 py-2 text-sm border outline-none"
                       style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
                       value={editInstagram}
                       onChange={(e) => setEditInstagram(e.target.value)}
@@ -870,11 +1121,11 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-semibold mb-1" style={{ color: "var(--text-3)" }}>Treatwell Link</label>
+                    <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text-3)" }}>Treatwell Link</label>
                     <input
                       type="text"
                       placeholder="https://www.treatwell.at/ort/..."
-                      className="w-full rounded px-2.5 py-1.5 text-xs border outline-none"
+                      className="w-full rounded-lg px-3 py-2 text-sm border outline-none"
                       style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
                       value={editTreatwellUrl}
                       onChange={(e) => setEditTreatwellUrl(e.target.value)}
@@ -882,10 +1133,10 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-semibold mb-1" style={{ color: "var(--text-3)" }}>Ansprechpartner</label>
+                    <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text-3)" }}>Ansprechpartner</label>
                     <input
                       type="text"
-                      className="w-full rounded px-2.5 py-1.5 text-xs border outline-none"
+                      className="w-full rounded-lg px-3 py-2 text-sm border outline-none"
                       style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
                       value={editContactPerson}
                       onChange={(e) => setEditContactPerson(e.target.value)}
@@ -893,10 +1144,10 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                   </div>
                   
                   <div>
-                    <label className="block text-[10px] font-semibold mb-1" style={{ color: "var(--text-3)" }}>Follow-Up Datum & Uhrzeit</label>
+                    <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text-3)" }}>Follow-Up Datum & Uhrzeit</label>
                     <input
                       type="datetime-local"
-                      className="w-full rounded px-2.5 py-1.5 text-xs border outline-none"
+                      className="w-full rounded-lg px-3 py-2 text-sm border outline-none"
                       style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
                       value={editNextFollowUpAt}
                       onChange={(e) => setEditNextFollowUpAt(e.target.value)}
@@ -904,18 +1155,18 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 pt-3 border-t animate-fade-in" style={{ borderColor: "var(--border)" }}>
+                <div className="flex items-center gap-3 pt-4 border-t animate-fade-in" style={{ borderColor: "var(--border)" }}>
                   <button
                     onClick={handleSaveLeadDetails}
                     disabled={savingDetails}
-                    className="flex-1 text-center font-bold px-3 py-2 rounded text-[11px] hover:opacity-90"
+                    className="flex-1 text-center font-bold px-4 py-2.5 rounded-lg text-sm hover:opacity-90"
                     style={{ background: "var(--accent)", color: "var(--bg)" }}
                   >
                     {savingDetails ? "Speichert…" : "Speichern"}
                   </button>
                   <button
                     onClick={() => setIsEditing(false)}
-                    className="flex-1 text-center font-bold px-3 py-2 rounded text-[11px] hover:bg-[var(--surface-4)]"
+                    className="flex-1 text-center font-bold px-4 py-2.5 rounded-lg text-sm hover:bg-[var(--surface-4)]"
                     style={{ background: "var(--surface-3)", color: "var(--text)" }}
                   >
                     Abbrechen
@@ -1185,8 +1436,18 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                         {recordings.map((rec) => {
                           const badge = sentimentBadge[rec.aiSentiment] || sentimentBadge.NEUTRAL;
                           const isExpanded = selectedRecordingId === rec.id;
-                          const extracted = rec.aiExtractedData || {};
-                          const nextSteps = Array.isArray(rec.aiNextSteps) ? rec.aiNextSteps : [];
+                          const extracted = (typeof rec.aiExtractedData === "object" && rec.aiExtractedData) ? rec.aiExtractedData : {};
+                          const nextSteps = Array.isArray(rec.aiNextSteps)
+                            ? rec.aiNextSteps
+                            : typeof rec.aiNextSteps === "string"
+                              ? [rec.aiNextSteps]
+                              : [];
+                          const aiFeedback = (typeof rec.aiFeedback === "object" && rec.aiFeedback) ? rec.aiFeedback : null;
+                          const feedbackTips: string[] = Array.isArray(aiFeedback?.tips)
+                            ? aiFeedback.tips
+                            : typeof aiFeedback?.tips === "string"
+                              ? [aiFeedback.tips]
+                              : [];
 
                           return (
                             <div
@@ -1264,7 +1525,7 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                                   </div>
 
                                   {/* Rhetoric Feedback */}
-                                  {rec.aiFeedback && (
+                                  {aiFeedback && (
                                     <div className="p-3.5 rounded border space-y-3" style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}>
                                       <h5 className="font-semibold text-[11px] flex items-center gap-1.5" style={{ color: "var(--status-warm-tx)" }}>
                                         <Sparkles className="w-3.5 h-3.5" /> Rhetorik- & Sprechstil-Analyse
@@ -1272,23 +1533,23 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-[11px]">
                                         <div className="space-y-0.5">
                                           <span className="font-semibold text-[10px]" style={{ color: "var(--text-3)" }}>Redegeschwindigkeit:</span>
-                                          <p style={{ color: "var(--text-2)" }}>{rec.aiFeedback.pace || "—"}</p>
+                                          <p style={{ color: "var(--text-2)" }}>{aiFeedback.pace || "—"}</p>
                                         </div>
                                         <div className="space-y-0.5">
                                           <span className="font-semibold text-[10px]" style={{ color: "var(--text-3)" }}>Füllwörter & Stottern:</span>
-                                          <p style={{ color: "var(--text-2)" }}>{rec.aiFeedback.stuttering || "—"}</p>
+                                          <p style={{ color: "var(--text-2)" }}>{aiFeedback.stuttering || "—"}</p>
                                         </div>
                                         <div className="space-y-0.5">
                                           <span className="font-semibold text-[10px]" style={{ color: "var(--text-3)" }}>Gelassenheit & Tonfall:</span>
-                                          <p style={{ color: "var(--text-2)" }}>{rec.aiFeedback.tone || "—"}</p>
+                                          <p style={{ color: "var(--text-2)" }}>{aiFeedback.tone || "—"}</p>
                                         </div>
                                       </div>
 
-                                      {rec.aiFeedback.tips && rec.aiFeedback.tips.length > 0 && (
+                                      {feedbackTips.length > 0 && (
                                         <div className="border-t pt-2 mt-2 space-y-1" style={{ borderColor: "var(--border)" }}>
                                           <span className="font-semibold text-[10px]" style={{ color: "var(--text-3)" }}>Rhetorik-Tipps zur Verbesserung:</span>
                                           <ul className="space-y-1 mt-1">
-                                            {rec.aiFeedback.tips.map((tip: string, idx: number) => (
+                                            {feedbackTips.map((tip: string, idx: number) => (
                                               <li key={idx} style={{ color: "var(--text-2)" }}>• {tip}</li>
                                             ))}
                                           </ul>
@@ -1323,6 +1584,7 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

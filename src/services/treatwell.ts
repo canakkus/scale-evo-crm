@@ -49,29 +49,32 @@ export async function searchTreatwell(
   const useBei = entry ? entry.prefix : true;
   const prefix = useBei ? "bei-" : "";
   const url = `https://www.treatwell.at/orte/${prefix}${slug}/in-${slugify(city)}-at/`;
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), options.timeoutMs ?? 15000);
 
   try {
-    const response = await fetch(url, {
-      headers: { "User-Agent": USER_AGENT, Accept: "text/html" },
-      redirect: "follow",
-      signal: controller.signal,
+    const timeoutMs = options.timeoutMs ?? 4500;
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": USER_AGENT,
+        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Accept-Language": "de-AT,de;q=0.9,en;q=0.8",
+      },
+      signal: AbortSignal.timeout(timeoutMs),
       cache: "no-store",
-    });
-    if (!response.ok) {
-      return { venues: [], url, error: `Treatwell antwortete mit HTTP ${response.status}.` };
+    }).catch(() => null);
+
+    if (!res || !res.ok) {
+      return { venues: [], url, error: res ? `HTTP ${res.status}` : "Treatwell Timeout" };
     }
-    const html = await response.text();
-    return { venues: parseTreatwellHtml(html), url };
+
+    const html = await res.text();
+    const venues = parseTreatwellHtml(html);
+    return { venues, url };
   } catch (error) {
     return {
       venues: [],
       url,
       error: error instanceof Error ? error.message : "Treatwell konnte nicht geladen werden.",
     };
-  } finally {
-    clearTimeout(timeout);
   }
 }
 

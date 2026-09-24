@@ -35,43 +35,59 @@ function textContains(text: string, terms: string[]) {
   return terms.some((term) => value.includes(term));
 }
 
+const USER_AGENT =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
+
 export class WebsiteAuditProvider {
   async analyze(input: string): Promise<AuditResult> {
     const normalized = normalizeUrl(input);
-    const url = normalized ?? input;
+    const url = normalized ?? (input.startsWith("http") ? input : `https://${input}`);
     const https = url.startsWith("https://");
-    const controller = new AbortController();
-    const timeout = setTimeout(
-      () => controller.abort(),
-      Number(process.env.ENRICHMENT_TIMEOUT_MS ?? 12000),
-    );
     const startedAt = performance.now();
 
     try {
       const response = await fetch(url, {
-        signal: controller.signal,
-        redirect: "follow",
         headers: {
-          "User-Agent": process.env.ENRICHMENT_USER_AGENT ?? "ScaleEvoCRM/3.0",
-          Accept: "text/html,application/xhtml+xml",
+          "User-Agent": USER_AGENT,
+          Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+          "Accept-Language": "de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7",
+          "Cache-Control": "no-cache",
         },
+        redirect: "follow",
         cache: "no-store",
+        signal: AbortSignal.timeout(3500),
+      }).catch((err) => {
+        // If HTTPS fails (e.g. invalid certificate), attempt HTTP fallback
+        if (url.startsWith("https://")) {
+          const httpUrl = url.replace(/^https:\/\//, "http://");
+          return fetch(httpUrl, {
+            headers: { "User-Agent": USER_AGENT },
+            redirect: "follow",
+            cache: "no-store",
+            signal: AbortSignal.timeout(2500),
+          }).catch(() => null);
+        }
+        return null;
       });
+
       const responseTimeMs = Math.round(performance.now() - startedAt);
-      const contentType = response.headers.get("content-type") ?? "";
-      if (!contentType.includes("text/html")) {
+
+      if (!response) {
         return {
           ...EMPTY_RESULT,
           url,
           https,
-          reachable: response.ok,
-          statusCode: response.status,
+          reachable: false,
+          statusCode: 0,
           responseTimeMs,
-          error: "Die URL liefert kein HTML-Dokument.",
+          error: "Timeout oder Verbindungsfehler beim Laden der Website.",
+          findings: ["Website nicht erreichbar oder Server antwortet nicht zeitnah."],
         };
       }
 
-      const html = (await response.text()).slice(0, 2_000_000);
+      const statusCode = response.status;
+      const isOk = statusCode >= 200 && statusCode < 400;
+      const html = (await response.text().catch(() => "")).slice(0, 2_000_000);
       const $ = cheerio.load(html);
       $("script, style, noscript, svg").remove();
       const pageText = $("body").text().replace(/\s+/g, " ").trim();
@@ -104,6 +120,7 @@ export class WebsiteAuditProvider {
       const email = $("a[href^='mailto:']").first().attr("href")?.replace(/^mailto:/, "").split("?")[0] ??
         firstMatch(pageText, /[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/);
       const instagram = allLinks.find((link) => /instagram\.com/i.test(link.href))?.href;
+      const treatwellUrl = allLinks.find((link) => /treatwell\.(at|de|com|ch|co\.uk)/i.test(link.href))?.href;
       const title = $("title").first().text().trim();
       const address =
         $("address").first().text().replace(/\s+/g, " ").trim() ||
@@ -117,9 +134,9 @@ export class WebsiteAuditProvider {
 
       const result: AuditResult = {
         url,
-        reachable: response.ok,
-        statusCode: response.status,
-        https: response.url.startsWith("https://"),
+        reachable: isOk,
+        statusCode: statusCode,
+        https: (response.url || url).startsWith("https://"),
         responseTimeMs,
         hasViewport: Boolean($("meta[name='viewport']").attr("content")),
         hasTitle: Boolean(title),
@@ -148,6 +165,7 @@ export class WebsiteAuditProvider {
           "reservieren",
         ]),
         hasBooking: textContains(linkHaystack, [
+          "treatwell",
           "calendly",
           "termin",
           "booking",
@@ -158,8 +176,8 @@ export class WebsiteAuditProvider {
         menuUrl,
         menuIsPdf,
         findings: [],
-        error: response.ok ? null : `HTTP-Status ${response.status}`,
-        extracted: { companyName, phone, email, address, instagram },
+        error: isOk ? null : `HTTP-Status ${statusCode}`,
+        extracted: { companyName, phone, email, address, instagram, treatwellUrl },
       };
 
       result.findings = buildFindings(result);
@@ -172,8 +190,6 @@ export class WebsiteAuditProvider {
         findings: ["Website nicht erreichbar – URL und Erreichbarkeit manuell prüfen."],
         error: error instanceof Error ? error.message : "Unbekannter Fehler",
       };
-    } finally {
-      clearTimeout(timeout);
     }
   }
 }

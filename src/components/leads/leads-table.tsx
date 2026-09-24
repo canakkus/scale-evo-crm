@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import {
-  Search,
+  Search, User,
   Plus,
   Filter,
   Phone,
@@ -19,6 +19,8 @@ import {
   Radio,
   Check,
   Copy,
+  RefreshCw,
+  Sparkles,
 } from "lucide-react";
 import { StatusBadge, PriorityDot } from "@/components/ui/status-badge";
 import { LeadFormModal } from "@/components/leads/lead-form-modal";
@@ -109,14 +111,14 @@ export function LeadsTable() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* Action Bar */}
-      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         {/* Search Input & Acquisition Type Switcher */}
-        <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap flex-1">
+        <div className="flex items-center gap-2.5 flex-1 min-w-0">
           {/* Acquisition Toggle */}
           <div
-            className="inline-flex p-1 rounded-xl border max-w-fit shrink-0 shadow-inner"
+            className="inline-flex p-0.5 rounded-xl border max-w-fit shrink-0 shadow-inner"
             style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}
           >
             <button
@@ -125,14 +127,14 @@ export function LeadsTable() {
                 setAcquisitionFilter("");
                 setPage(1);
               }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 acquisitionFilter === ""
                   ? "shadow-sm"
                   : "opacity-75 hover:opacity-100 hover:text-[var(--text)]"
               }`}
               style={{
-                background: acquisitionFilter === "" ? "var(--accent)" : "transparent",
-                color: acquisitionFilter === "" ? "var(--bg)" : "var(--text-2)",
+                background: acquisitionFilter === "" ? "var(--surface)" : "transparent",
+                color: acquisitionFilter === "" ? "var(--text)" : "var(--text-2)",
               }}
             >
               Alle
@@ -143,18 +145,18 @@ export function LeadsTable() {
                 setAcquisitionFilter("CALL");
                 setPage(1);
               }}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 acquisitionFilter === "CALL"
                   ? "shadow-sm"
                   : "opacity-75 hover:opacity-100 hover:text-[var(--text)]"
               }`}
               style={{
-                background: acquisitionFilter === "CALL" ? "var(--accent)" : "transparent",
-                color: acquisitionFilter === "CALL" ? "var(--bg)" : "var(--text-2)",
+                background: acquisitionFilter === "CALL" ? "var(--surface)" : "transparent",
+                color: acquisitionFilter === "CALL" ? "var(--text)" : "var(--text-2)",
               }}
             >
-              <span>📞</span>
-              <span>Cold Calls</span>
+              <Phone className="w-3.5 h-3.5 opacity-70" />
+              <span>Calls</span>
             </button>
             <button
               type="button"
@@ -162,17 +164,17 @@ export function LeadsTable() {
                 setAcquisitionFilter("WALK_IN");
                 setPage(1);
               }}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 acquisitionFilter === "WALK_IN"
                   ? "shadow-sm"
                   : "opacity-75 hover:opacity-100 hover:text-[var(--text)]"
               }`}
               style={{
-                background: acquisitionFilter === "WALK_IN" ? "var(--accent)" : "transparent",
-                color: acquisitionFilter === "WALK_IN" ? "var(--bg)" : "var(--text-2)",
+                background: acquisitionFilter === "WALK_IN" ? "var(--surface)" : "transparent",
+                color: acquisitionFilter === "WALK_IN" ? "var(--text)" : "var(--text-2)",
               }}
             >
-              <span>🚶‍♂️</span>
+              <User className="w-3.5 h-3.5 opacity-70" />
               <span>Walk-Ins</span>
             </button>
             <button
@@ -197,24 +199,37 @@ export function LeadsTable() {
           </div>
 
           {/* Search Input */}
-          <div className="relative flex-1 min-w-[200px] max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "var(--text-3)" }} />
+          <div className="relative flex-1 min-w-[140px] max-w-xs">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: "var(--text-3)" }} />
             <input
               type="text"
-              placeholder="Lead suchen (Name, Stadt, Telefon)..."
+              placeholder="Lead suchen..."
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              className="w-full rounded-md pl-9 pr-4 py-2 text-sm border outline-none transition-colors"
+              className="w-full rounded-xl pl-9 pr-7 py-1.5 text-xs sm:text-sm border outline-none transition-colors"
               style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}
             />
+            {search && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearch("");
+                  setPage(1);
+                }}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs opacity-50 hover:opacity-100"
+                style={{ color: "var(--text)" }}
+              >
+                ✕
+              </button>
+            )}
           </div>
         </div>
 
         {/* Filters & Add Button */}
-        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+        <div className="flex items-center gap-2 shrink-0">
           {/* Update Date Filter */}
           <div className="flex items-center gap-1.5">
             <select
@@ -226,14 +241,14 @@ export function LeadsTable() {
                   setCustomDate("");
                 }
               }}
-              className="rounded-md px-3 py-2 text-xs font-medium border outline-none cursor-pointer"
+              className="rounded-xl px-2.5 py-1.5 text-xs sm:text-sm font-medium border outline-none cursor-pointer"
               style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-2)" }}
             >
-              <option value="">Zuletzt geändert: Jederzeit</option>
+              <option value="">Jederzeit</option>
               <option value="today">Heute</option>
               <option value="yesterday">Gestern</option>
               <option value="thisWeek">Diese Woche</option>
-              <option value="custom">Anderes Datum...</option>
+              <option value="custom">Datum...</option>
             </select>
 
             {updatedDateFilter === "custom" && (
@@ -244,7 +259,7 @@ export function LeadsTable() {
                   setCustomDate(e.target.value);
                   setPage(1);
                 }}
-                className="rounded-md px-2.5 py-1.5 text-xs border outline-none cursor-pointer animate-fade-in"
+                className="rounded-xl px-2.5 py-1.5 text-xs sm:text-sm border outline-none cursor-pointer animate-fade-in"
                 style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-2)" }}
               />
             )}
@@ -257,10 +272,10 @@ export function LeadsTable() {
               setStatusFilter(e.target.value);
               setPage(1);
             }}
-            className="rounded-md px-3 py-2 text-xs font-medium border outline-none cursor-pointer"
+            className="rounded-xl px-2.5 py-1.5 text-xs sm:text-sm font-medium border outline-none cursor-pointer"
             style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-2)" }}
           >
-            <option value="">Alle Status ({totalLeads})</option>
+            <option value="">Alle Status</option>
             {Object.entries(STATUS_LABELS).map(([key, label]) => (
               <option key={key} value={key}>{label}</option>
             ))}
@@ -271,13 +286,13 @@ export function LeadsTable() {
             <button
               type="button"
               onClick={() => setIsIndustryDropdownOpen(!isIndustryDropdownOpen)}
-              className="rounded-md px-3 py-2 text-xs font-medium border outline-none cursor-pointer flex items-center gap-1.5 transition-colors hidden md:flex"
+              className="rounded-xl px-2.5 py-1.5 text-xs sm:text-sm font-medium border outline-none cursor-pointer flex items-center gap-1.5 transition-colors hidden md:flex"
               style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-2)" }}
             >
               <Filter className="w-3.5 h-3.5" />
               <span>
                 {industryFilters.length === 0
-                  ? "Alle Branchen"
+                  ? "Branchen"
                   : industryFilters.length === 1
                   ? industryFilters[0]
                   : `${industryFilters.length} Branchen`}
@@ -291,7 +306,7 @@ export function LeadsTable() {
                   onClick={() => setIsIndustryDropdownOpen(false)}
                 />
                 <div
-                  className="absolute right-0 mt-1 w-64 rounded-md border shadow-lg p-3 space-y-2.5 z-20 animate-fade-in"
+                  className="absolute right-0 mt-2 w-64 rounded-xl border shadow-xl p-3 space-y-3 z-20 animate-fade-in"
                   style={{ background: "var(--surface)", borderColor: "var(--border)" }}
                 >
                   <input
@@ -299,13 +314,12 @@ export function LeadsTable() {
                     placeholder="Branche suchen..."
                     value={industrySearch}
                     onChange={(e) => setIndustrySearch(e.target.value)}
-                    className="w-full rounded px-2.5 py-1 text-xs border outline-none"
+                    className="w-full rounded-md px-3 py-1.5 text-sm border outline-none"
                     style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
                   />
 
-                  <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
-                    {/* Option: Keine Angabe */}
-                    <label className="flex items-center gap-2 cursor-pointer text-xs p-1 rounded hover:bg-[var(--surface-2)]">
+                  <div className="max-h-48 overflow-y-auto space-y-1 pr-1">
+                    <label className="flex items-center gap-2 cursor-pointer text-sm p-1.5 rounded-md hover:bg-[var(--surface-2)]">
                       <input
                         type="checkbox"
                         checked={industryFilters.includes("Keine Angabe")}
@@ -325,7 +339,7 @@ export function LeadsTable() {
                     {availableIndustries
                       .filter((ind) => ind.toLowerCase().includes(industrySearch.toLowerCase()))
                       .map((ind) => (
-                        <label key={ind} className="flex items-center gap-2 cursor-pointer text-xs p-1 rounded hover:bg-[var(--surface-2)]">
+                        <label key={ind} className="flex items-center gap-2 cursor-pointer text-sm p-1.5 rounded-md hover:bg-[var(--surface-2)]">
                           <input
                             type="checkbox"
                             checked={industryFilters.includes(ind)}
@@ -344,22 +358,22 @@ export function LeadsTable() {
                       ))}
                   </div>
 
-                  <div className="flex items-center justify-between border-t pt-2" style={{ borderColor: "var(--border)" }}>
+                  <div className="flex items-center justify-between border-t pt-3" style={{ borderColor: "var(--border)" }}>
                     <button
                       type="button"
                       onClick={() => {
                         setIndustryFilters([]);
                         setPage(1);
                       }}
-                      className="text-[10px] font-bold uppercase transition-colors hover:text-[var(--accent)]"
+                      className="text-xs font-semibold uppercase transition-colors hover:text-[var(--accent)]"
                       style={{ color: "var(--text-3)" }}
                     >
-                      Filter zurücksetzen
+                      Zurücksetzen
                     </button>
                     <button
                       type="button"
                       onClick={() => setIsIndustryDropdownOpen(false)}
-                      className="text-[10px] font-bold uppercase rounded px-2.5 py-1"
+                      className="text-xs font-semibold uppercase rounded-md px-3 py-1.5"
                       style={{ background: "var(--accent)", color: "var(--bg)" }}
                     >
                       Fertig
@@ -370,14 +384,27 @@ export function LeadsTable() {
             )}
           </div>
 
+          {/* Refresh Button */}
+          <button
+            type="button"
+            onClick={() => fetchLeads()}
+            disabled={loading}
+            title="Leads aktualisieren"
+            className="flex items-center justify-center rounded-xl p-2 sm:px-2.5 sm:py-1.5 text-xs sm:text-sm font-medium border outline-none transition-all cursor-pointer hover:bg-[var(--surface-2)] active:scale-95 disabled:opacity-50"
+            style={{ background: "var(--surface)", borderColor: "var(--border)" }}
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-[var(--accent)]" : ""}`} style={{ color: "var(--text-2)" }} />
+            <span className="hidden xl:inline ml-1.5" style={{ color: "var(--text-2)" }}>Aktualisieren</span>
+          </button>
+
           {/* New Lead Button */}
           <button
             onClick={() => setIsFormOpen(true)}
-            className="flex items-center gap-1.5 rounded-md px-3.5 py-2 text-xs font-semibold shadow-sm transition-all"
+            className="flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs sm:text-sm font-semibold shadow-sm transition-all hover:opacity-90 active:scale-95 shrink-0"
             style={{ background: "var(--accent)", color: "var(--bg)" }}
           >
             <Plus className="w-4 h-4" />
-            Neuer Lead
+            <span>Neuer Lead</span>
           </button>
         </div>
       </div>
@@ -385,29 +412,28 @@ export function LeadsTable() {
       {/* Table Container */}
       <div className="rounded-xl border overflow-hidden shadow-sm" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
+          <table className="w-full text-left text-sm border-collapse">
             <thead>
               <tr className="border-b" style={{ borderColor: "var(--border)", background: "var(--surface-2)" }}>
-                <th className="px-4 py-3 font-semibold" style={{ color: "var(--text-2)" }}>Firma / Branche</th>
-                <th className="px-4 py-3 font-semibold" style={{ color: "var(--text-2)" }}>Typ & Status</th>
-                <th className="px-4 py-3 font-semibold" style={{ color: "var(--text-2)" }}>Kontakt</th>
-                <th className="px-4 py-3 font-semibold" style={{ color: "var(--text-2)" }}>Adresse / Stadt</th>
-                <th className="px-4 py-3 font-semibold" style={{ color: "var(--text-2)" }}>Bewertung</th>
-                <th className="px-4 py-3 font-semibold" style={{ color: "var(--text-2)" }}>Letzter Kontakt</th>
-                <th className="px-4 py-3 font-semibold text-right" style={{ color: "var(--text-2)" }}>Aktionen</th>
+                <th className="px-5 py-3 font-medium" style={{ color: "var(--text-2)" }}>Firma / Branche</th>
+                <th className="px-5 py-3 font-medium" style={{ color: "var(--text-2)" }}>Typ & Status</th>
+                <th className="px-5 py-3 font-medium" style={{ color: "var(--text-2)" }}>Kontakt</th>
+                <th className="px-5 py-3 font-medium" style={{ color: "var(--text-2)" }}>Adresse / Stadt</th>
+                <th className="px-5 py-3 font-medium" style={{ color: "var(--text-2)" }}>Bewertung</th>
+                <th className="px-5 py-3 font-medium text-right" style={{ color: "var(--text-2)" }}>Aktionen</th>
               </tr>
             </thead>
             <tbody className="divide-y" style={{ borderColor: "var(--border)" }}>
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-12 text-center" style={{ color: "var(--text-3)" }}>
-                    <div className="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin mx-auto mb-2" style={{ borderColor: "var(--border-2)", borderTopColor: "var(--accent)" }} />
+                  <td colSpan={6} className="px-5 py-12 text-center" style={{ color: "var(--text-3)" }}>
+                    <div className="w-6 h-6 rounded-full border-2 border-t-transparent animate-spin mx-auto mb-3" style={{ borderColor: "var(--border-2)", borderTopColor: "var(--accent)" }} />
                     Leads werden geladen…
                   </td>
                 </tr>
               ) : leads.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-12 text-center" style={{ color: "var(--text-3)" }}>
+                  <td colSpan={6} className="px-5 py-12 text-center text-base" style={{ color: "var(--text-3)" }}>
                     Keine Leads gefunden.
                   </td>
                 </tr>
@@ -423,60 +449,51 @@ export function LeadsTable() {
                       className="hover:bg-[var(--surface-3)] transition-colors cursor-pointer group"
                     >
                       {/* Firma */}
-                      <td className="px-4 py-3.5">
-                        <div className="flex items-center gap-1.5 font-semibold text-sm" style={{ color: "var(--text)" }}>
+                      <td className="px-5 py-4 align-top">
+                        <div className="flex items-center gap-2 font-semibold text-base mb-1" style={{ color: "var(--text)" }}>
                           <span>{lead.companyName}</span>
                           {lead.hasMenu === true && (
-                            <span className="text-[10px] font-normal px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                              🟢 Karte
+                            <span className="text-xs font-normal px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                              Karte
                             </span>
                           )}
                           {lead.hasMenu === false && lead.website && (
-                            <span className="text-[10px] font-normal px-1.5 py-0.2 rounded bg-red-500/10 text-red-400 border border-red-500/20">
-                              🔴 Keine Karte
+                            <span className="text-xs font-normal px-2 py-0.5 rounded-md bg-red-500/10 text-red-500 border border-red-500/20">
+                              Keine Karte
                             </span>
                           )}
                         </div>
-                        <div className="text-[11px]" style={{ color: "var(--text-2)" }}>
+                        <div className="text-xs font-medium" style={{ color: "var(--text-2)" }}>
                           {lead.industry || "—"}
                         </div>
                       </td>
 
                       {/* Typ & Status */}
-                      <td className="px-4 py-3.5">
-                        <div className="flex flex-col gap-1 items-start">
+                      <td className="px-5 py-4 align-top">
+                        <div className="flex flex-col gap-2 items-start">
                           <StatusBadge status={lead.status} />
                           <span
-                            className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
+                            className="text-xs font-medium px-2 py-1 rounded-md"
                             style={
                               lead.acquisitionType === "DM"
-                                ? {
-                                    background: "var(--channel-dm-bg)",
-                                    color: "var(--channel-dm-tx)",
-                                    border: "1px solid var(--border-2)",
-                                  }
+                                ? { background: "var(--channel-dm-bg)", color: "var(--channel-dm-tx)" }
                                 : {
                                     background: isWalkIn ? "rgba(168, 85, 247, 0.1)" : "rgba(59, 130, 246, 0.1)",
                                     color: isWalkIn ? "rgb(192, 132, 252)" : "rgb(96, 165, 250)",
-                                    border: isWalkIn ? "1px solid rgba(168, 85, 247, 0.2)" : "1px solid rgba(59, 130, 246, 0.2)",
                                   }
                             }
                           >
-                            {lead.acquisitionType === "DM"
-                              ? "💬 Instagram DM"
-                              : isWalkIn
-                                ? "🚶‍♂️ Walk-In"
-                                : "📞 Cold Call"}
+                            {lead.acquisitionType === "DM" ? "Instagram DM" : isWalkIn ? "Walk-In" : "Cold Call"}
                           </span>
                         </div>
                       </td>
 
                       {/* Kontakt */}
-                      <td className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex flex-col gap-0.5 text-[11px]">
+                      <td className="px-5 py-4 align-top" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex flex-col gap-1.5 text-sm">
                           {lead.phone ? (
-                            <a href={`tel:${lead.phone}`} className="flex items-center gap-1.5 hover:underline font-mono" style={{ color: "var(--accent)" }}>
-                              <Phone className="w-3 h-3 shrink-0" style={{ color: "var(--text-3)" }} />
+                            <a href={`tel:${lead.phone}`} className="flex items-center gap-2 hover:underline font-mono" style={{ color: "var(--accent)" }}>
+                              <Phone className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--text-3)" }} />
                               {lead.phone}
                             </a>
                           ) : null}
@@ -485,35 +502,48 @@ export function LeadsTable() {
                               href={lead.website.startsWith("http") ? lead.website : `https://${lead.website}`}
                               target="_blank"
                               rel="noreferrer"
-                              className="flex items-center gap-1.5 hover:underline truncate max-w-[160px]"
+                              className="flex items-center gap-2 hover:underline truncate max-w-[160px]"
                               style={{ color: "var(--text-2)" }}
+                              title={lead.website}
                             >
-                              <Globe className="w-3 h-3 shrink-0" style={{ color: "var(--text-3)" }} />
+                              <Globe className="w-3.5 h-3.5 shrink-0" style={{ color: "var(--text-3)" }} />
                               {lead.website.replace(/^https?:\/\/(www\.)?/, "")}
                             </a>
                           ) : null}
-                          {!lead.phone && !lead.website && <span style={{ color: "var(--text-3)" }}>Keine Kontaktdaten</span>}
+                          {lead.treatwellUrl ? (
+                            <a
+                              href={lead.treatwellUrl.startsWith("http") ? lead.treatwellUrl : `https://${lead.treatwellUrl}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="flex items-center gap-2 hover:underline truncate max-w-[160px] text-teal-400 font-medium"
+                              title="Treatwell-Profil öffnen"
+                            >
+                              <Sparkles className="w-3.5 h-3.5 shrink-0 text-teal-400" />
+                              Treatwell
+                            </a>
+                          ) : null}
+                          {!lead.phone && !lead.website && !lead.treatwellUrl && <span style={{ color: "var(--text-3)" }}>Keine Kontaktdaten</span>}
                         </div>
                       </td>
 
                       {/* Adresse / Stadt */}
-                      <td className="px-4 py-3.5" style={{ color: "var(--text-2)" }}>
-                        <div className="flex flex-col gap-0.5 text-[11px]">
+                      <td className="px-5 py-4 align-top" style={{ color: "var(--text-2)" }}>
+                        <div className="flex flex-col gap-1 text-sm">
                           {lead.address && <span className="font-medium truncate max-w-[180px]">{lead.address}</span>}
                           <span style={{ color: "var(--text-3)" }}>{lead.city || "—"}</span>
                         </div>
                       </td>
 
                       {/* Rating */}
-                      <td className="px-4 py-3.5">
+                      <td className="px-5 py-4 align-top">
                         {lead.googleRating != null ? (
-                          <div className="flex items-center gap-1">
-                            <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                            <span className="font-semibold" style={{ color: "var(--text)" }}>
+                          <div className="flex items-center gap-1.5">
+                            <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                            <span className="font-semibold text-sm" style={{ color: "var(--text)" }}>
                               {lead.googleRating.toFixed(1)}
                             </span>
                             {lead.googleReviewCount != null && (
-                              <span style={{ color: "var(--text-3)" }}>({lead.googleReviewCount})</span>
+                              <span className="text-xs" style={{ color: "var(--text-3)" }}>({lead.googleReviewCount})</span>
                             )}
                           </div>
                         ) : (
@@ -521,20 +551,15 @@ export function LeadsTable() {
                         )}
                       </td>
 
-                      {/* Letzter Kontakt */}
-                      <td className="px-4 py-3.5 text-[11px]" style={{ color: "var(--text-3)" }}>
-                        {lead.lastContactAt ? timeAgo(lead.lastContactAt) : "Noch nie"}
-                      </td>
-
                       {/* Actions */}
-                      <td className="px-4 py-3.5 text-right" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-1.5">
+                      <td className="px-5 py-4 align-top text-right" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-2 opacity-100 transition-opacity">
                           {/* Maps Quick Action */}
                           {mapsUrl && (
                             <button
                               type="button"
                               onClick={() => window.open(mapsUrl, "_blank", "noopener,noreferrer")}
-                              className="p-1.5 rounded hover:bg-[var(--surface-2)] transition-colors text-sky-400"
+                              className="p-2 rounded-lg hover:bg-[var(--surface-2)] transition-colors text-sky-400"
                               title="Route auf Google Maps öffnen"
                             >
                               <Navigation className="w-4 h-4" />
@@ -546,8 +571,8 @@ export function LeadsTable() {
                             <button
                               type="button"
                               onClick={(e) => handleCopyNfc(e, lead.nfcDemoUrl, lead.id)}
-                              className="p-1.5 rounded hover:bg-[var(--surface-2)] transition-colors text-purple-400"
-                              title={copiedNfcId === lead.id ? "Kopiert!" : `NFC Demo URL kopieren: ${lead.nfcDemoUrl}`}
+                              className="p-2 rounded-lg hover:bg-[var(--surface-2)] transition-colors text-purple-400"
+                              title={copiedNfcId === lead.id ? "Kopiert!" : `NFC Demo URL kopieren`}
                             >
                               {copiedNfcId === lead.id ? (
                                 <Check className="w-4 h-4 text-emerald-400" />
@@ -559,7 +584,7 @@ export function LeadsTable() {
 
                           <button
                             onClick={() => setSelectedLeadId(lead.id)}
-                            className="p-1.5 rounded hover:bg-[var(--surface-2)] transition-colors"
+                            className="p-2 rounded-lg hover:bg-[var(--surface-2)] transition-colors"
                             title="Details anzeigen"
                             style={{ color: "var(--text-2)" }}
                           >
@@ -567,7 +592,7 @@ export function LeadsTable() {
                           </button>
                           <button
                             onClick={() => handleDeleteLead(lead.id, lead.companyName)}
-                            className="p-1.5 rounded hover:bg-[var(--status-lost-bg)] transition-colors"
+                            className="p-2 rounded-lg hover:bg-[var(--status-lost-bg)] transition-colors"
                             title="Löschen"
                             style={{ color: "var(--status-lost-tx)" }}
                           >
@@ -585,15 +610,15 @@ export function LeadsTable() {
 
         {/* Pagination Footer */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t text-xs" style={{ borderColor: "var(--border)", background: "var(--surface-2)" }}>
+          <div className="flex items-center justify-between px-5 py-4 border-t text-sm" style={{ borderColor: "var(--border)", background: "var(--surface-2)" }}>
             <span style={{ color: "var(--text-2)" }}>
-              Seite {page} von {totalPages} ({totalLeads} Leads gesamt)
+              Seite {page} von {totalPages} ({totalLeads} Leads)
             </span>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-2">
               <button
                 disabled={page <= 1}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
-                className="p-1.5 rounded border transition-colors disabled:opacity-40"
+                className="p-2 rounded-md border shadow-sm transition-colors disabled:opacity-40"
                 style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}
               >
                 <ChevronLeft className="w-4 h-4" />
@@ -601,7 +626,7 @@ export function LeadsTable() {
               <button
                 disabled={page >= totalPages}
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                className="p-1.5 rounded border transition-colors disabled:opacity-40"
+                className="p-2 rounded-md border shadow-sm transition-colors disabled:opacity-40"
                 style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}
               >
                 <ChevronRight className="w-4 h-4" />
