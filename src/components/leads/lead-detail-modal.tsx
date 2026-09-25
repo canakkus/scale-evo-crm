@@ -37,9 +37,10 @@ import {
   AlarmClock,
 } from "lucide-react";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { OutreachLeadPanel } from "@/components/outreach/outreach-lead-panel";
 import { CustomAudioPlayer } from "@/components/ui/custom-audio-player";
 import { STATUS_LABELS, INTERACTION_LABELS } from "@/lib/constants";
-import { formatDate, timeAgo } from "@/lib/utils";
+import { formatDate, timeAgo, normalizeInstagramHandle, instagramProfileUrl } from "@/lib/utils";
 import type { LeadStatus, InteractionType } from "@prisma/client";
 
 type LeadDetailModalProps = {
@@ -57,7 +58,7 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
   const [checkingMenu, setCheckingMenu] = useState(false);
 
   // Tab State: "timeline" or "gemini"
-  const [activeTab, setActiveTab] = useState<"timeline" | "gemini">("timeline");
+  const [activeTab, setActiveTab] = useState<"timeline" | "gemini" | "outreach">("timeline");
 
   // Call recordings for this lead
   const [recordings, setRecordings] = useState<any[]>([]);
@@ -531,7 +532,7 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                         color: lead.acquisitionType === "WALK_IN" ? "rgb(192, 132, 252)" : "rgb(96, 165, 250)",
                       }}
                     >
-                      {lead.acquisitionType === "WALK_IN" ? "Walk-In" : "Cold Call"}
+                      {lead.acquisitionType === "DM" ? "Instagram DM" : lead.acquisitionType === "WALK_IN" ? "Walk-In" : "Cold Call"}
                     </span>
                   </div>
                 </div>
@@ -673,13 +674,17 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                     <div className="flex items-center gap-2">
                       <Camera className="w-4 h-4 shrink-0" style={{ color: "var(--text-3)" }} />
                       <a
-                        href={`https://instagram.com/${lead.instagram.replace(/^@/, "")}`}
+                        href={instagramProfileUrl(lead.instagram) ?? "#"}
                         target="_blank"
                         rel="noreferrer"
                         className="hover:underline truncate"
                         style={{ color: "var(--accent)" }}
                       >
-                        {lead.instagram.startsWith("@") ? lead.instagram : `@${lead.instagram}`}
+                        {/* Das Feld enthaelt mal ein Handle, mal eine volle URL —
+                            deshalb immer normalisieren statt nur ein "@" davorzusetzen. */}
+                        {normalizeInstagramHandle(lead.instagram)
+                          ? `@${normalizeInstagramHandle(lead.instagram)}`
+                          : lead.instagram}
                       </a>
                     </div>
                   </div>
@@ -1010,6 +1015,7 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                     >
                       <option value="CALL">Cold Call</option>
                       <option value="WALK_IN">Walk-In</option>
+                      <option value="DM">Instagram DM</option>
                     </select>
                   </div>
 
@@ -1196,14 +1202,33 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                 <Brain className="w-3.5 h-3.5" style={{ color: "var(--status-warm-tx)" }} />
                 Gemini Transkripte ({recordings.length})
               </button>
+
+              <button
+                onClick={() => setActiveTab("outreach")}
+                className={`px-4 py-2 text-xs font-semibold border-b-2 transition-all flex items-center gap-1.5 ${
+                  activeTab === "outreach"
+                    ? "border-[var(--accent)] text-[var(--text)]"
+                    : "border-transparent text-[var(--text-2)] hover:text-[var(--text)]"
+                }`}
+              >
+                <Send className="w-3.5 h-3.5" style={{ color: "var(--status-contacted-tx)" }} />
+                Outreach
+              </button>
             </div>
 
             {/* Tab Content Box */}
             <div className="flex-1 overflow-y-auto p-6">
-              {activeTab === "timeline" ? (
+              {activeTab === "outreach" ? (
+                <OutreachLeadPanel
+                  leadId={lead.id}
+                  companyName={lead.companyName}
+                  instagram={lead.instagram ?? null}
+                  onSent={onUpdate}
+                />
+              ) : activeTab === "timeline" ? (
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 items-start">
                   {/* Left sub-column: Notes */}
-                  <div className="space-y-3">
+                  <div className="min-w-0 space-y-3">
                     <div className="flex items-center justify-between">
                       <label className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--text-2)" }}>
                         Notizen & Besonderheiten
@@ -1228,7 +1253,7 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                   </div>
 
                   {/* Right sub-column: Timeline */}
-                  <div className="space-y-4 xl:border-l xl:pl-8" style={{ borderColor: "var(--border)" }}>
+                  <div className="min-w-0 space-y-4 xl:border-l xl:pl-8" style={{ borderColor: "var(--border)" }}>
                     <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--text-2)" }}>
                       Kontakt-Timeline ({lead.interactions?.length || 0})
                     </h3>
@@ -1249,7 +1274,7 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                         type="text"
                         required
                         placeholder="Neue Interaktion protokollieren..."
-                        className="flex-1 rounded-md px-3 py-1.5 text-xs border outline-none"
+                        className="min-w-0 flex-1 rounded-md px-3 py-1.5 text-xs border outline-none"
                         style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
                         value={newInteractionNote}
                         onChange={(e) => setNewInteractionNote(e.target.value)}
@@ -1257,7 +1282,7 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                       <button
                         type="submit"
                         disabled={addingInteraction}
-                        className="px-4 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1 transition-all active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed disabled:active:scale-100"
+                        className="shrink-0 px-4 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1 transition-all active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed disabled:active:scale-100"
                         style={{ background: "var(--accent)", color: "var(--bg)" }}
                       >
                         {addingInteraction ? (

@@ -1,5 +1,5 @@
 import type { Lead } from "@prisma/client";
-import { normalizeUrl } from "@/lib/utils";
+import { normalizeInstagramHandle, normalizeUrl } from "@/lib/utils";
 
 export type MatchConfidence = "high" | "medium" | "low";
 
@@ -134,14 +134,7 @@ function domainOf(value?: string | null): string {
 }
 
 function instagramHandle(value?: string | null): string {
-  if (!value) return "";
-  try {
-    const url = new URL(normalizeUrl(value) ?? value);
-    if (!url.hostname.replace(/^www\./, "").endsWith("instagram.com")) return "";
-    return url.pathname.split("/").filter(Boolean)[0] ?? "";
-  } catch {
-    return "";
-  }
+  return normalizeInstagramHandle(value) ?? "";
 }
 
 const SIGNALS = {

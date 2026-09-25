@@ -26,6 +26,7 @@ import { StatusBadge, PriorityDot } from "@/components/ui/status-badge";
 import { LeadFormModal } from "@/components/leads/lead-form-modal";
 import { LeadDetailModal } from "@/components/leads/lead-detail-modal";
 import { STATUS_LABELS, INDUSTRIES } from "@/lib/constants";
+import { getMapsUrl } from "@/lib/maps-url";
 import { formatDate, timeAgo } from "@/lib/utils";
 import type { LeadStatus } from "@prisma/client";
 
@@ -91,15 +92,6 @@ export function LeadsTable() {
     navigator.clipboard.writeText(url);
     setCopiedNfcId(leadId);
     setTimeout(() => setCopiedNfcId(null), 2000);
-  }
-
-  function getMapsUrl(lead: any): string | null {
-    if (lead.googleMapsUrl) return lead.googleMapsUrl;
-    if (lead.address || lead.city) {
-      const queryParts = [lead.companyName, lead.address, lead.city].filter(Boolean);
-      return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(queryParts.join(", "))}`;
-    }
-    return null;
   }
 
   useEffect(() => {
@@ -184,6 +176,25 @@ export function LeadsTable() {
             >
               <User className="w-3.5 h-3.5 opacity-70" />
               <span>Walk-Ins</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setAcquisitionFilter("DM");
+                setPage(1);
+              }}
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                acquisitionFilter === "DM"
+                  ? "shadow-sm"
+                  : "opacity-75 hover:opacity-100 hover:text-[var(--text)]"
+              }`}
+              style={{
+                background: acquisitionFilter === "DM" ? "var(--accent)" : "transparent",
+                color: acquisitionFilter === "DM" ? "var(--bg)" : "var(--text-2)",
+              }}
+            >
+              <span>💬</span>
+              <span>Instagram DM</span>
             </button>
           </div>
 
@@ -462,13 +473,17 @@ export function LeadsTable() {
                         <div className="flex flex-col gap-2 items-start">
                           <StatusBadge status={lead.status} />
                           <span
-                            className="text-xs font-medium px-2 py-1 rounded-md"
-                            style={{
-                              background: isWalkIn ? "rgba(168, 85, 247, 0.1)" : "rgba(59, 130, 246, 0.1)",
-                              color: isWalkIn ? "rgb(192, 132, 252)" : "rgb(96, 165, 250)",
-                            }}
+                            className="text-xs font-medium px-2 py-1 rounded-md whitespace-nowrap"
+                            style={
+                              lead.acquisitionType === "DM"
+                                ? { background: "var(--channel-dm-bg)", color: "var(--channel-dm-tx)" }
+                                : {
+                                    background: isWalkIn ? "rgba(168, 85, 247, 0.1)" : "rgba(59, 130, 246, 0.1)",
+                                    color: isWalkIn ? "rgb(192, 132, 252)" : "rgb(96, 165, 250)",
+                                  }
+                            }
                           >
-                            {isWalkIn ? "Walk-In" : "Cold Call"}
+                            {lead.acquisitionType === "DM" ? "Instagram DM" : isWalkIn ? "Walk-In" : "Cold Call"}
                           </span>
                         </div>
                       </td>

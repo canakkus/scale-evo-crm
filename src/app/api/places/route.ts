@@ -3,9 +3,14 @@ import { getOptionalUser } from "@/lib/auth";
 import { mapPlaceToSuggestion, type PlaceSuggestion, type RawPlace } from "@/lib/places";
 
 const PLACES_URL = "https://places.googleapis.com/v1/places:searchText";
+// `places.location` liefert lat/lng. Kostenneutral: die Maske ist wegen rating/
+// phone/website ohnehin in der Enterprise-SKU, location ist darin enthalten.
+// Ohne dieses Feld gibt mapPlaceToSuggestion() nie Koordinaten zurueck — und
+// das Speichern der fixen Adresse in /settings scheitert still (lat/lng null).
 const FIELD_MASK =
   "places.displayName,places.formattedAddress,places.internationalPhoneNumber,places.websiteUri," +
-  "places.rating,places.userRatingCount,places.googleMapsUri,places.types,places.primaryTypeDisplayName";
+  "places.rating,places.userRatingCount,places.googleMapsUri,places.types,places.primaryTypeDisplayName," +
+  "places.location";
 
 export async function GET(request: Request) {
   try {

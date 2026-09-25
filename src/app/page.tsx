@@ -1,17 +1,14 @@
 import { requireAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { leadScope as workspaceLeadScope } from "@/lib/workspace";
 import { DashboardComponent } from "@/components/dashboard/dashboard-component";
 
 export const metadata = { title: "Dashboard | Scale Evo CRM" };
 
-async function getDashboardData(userId: string) {
+async function getDashboardData(user: { id: string; email?: string | null }) {
+  const userId = user.id;
   try {
-    const leadScope = {
-      OR: [
-        { createdById: userId },
-        { assignedToId: userId },
-      ],
-    };
+    const leadScope = await workspaceLeadScope(user);
 
     const [
       totalLeads,
@@ -71,7 +68,7 @@ async function getDashboardData(userId: string) {
 
 export default async function DashboardPage() {
   const user = await requireAuth();
-  const initialData = await getDashboardData(user.id);
+  const initialData = await getDashboardData(user);
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">

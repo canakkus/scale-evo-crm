@@ -39,3 +39,8 @@ Thumbs.db
 *.swp
 *.swo
 .env*.local
+
+# Lokale Artefakte — enthalten Session-Tokens bzw. Server-Logs
+cookies.txt
+*.log
+.venv/

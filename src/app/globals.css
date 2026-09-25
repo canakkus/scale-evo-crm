@@ -129,6 +129,68 @@
   --overlay:      rgba(0, 0, 0, 0.6);
 }
 
+/* ================================================================
+   Outreach / Instagram-DM — abgeleitete Tokens
+   Regel: KEINE neuen Farben. Alles ist ein Alias auf bestehende
+   Tokens, damit Score-, Kanal- und Warm-up-Zustände systemweit
+   identisch aussehen. Wer hier einen neuen Hex-Wert einträgt,
+   bricht das Design-System.
+   ================================================================ */
+:root {
+  /* Score-Temperatur: 70–100 heiß / 40–69 lauwarm / 0–39 kalt.
+     Rot bleibt reserviert für Fehler & Duplikate. */
+  --score-hot-bg:   var(--status-warm-bg);
+  --score-hot-tx:   var(--status-warm-tx);
+  --score-warm-bg:  var(--status-planned-bg);
+  --score-warm-tx:  var(--status-planned-tx);
+  --score-cold-bg:  var(--surface-3);
+  --score-cold-tx:  var(--text-3);
+  --score-track:    var(--border-2);
+
+  /* Kanäle */
+  --channel-dm-bg:    var(--status-contacted-bg);
+  --channel-dm-tx:    var(--status-contacted-tx);
+  --channel-call-bg:  var(--status-new-bg);
+  --channel-call-tx:  var(--status-new-tx);
+
+  /* Warm-up-Stufen */
+  --warmup-done-tx: var(--status-warm-tx);
+  --warmup-wait-tx: var(--status-planned-tx);
+  --warmup-todo-tx: var(--text-3);
+
+  /* Sende-Bestätigung */
+  --confirm-bar-bg:   var(--status-contacted-bg);
+  --confirm-bar-tx:   var(--status-contacted-tx);
+  --confirm-bar-ring: rgba(168, 139, 224, 0.28);
+
+  /* Zeichenzähler */
+  --count-ok-tx:   var(--text-3);
+  --count-warn-tx: var(--status-planned-tx);
+  --count-over-tx: var(--status-lost-tx);
+
+  /* Layout */
+  --outreach-queue-w: 320px;
+}
+
+/* ================================================================
+   Lead-Karte /map — abgeleitete Tokens
+   Gleiche Regel wie oben: keine neuen Hex-Werte, nur Aliase.
+   ================================================================ */
+:root {
+  /* Schliesst eine echte Luecke: --channel-dm-* und --channel-call-* gab es,
+     Walk-In wurde in leads-table.tsx als rgba(168,85,247,…) hartkodiert. */
+  --channel-walkin-bg: var(--status-planned-bg);
+  --channel-walkin-tx: var(--status-planned-tx);
+
+  --map-pin-hit:   44px;
+  --map-pin-size:  14px;
+  --map-pin-ring:  2px;
+  --map-stack-size: 22px;
+  --map-panel-w:   var(--outreach-queue-w);
+  --map-tile-filter: saturate(0.75) brightness(0.85) contrast(1.05);
+  --map-chrome-bg: color-mix(in srgb, var(--bg) 78%, transparent);
+}
+
 @theme {
   --color-bg:        var(--bg);
   --color-surface:   var(--surface);
@@ -193,6 +255,12 @@ body {
   letter-spacing: -0.02em;
 }
 
+/* ---- Touch / iPad ---- */
+.touch-scroll {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
 /* ---- Animations ---- */
 @keyframes fade-in {
   from { opacity: 0; transform: translateY(8px); }
@@ -208,5 +276,323 @@ body {
   to { transform: rotate(360deg); }
 }
 
-.animate-fade-in    { animation: fade-in 0.25s var(--ease-out) both; }
-.animate-slide-left { animation: slide-in-left 0.25s var(--ease-out) both; }
+/* Bestätigungs-Balken meldet sich beim Rücksprung aus Instagram */
+@keyframes confirm-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(168, 139, 224, 0); }
+  50%      { box-shadow: 0 0 0 3px var(--confirm-bar-ring); }
+}
+
+/* Quittung nach "Ja, gesendet" */
+@keyframes sent-sweep {
+  from { background-position: -140% 0; }
+  to   { background-position: 240% 0; }
+}
+
+/* Skeleton für generierende Textvarianten */
+@keyframes shimmer {
+  from { background-position: -200% 0; }
+  to   { background-position: 200% 0; }
+}
+
+.animate-fade-in      { animation: fade-in 0.25s var(--ease-out) both; }
+.animate-slide-left   { animation: slide-in-left 0.25s var(--ease-out) both; }
+.animate-confirm-pulse{ animation: confirm-pulse 1.2s var(--ease) 2; }
+.animate-sent-sweep   {
+  background-image: linear-gradient(90deg, transparent 0%, var(--status-warm-bg) 45%, transparent 90%);
+  background-size: 200% 100%;
+  animation: sent-sweep 0.6s var(--ease-out) 1;
+}
+.skeleton-line {
+  background-image: linear-gradient(90deg, var(--surface-2) 0%, var(--surface-3) 50%, var(--surface-2) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s var(--ease) infinite;
+  border-radius: var(--r-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-confirm-pulse,
+  .animate-sent-sweep,
+  .skeleton-line { animation: none; }
+}
+
+/* ================================================================
+   Lead-Karte /map — Leaflet-Chrome vollstaendig ueberschrieben
+   ----------------------------------------------------------------
+   leaflet.css wird im Karten-Chunk importiert und laedt damit NACH
+   dieser Datei. Jede Regel hier ist deshalb bewusst um eine Klasse
+   spezifischer als das Leaflet-Original (.leaflet-container davor),
+   sonst gewinnt das weisse Default-Chrome ueber die Ladereihenfolge.
+   ================================================================ */
+
+.map-canvas.leaflet-container {
+  background: var(--bg);
+  font-family: var(--font-body);
+  outline: none;
+}
+
+/* Entsaettigen NUR der Kacheln — nie der Marker-Pane, sonst waeren die
+   Status-Farben genau das, was sie nicht sein duerfen: blass. */
+.map-canvas .leaflet-tile-pane {
+  filter: var(--map-tile-filter);
+}
+
+/* ---- Attribution: Pflicht, immer sichtbar, nie unter 10px ---- */
+.map-canvas .leaflet-control-attribution {
+  background: var(--map-chrome-bg);
+  backdrop-filter: blur(4px);
+  color: var(--text-3);
+  font-size: 10px;
+  line-height: 1.5;
+  padding: 2px 8px;
+  margin: 0;
+  border: none;
+  box-shadow: none;
+  border-radius: var(--r-sm) 0 0 0;
+}
+.map-canvas .leaflet-control-attribution a {
+  color: var(--text-2);
+  text-decoration: none;
+}
+.map-canvas .leaflet-control-attribution a:hover {
+  text-decoration: underline;
+}
+
+/* ---- Zoom-Control ----
+   Selektor bewusst `.map-canvas.leaflet-container` (beide Klassen sitzen auf
+   demselben Element): leaflet.css laedt im Karten-Chunk NACH globals.css, und
+   dessen Touch-Regeln (`.leaflet-touch .leaflet-bar a` → 30px,
+   `.leaflet-bottom .leaflet-control` → margin-bottom 10px) sind gleich
+   spezifisch. Mit nur `.map-canvas` gewann Leaflet: auf Touch-Geraeten waren
+   die Knoepfe 30px statt 44px, und "−" lag unter dem Bottom-Sheet. */
+.map-canvas.leaflet-container .leaflet-control-zoom {
+  border: none;
+  box-shadow: none;
+  margin: 0 16px 80px 0; /* nicht unter die Sheet-Peek-Kante */
+}
+.map-canvas.leaflet-container .leaflet-control-zoom a {
+  width: 36px;
+  height: 36px;
+  line-height: 34px;
+  background: var(--surface-2);
+  color: var(--text-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  font-size: 17px;
+  font-weight: 600;
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+.map-canvas.leaflet-container .leaflet-control-zoom a + a {
+  margin-top: 6px;
+}
+.map-canvas.leaflet-container .leaflet-control-zoom a:hover {
+  background: var(--surface-3);
+  color: var(--text);
+  border-color: var(--border-2);
+}
+.map-canvas.leaflet-container .leaflet-control-zoom a.leaflet-disabled {
+  background: var(--surface);
+  color: var(--text-3);
+}
+@media (pointer: coarse) {
+  .map-canvas.leaflet-container .leaflet-control-zoom a {
+    width: 44px;
+    height: 44px;
+    line-height: 42px;
+  }
+}
+
+/* ---- Popup ---- */
+.map-canvas .leaflet-popup-content-wrapper {
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow-lg);
+  padding: 0;
+}
+.map-canvas .leaflet-popup-content {
+  margin: 0;
+  width: 280px !important;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.map-canvas .leaflet-popup-tip {
+  background: var(--surface-2);
+  border: 1px solid var(--border-2);
+  box-shadow: none;
+}
+/* Eigener 44px-Schliessen-Button steckt im Inhalt. */
+.map-canvas .leaflet-popup-close-button {
+  display: none;
+}
+.map-canvas .leaflet-popup {
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+
+/* ---- Tooltip (nur Desktop, pointer-events: none) ---- */
+.leaflet-tooltip.map-tooltip {
+  max-width: 260px;
+  padding: var(--sp-3);
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow-md);
+  white-space: normal;
+  font-family: var(--font-body);
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+/* Kein Pfeil. */
+.leaflet-tooltip.map-tooltip::before {
+  display: none;
+}
+
+/* ---- Steuerleiste: auf Touch ist jedes Bedienelement 44px hoch ---- */
+.map-chip {
+  height: 32px;
+  min-height: 32px;
+}
+
+/* Zaehler + Legende bleiben beim horizontalen Scrollen am rechten Rand.
+   z-index ist Pflicht: `position: sticky` erzeugt einen eigenen Stacking
+   Context. Ohne z-index liegt er auf Ebene 0 und damit UNTER dem spaeter
+   gerenderten, isolierten Kartencontainer — die Popover darin ("ohne
+   Standort", Legende) wurden von der Karte abgeschnitten. 30 = ueber der
+   Karte (0), unter Sidebar-FAB (40) und LeadDetailModal/Schublade (50). */
+.map-controls-sticky {
+  position: sticky;
+  right: 0;
+  z-index: 30;
+  padding-left: var(--sp-3);
+  background: var(--surface);
+}
+
+/* Unter 1024px liegt das Bottom-Sheet mit 64px Peek ueber der Karte — die
+   Pflicht-Attribution muss darueber bleiben, nicht dahinter verschwinden. */
+@media (max-width: 1023px) {
+  .map-canvas .leaflet-bottom.leaflet-left {
+    bottom: 64px;
+  }
+}
+@media (pointer: coarse) {
+  .map-chip {
+    height: 44px;
+    min-height: 44px;
+  }
+  .map-segment {
+    min-height: 40px;
+  }
+}
+
+/* ================================================================
+   Pins — divIcon, Anker Mitte, 44px Trefferflaeche
+   ================================================================ */
+.map-canvas .leaflet-marker-icon.map-pin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+}
+
+.map-pin__dot {
+  position: relative;
+  width: var(--map-pin-size);
+  height: var(--map-pin-size);
+  border-radius: var(--r-full);
+  background: var(--pin-color);
+  box-shadow:
+    0 0 0 1px var(--bg),
+    0 0 0 calc(1px + var(--map-pin-ring)) var(--pin-ring),
+    var(--shadow-sm);
+  transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+}
+
+/* Kanal doppelt kodiert: Walk-In ist zusaetzlich eckig. */
+.map-pin--walkin .map-pin__dot {
+  width: 13px;
+  height: 13px;
+  border-radius: var(--r-sm);
+}
+
+/* Ungefaehre Lage: HOHL und gestrichelt. Darf nie wie eine exakte Position
+   aussehen — das ist der Unterschied zwischen einem ehrlichen Werkzeug und
+   einer Karte, die zu einer Adresse fahren laesst, die es nie gab. */
+.map-pin--approx .map-pin__dot {
+  /* Leicht getoente Fuellung statt voll transparent: sonst verschwindet ein
+     Bestand aus lauter ungefaehren Pins im dunklen Kartengrund. */
+  background: color-mix(in srgb, var(--pin-color) 30%, transparent);
+  border: 2px dashed var(--pin-color);
+  box-shadow: 0 0 0 1px var(--bg);
+}
+
+.map-pin--hover .map-pin__dot,
+.map-pin--selected .map-pin__dot {
+  transform: scale(1.25);
+  box-shadow:
+    0 0 0 1px var(--bg),
+    0 0 0 4px var(--pin-ring),
+    var(--shadow-sm);
+}
+.map-pin--approx.map-pin--hover .map-pin__dot,
+.map-pin--approx.map-pin--selected .map-pin__dot {
+  box-shadow: none;
+}
+
+.map-pin--selected .map-pin__dot {
+  transform: scale(1.3);
+}
+/* 2px-Halo mit 4px echtem Abstand — als Pseudo-Element, weil ein weiterer
+   box-shadow-Layer den Zwischenraum zumalen wuerde. */
+.map-pin--selected .map-pin__dot::after {
+  content: "";
+  position: absolute;
+  inset: -7px;
+  border: 2px solid var(--accent);
+  border-radius: var(--r-full);
+  animation: map-pin-pulse var(--dur-slow) var(--ease-out) 1;
+}
+.map-pin--walkin.map-pin--selected .map-pin__dot::after {
+  border-radius: var(--r-lg);
+}
+
+@keyframes map-pin-pulse {
+  from { transform: scale(0.7); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+
+/* Stapel: mehrere Leads an identischer Koordinate. */
+.map-pin__stack {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--map-stack-size);
+  height: var(--map-stack-size);
+  border-radius: var(--r-full);
+  background: var(--surface-3);
+  border: 2px solid var(--border-2);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+}
+.map-pin--approx .map-pin__stack {
+  border-style: dashed;
+}
+.map-pin--hover .map-pin__stack,
+.map-pin--selected .map-pin__stack {
+  transform: scale(1.25);
+  border-color: var(--accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .map-pin__dot,
+  .map-pin__stack {
+    transition: none;
+  }
+  .map-pin--selected .map-pin__dot::after {
+    animation: none;
+  }
+}

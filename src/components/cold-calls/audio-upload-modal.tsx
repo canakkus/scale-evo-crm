@@ -36,9 +36,11 @@ export function AudioUploadModal({ isOpen, onClose, onSuccess }: AudioUploadModa
     }
   }, [isOpen]);
 
-  if (!isOpen) return null;
-
+  // Der useState MUSS vor dem Early Return stehen — sonst aendert sich die
+  // Hook-Reihenfolge zwischen geoeffnetem und geschlossenem Modal.
   const [isDragging, setIsDragging] = useState(false);
+
+  if (!isOpen) return null;
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     if (e.target.files && e.target.files[0]) {

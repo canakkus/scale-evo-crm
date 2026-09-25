@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import { getOptionalUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { mapPlaceToSuggestion, type RawPlace } from "@/lib/places";
+import { parseCoordinates } from "@/lib/geo";
 import { pushToAppleEcosystem, isAppleSyncUser } from "@/services/apple-bridge";
+import { findAccessibleLead, leadScope } from "@/lib/workspace";
 
 async function getPlaceDetailsFromUrl(url: string, defaultName: string): Promise<RawPlace | null> {
   const apiKey = process.env.GOOGLE_PLACES_API_KEY;
@@ -28,9 +30,12 @@ async function getPlaceDetailsFromUrl(url: string, defaultName: string): Promise
 
     // Call Google Places API
     const PLACES_URL = "https://places.googleapis.com/v1/places:searchText";
+    // `places.location` = lat/lng. Siehe Kommentar in src/app/api/places/route.ts:
+    // ohne dieses Feld reicht der Enrichment-Pfad nie Koordinaten durch.
     const FIELD_MASK =
       "places.displayName,places.formattedAddress,places.internationalPhoneNumber,places.websiteUri," +
-      "places.rating,places.userRatingCount,places.googleMapsUri,places.types,places.primaryTypeDisplayName";
+      "places.rating,places.userRatingCount,places.googleMapsUri,places.types,places.primaryTypeDisplayName," +
+      "places.location";
 
     const response = await fetch(PLACES_URL, {
       method: "POST",
@@ -70,8 +75,8 @@ export async function GET(
     }
 
     const { id } = await params;
-    const lead = await prisma.lead.findUnique({
-      where: { id },
+    const lead = await prisma.lead.findFirst({
+      where: { id, ...(await leadScope(user)) },
       include: {
         createdBy: { select: { id: true, displayName: true, email: true } },
         assignedTo: { select: { id: true, displayName: true, email: true } },
@@ -80,7 +85,8 @@ export async function GET(
           include: { createdBy: { select: { displayName: true } } },
         },
         audits: { orderBy: { createdAt: "desc" }, take: 1 },
-        tasks: { orderBy: { createdAt: "desc" } },
+        // Tasks sind persoenlich — auch am geteilten Lead nur die eigenen.
+        tasks: { where: { userId: user.id }, orderBy: { createdAt: "desc" } },
         callRecordings: { orderBy: { createdAt: "desc" } },
       },
     });
@@ -109,13 +115,14 @@ export async function PATCH(
     const { id } = await params;
     const data = await request.json();
 
-    const existingLead = await prisma.lead.findUnique({ where: { id } });
+    const existingLead = await findAccessibleLead(user, id);
     if (!existingLead) {
       return NextResponse.json({ error: "Lead nicht gefunden." }, { status: 404 });
     }
 
     // Enrichment logic if googleMapsUrl is provided or updated
-    let enrichedData: any = {};
+    const enrichedData: any = {};
+    let enrichedGeo: Record<string, unknown> = {};
     if (data.googleMapsUrl && data.googleMapsUrl !== existingLead.googleMapsUrl) {
       const place = await getPlaceDetailsFromUrl(data.googleMapsUrl, data.companyName || existingLead.companyName);
       if (place) {
@@ -127,6 +134,20 @@ export async function PATCH(
         if (suggestion.industry) enrichedData.industry = suggestion.industry;
         if (suggestion.rating !== null) enrichedData.googleRating = suggestion.rating;
         if (suggestion.reviewCount !== null) enrichedData.googleReviewCount = suggestion.reviewCount;
+        // Gratis-Verortung aus demselben Places-Treffer. Der Nutzer hat den Lead
+        // gerade auf einen anderen Maps-Eintrag gezeigt — dessen Koordinaten sind
+        // damit die neue Wahrheit. Ausnahme: ein manuell gesetzter Punkt.
+        const coords = parseCoordinates(suggestion.latitude, suggestion.longitude);
+        if (coords && existingLead.geoSource !== "manual") {
+          enrichedGeo = {
+            latitude: coords.latitude,
+            longitude: coords.longitude,
+            geoSource: "places",
+            geoPrecision: "ROOFTOP",
+            geoStatus: "ok",
+            geoAttemptedAt: new Date(),
+          };
+        }
       }
     }
 
@@ -152,13 +173,54 @@ export async function PATCH(
       return normExisting;
     };
 
+    const nextAddress = getVal(data.address, enrichedData.address, existingLead.address);
+    const nextCity = getVal(data.city, enrichedData.city, existingLead.city);
+
+    /*
+     * Adresse geaendert -> alte Koordinaten sind ungueltig.
+     *
+     * Ohne diesen Block gab es zwei stille Fehler:
+     * (a) Adresse korrigiert -> der Pin blieb fuer immer am alten Ort, und das
+     *     Backfill-Skript griff nicht, weil es auf `latitude: null` selektiert.
+     * (b) Lead mit geoStatus "no_address"/"no_result": Die Karte fordert auf
+     *     "Adresse ergaenzen, dann erscheinen sie auf der Karte" — ohne Reset
+     *     blieb `geoAttemptedAt` gesetzt, der Lead war damit dauerhaft
+     *     retry-unfaehig und waere NIE erschienen. Die UI haette etwas
+     *     versprochen, das der Code nicht einloest.
+     *
+     * Bewusst nur bei echter Aenderung (normalisierter Vergleich), nicht bei
+     * jedem PATCH — sonst wuerde ein Statuswechsel im Modal die Verortung des
+     * ganzen Bestands wegwerfen und das Freikontingent erneut verbrauchen.
+     *
+     * `geoSource === "manual"` ist ausgenommen: ein von Hand gesetzter Punkt ist
+     * eine ausdrueckliche menschliche Entscheidung und schlaegt eine abgeleitete
+     * Adresse. Ihn beim Tippen in der Adresszeile zu loeschen waere Datenverlust.
+     * (Heute schreibt noch nichts "manual"; der Zweig sichert das Feld ab,
+     * bevor es einen Schreiber bekommt.)
+     */
+    const addressChanged =
+      normalize(nextAddress) !== normalize(existingLead.address) ||
+      normalize(nextCity) !== normalize(existingLead.city);
+
+    const geoReset =
+      addressChanged && existingLead.geoSource !== "manual"
+        ? {
+            latitude: null,
+            longitude: null,
+            geoSource: null,
+            geoPrecision: null,
+            geoAttemptedAt: null,
+            geoStatus: "pending",
+          }
+        : {};
+
     const updated = await prisma.lead.update({
       where: { id },
       data: {
         companyName: data.companyName !== undefined ? data.companyName.trim() : existingLead.companyName,
         industry: getVal(data.industry, enrichedData.industry, existingLead.industry),
-        address: getVal(data.address, enrichedData.address, existingLead.address),
-        city: getVal(data.city, enrichedData.city, existingLead.city),
+        address: nextAddress,
+        city: nextCity,
         webPresence: data.webPresence !== undefined ? data.webPresence : existingLead.webPresence,
         website: getVal(data.website, enrichedData.website, existingLead.website),
         treatwellUrl: data.treatwellUrl !== undefined ? data.treatwellUrl || null : existingLead.treatwellUrl,
@@ -188,6 +250,10 @@ export async function PATCH(
         score: data.score !== undefined ? parseInt(data.score, 10) : existingLead.score,
         lastContactAt: data.lastContactAt !== undefined ? (data.lastContactAt ? new Date(data.lastContactAt) : null) : existingLead.lastContactAt,
         nextFollowUpAt: data.nextFollowUpAt !== undefined ? (data.nextFollowUpAt ? new Date(data.nextFollowUpAt) : null) : existingLead.nextFollowUpAt,
+        // Reihenfolge ist bedeutsam: erst entwerten, dann — falls derselbe
+        // Request frische Places-Koordinaten geliefert hat — direkt neu setzen.
+        ...geoReset,
+        ...enrichedGeo,
       },
     });
 
@@ -230,6 +296,9 @@ export async function DELETE(
     }
 
     const { id } = await params;
+    if (!(await findAccessibleLead(user, id))) {
+      return NextResponse.json({ error: "Lead nicht gefunden." }, { status: 404 });
+    }
     await prisma.lead.delete({ where: { id } });
     return NextResponse.json({ success: true });
   } catch (error) {

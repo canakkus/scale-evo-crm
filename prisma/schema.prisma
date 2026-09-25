@@ -15,6 +15,31 @@ datasource db {
 enum AcquisitionType {
   CALL
   WALK_IN
+  DM
+}
+
+enum OutreachChannel {
+  INSTAGRAM_DM
+  PHONE
+}
+
+enum OutreachTone {
+  CASUAL_VIENNESE
+  PROFESSIONAL_DU
+  FORMAL_SIE
+}
+
+enum DmDraftStatus {
+  DRAFT
+  SENT
+  SKIPPED
+}
+
+enum OutreachOutcome {
+  NO_REPLY
+  REPLIED_POSITIVE
+  REPLIED_NEGATIVE
+  BLOCKED
 }
 
 enum LeadStatus {
@@ -141,6 +166,26 @@ model Lead {
   menuCheckedAt          DateTime?
   acquisitionType        AcquisitionType         @default(CALL)
   nfcDemoUrl             String?
+
+  // --- Verortung (Lead-Karte /map) -----------------------------------------
+  // Koordinaten kommen entweder gratis aus Google Places (Scout/Autofill) oder
+  // einmalig aus dem Backfill-Skript (Google Geocoding).
+  latitude               Float?
+  longitude              Float?
+  /** "places" | "geocode" | "manual" — woher die Koordinaten stammen. */
+  geoSource              String?
+  /** ROOFTOP | RANGE_INTERPOLATED | GEOMETRIC_CENTER | APPROXIMATE (Google location_type). */
+  geoPrecision           String?
+  /**
+   * Ein-Versuch-Garantie: wird bei JEDEM Geocoding-Versuch gesetzt, auch bei
+   * Fehlschlag. `latitude: null` ist NIE der Merker — sonst wuerde jeder
+   * Backfill-Lauf dieselben erfolglosen Adressen erneut kostenpflichtig fragen.
+   * (Gleiches Muster wie richSourceAttemptedAt in snapshot-cache.ts.)
+   */
+  geoAttemptedAt         DateTime?
+  /** pending | ok | no_result | no_address | error — nur "error" ist retry-faehig. */
+  geoStatus              String                  @default("pending")
+
   addedAt                DateTime                @default(now())
   createdAt              DateTime                @default(now())
   updatedAt              DateTime                @updatedAt
@@ -154,6 +199,7 @@ model Lead {
   tasks        Task[]
   callRecordings CallRecording[]
   scoutResults ScoutResult[]
+  dmDrafts     DmDraft[]
 
   @@index([status])
   @@index([acquisitionType])
@@ -163,6 +209,7 @@ model Lead {
   @@index([webPresence])
   @@index([createdById])
   @@index([assignedToId])
+  @@index([createdById, latitude])
 }
 
 model User {
@@ -192,6 +239,7 @@ model User {
   scoutSessions  ScoutSession[]
   callRecordings CallRecording[]
   aiChats        AiChatMessage[]
+  dmDrafts       DmDraft[]
 }
 
 model Interaction {
@@ -209,6 +257,7 @@ model Interaction {
 
   @@index([leadId, createdAt])
   @@index([createdById, createdAt])
+  @@index([callRecordingId], map: "idx_interaction_callrecordingid")
 }
 
 model WebsiteAudit {
@@ -240,6 +289,7 @@ model WebsiteAudit {
   createdBy User @relation(fields: [createdById], references: [id], onDelete: Restrict)
 
   @@index([leadId, createdAt])
+  @@index([createdById], map: "idx_websiteaudit_createdbyid")
 }
 
 model ScoringWeight {
@@ -421,9 +471,11 @@ model ScoutResult {
   googleMapsUrl String?
   googleRating  Float?
   reviewCount   Int?
-  industry      String?
-  hasTreatwell  Boolean  @default(false)
-  importedAt    DateTime?
+  industry        String?
+  hasTreatwell    Boolean  @default(false)
+  instagramHandle String?
+  followerCount   Int?
+  importedAt      DateTime?
   rawData       Json?
   createdAt     DateTime @default(now())
 
@@ -476,4 +528,69 @@ model AiChatMessage {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
+}
+
+// ============================================================
+// Outreach — generierte Nachrichten-Entwürfe (NEU)
+// ============================================================
+
+model DmDraft {
+  id             String           @id @default(cuid())
+  leadId         String
+  channel        OutreachChannel  @default(INSTAGRAM_DM)
+  tone           OutreachTone     @default(CASUAL_VIENNESE)
+  variantIndex   Int              @default(0)
+  sequenceStep   Int              @default(0)
+  anchor         String?
+  bodyGenerated  String           @db.Text
+  bodyEdited     String?          @db.Text
+  status         DmDraftStatus    @default(DRAFT)
+  outcome        OutreachOutcome?
+  sentAt         DateTime?
+  createdById    String           @db.Uuid
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  lead      Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  createdBy User @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([leadId, createdAt])
+  @@index([createdById, status])
+}
+
+/// Zwischenspeicher fuer angereicherte Instagram-Profile.
+///
+/// Key ist das NORMALISIERTE Handle, nicht die leadId — so teilen sich
+/// alle Leads und Scout-Sessions denselben Snapshot und ein Profil wird
+/// nie zweimal bezahlt. Enthaelt ausschliesslich oeffentliche Profildaten,
+/// deshalb bewusst nicht pro Nutzer isoliert.
+///
+/// WICHTIG: Es wird `lastPostAt` als ABSOLUTER Zeitpunkt gespeichert,
+/// niemals `daysSinceLastPost`. Ein relativer Wert wuerde im Cache
+/// taeglich verrotten und kostenpflichtige Re-Fetches erzwingen.
+model InstagramProfileSnapshot {
+  id         String    @id @default(cuid())
+  handle     String    @unique
+  /// "graph-api" | "apify" | "public-page"
+  source     String
+  fetchedAt  DateTime  @default(now())
+  lastPostAt DateTime?
+  /// true, wenn das Profil privat ist — solche Handles werden dauerhaft uebersprungen.
+  isPrivate  Boolean?
+  /// true, wenn der Abruf unvollstaendig war (dann ist ein frueher Retry sinnvoll).
+  incomplete Boolean   @default(false)
+  /// Wann zuletzt eine vollwertige Quelle (Graph API / Apify) TATSAECHLICH
+  /// befragt wurde — unabhaengig davon, ob sie etwas geliefert hat. Ohne
+  /// diesen Merker wuerde ein Handle, fuer das Apify nichts zurueckgibt,
+  /// bei jedem Durchlauf erneut kostenpflichtig angefragt.
+  richSourceAttemptedAt DateTime?
+  /// Geparstes InstagramProfile (ohne daysSinceLastPost).
+  profile    Json
+  /// Unveraendertes Item der Quelle — fuer Nachanalysen, wenn sich Feldnamen aendern.
+  raw        Json?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([fetchedAt])
+  @@index([source])
 }

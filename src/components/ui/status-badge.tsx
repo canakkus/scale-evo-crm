@@ -2,7 +2,12 @@ import type { LeadStatus, Priority } from "@prisma/client";
 import { PRIORITY_LABELS, STATUS_LABELS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
-const STATUS_STYLES: Record<LeadStatus, { bg: string; tx: string }> = {
+/**
+ * Einzige Zuordnung Status -> Farbe im Projekt. Die Karte faerbt ihre Pins mit
+ * der `tx`-Variante (die `bg`-Varianten sind fast schwarz und auf dunklem Grund
+ * unsichtbar). Wer eine zweite Tabelle anlegt, laesst sie auseinanderlaufen.
+ */
+export const STATUS_STYLES: Record<LeadStatus, { bg: string; tx: string }> = {
   NEW:          { bg: "var(--status-new-bg)", tx: "var(--status-new-tx)" },
   RESEARCHED:   { bg: "var(--status-new-bg)", tx: "var(--status-new-tx)" },
   TO_CONTACT:   { bg: "var(--status-planned-bg)", tx: "var(--status-planned-tx)" },

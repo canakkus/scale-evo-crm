@@ -16,6 +16,7 @@
 
 import Groq from "groq-sdk";
 import { prisma } from "@/lib/prisma";
+import { leadScopeForUserId } from "@/lib/workspace";
 import { runLeadScout } from "./lead-scout";
 import { runRestaurantScout } from "./restaurant-scout";
 import { withGroqClient } from "@/lib/groq-key-manager";
@@ -215,6 +216,13 @@ export interface CrmContext {
 }
 
 export async function executeAssistantTool(name: string, args: any, userId: string): Promise<any> {
+  // Tool-Argumente stammen vom Modell und sind damit nicht vertrauenswuerdig —
+  // jede Lead-ID wird gegen den Arbeitsbereich des Accounts geprueft.
+  const scope = await leadScopeForUserId(userId);
+  const canAccessLead = async (leadId: unknown) =>
+    typeof leadId === "string" &&
+    Boolean(await prisma.lead.findFirst({ where: { id: leadId, ...scope }, select: { id: true } }));
+  const notFound = { success: false, error: "Lead nicht gefunden oder kein Zugriff." };
   console.log(`[Groq Assistant Tool] Executing ${name} with args:`, args);
   try {
     switch (name) {
@@ -231,12 +239,7 @@ export async function executeAssistantTool(name: string, args: any, userId: stri
         } = args;
 
         const andClauses: any[] = [
-          {
-            OR: [
-              { createdById: userId },
-              { assignedToId: userId },
-            ],
-          },
+          scope,
         ];
 
         if (status && status !== "ALL") {
@@ -331,12 +334,7 @@ export async function executeAssistantTool(name: string, args: any, userId: stri
         }
 
         const andClauses: any[] = [
-          {
-            OR: [
-              { createdById: userId },
-              { assignedToId: userId },
-            ],
-          },
+          scope,
         ];
 
         if (Array.isArray(leadIds) && leadIds.length > 0) {
@@ -399,12 +397,7 @@ export async function executeAssistantTool(name: string, args: any, userId: stri
       case "searchLeads": {
         const { query = "", status, sortBy = "createdAt", sortOrder = "desc", limit = 10 } = args;
         const andClauses: any[] = [
-          {
-            OR: [
-              { createdById: userId },
-              { assignedToId: userId },
-            ],
-          },
+          scope,
         ];
 
         if (query && query.trim()) {
@@ -437,11 +430,11 @@ export async function executeAssistantTool(name: string, args: any, userId: stri
 
       case "getLeadDetails": {
         const { leadId } = args;
-        const lead = await prisma.lead.findUnique({
-          where: { id: leadId },
+        const lead = await prisma.lead.findFirst({
+          where: { id: String(leadId), ...scope },
           include: {
             interactions: { take: 5, orderBy: { createdAt: "desc" }, select: { type: true, note: true, createdAt: true } },
-            tasks: { take: 5, orderBy: { createdAt: "desc" }, select: { title: true, status: true, priority: true } },
+            tasks: { where: { userId }, take: 5, orderBy: { createdAt: "desc" }, select: { title: true, status: true, priority: true } },
           },
         });
         return { success: !!lead, lead };
@@ -449,6 +442,7 @@ export async function executeAssistantTool(name: string, args: any, userId: stri
 
       case "updateLeadStatus": {
         const { leadId, status } = args;
+        if (!(await canAccessLead(leadId))) return notFound;
         const updated = await prisma.lead.update({
           where: { id: leadId },
           data: { status: status as any },
@@ -459,6 +453,7 @@ export async function executeAssistantTool(name: string, args: any, userId: stri
 
       case "createTask": {
         const { leadId, title, category, priority, dueAt } = args;
+        if (leadId && !(await canAccessLead(leadId))) return notFound;
         const task = await prisma.task.create({
           data: {
             leadId: leadId || null,
@@ -507,6 +502,7 @@ export async function executeAssistantTool(name: string, args: any, userId: stri
 
       case "addLeadInteraction": {
         const { leadId, type, note } = args;
+        if (!(await canAccessLead(leadId))) return notFound;
         const interaction = await prisma.interaction.create({
           data: {
             leadId,

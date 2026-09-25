@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getOptionalUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { findAccessibleLead, leadScope } from "@/lib/workspace";
 import type { TaskCategory, TaskStatus, Priority } from "@prisma/client";
 
 export async function GET(request: Request) {
@@ -28,7 +29,21 @@ export async function GET(request: Request) {
       },
     });
 
-    return NextResponse.json({ tasks });
+    // Alt-Datensaetze koennen an Leads haengen, die (nicht mehr) im Arbeitsbereich
+    // liegen — deren Firmenname und Telefonnummer duerfen nicht durchsickern.
+    const visibleLeadIds = new Set(
+      (
+        await prisma.lead.findMany({
+          where: { id: { in: tasks.flatMap((task) => (task.leadId ? [task.leadId] : [])) }, ...(await leadScope(user)) },
+          select: { id: true },
+        })
+      ).map((lead) => lead.id),
+    );
+    const visibleTasks = tasks.map((task) =>
+      task.leadId && !visibleLeadIds.has(task.leadId) ? { ...task, leadId: null, lead: null } : task,
+    );
+
+    return NextResponse.json({ tasks: visibleTasks });
   } catch (error) {
     console.error("[GET /api/tasks] Error:", error);
     return NextResponse.json({ error: "Fehler beim Laden der Tasks." }, { status: 500 });
@@ -54,6 +69,9 @@ export async function POST(request: Request) {
 
     if (!data.title?.trim()) {
       return NextResponse.json({ error: "Titel ist erforderlich." }, { status: 400 });
+    }
+    if (data.leadId && !(await findAccessibleLead(user, String(data.leadId)))) {
+      return NextResponse.json({ error: "Lead nicht gefunden." }, { status: 404 });
     }
 
     const task = await prisma.task.create({

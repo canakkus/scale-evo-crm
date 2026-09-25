@@ -1,5 +1,8 @@
 function getSessionSecret(): string {
-  const secret = process.env.SESSION_SECRET || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  // Bewusst KEIN Rueckfall auf NEXT_PUBLIC_*: diese Keys stehen im Browser-Bundle.
+  // Wer damit signieren kann, faelscht jede Session — samt E-Mail und damit
+  // Zugang zu geteilten Arbeitsbereichen (src/lib/workspace.ts).
+  const secret = process.env.SESSION_SECRET;
   if (!secret) {
     if (process.env.NODE_ENV === "production") {
       throw new Error("SESSION_SECRET environment variable is missing in production.");

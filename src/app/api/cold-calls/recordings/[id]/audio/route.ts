@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getOptionalUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { findAccessibleLead } from "@/lib/workspace";
 
 export async function GET(
   request: Request,
@@ -13,6 +14,18 @@ export async function GET(
     }
 
     const { id } = await params;
+
+    // Eigene Aufnahmen immer; fremde nur, wenn der Lead im Arbeitsbereich liegt.
+    const recording = await prisma.callRecording.findUnique({
+      where: { id },
+      select: { createdById: true, leadId: true },
+    });
+    const allowed =
+      recording &&
+      (recording.createdById === user.id || (recording.leadId && (await findAccessibleLead(user, recording.leadId))));
+    if (!allowed) {
+      return NextResponse.json({ error: "Audiodatei nicht gefunden." }, { status: 404 });
+    }
 
     const audioFile = await prisma.audioFile.findUnique({
       where: { recordingId: id },
@@ -40,7 +53,7 @@ export async function GET(
               "Accept-Ranges": "bytes",
               "Content-Length": chunk.length.toString(),
               "Content-Type": audioFile.mimeType || "audio/mpeg",
-              "Cache-Control": "public, max-age=31536000, immutable",
+              "Cache-Control": "private, max-age=31536000, immutable",
             },
           });
         }
@@ -53,7 +66,7 @@ export async function GET(
         "Content-Type": audioFile.mimeType || "audio/mpeg",
         "Content-Length": totalSize.toString(),
         "Accept-Ranges": "bytes",
-        "Cache-Control": "public, max-age=31536000, immutable",
+        "Cache-Control": "private, max-age=31536000, immutable",
       },
     });
   } catch (error) {

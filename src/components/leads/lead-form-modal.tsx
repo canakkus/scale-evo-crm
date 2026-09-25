@@ -39,6 +39,9 @@ export function LeadFormModal({ isOpen, onClose, onSuccess }: LeadFormModalProps
     notes: "",
     status: "NEW" as LeadStatus,
     priority: "MEDIUM" as Priority,
+    // Gratis aus dem Places-Autofill; POST /api/leads macht daraus geoSource "places".
+    latitude: null as number | null,
+    longitude: null as number | null,
   });
 
   if (!isOpen) return null;
@@ -55,7 +58,18 @@ export function LeadFormModal({ isOpen, onClose, onSuccess }: LeadFormModalProps
       googleRating: place.rating != null ? String(place.rating) : prev.googleRating,
       googleReviewCount: place.reviewCount != null ? String(place.reviewCount) : prev.googleReviewCount,
       industry: place.industry && INDUSTRIES.includes(place.industry) ? place.industry : prev.industry,
+      latitude: place.latitude ?? null,
+      longitude: place.longitude ?? null,
     }));
+  }
+
+  /**
+   * Tippt der Nutzer die Adresse nach dem Autofill um, gehoeren die
+   * Places-Koordinaten nicht mehr zu dieser Adresse. Lieber gar keine Position
+   * (das Backfill-Skript holt sie nach) als eine, die woanders hinzeigt.
+   */
+  function handleAddressEdit(field: "address" | "city", value: string) {
+    setFormData((prev) => ({ ...prev, [field]: value, latitude: null, longitude: null }));
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -182,7 +196,7 @@ export function LeadFormModal({ isOpen, onClose, onSuccess }: LeadFormModalProps
                 className="w-full rounded-md px-3 py-2 text-sm border outline-none"
                 style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
                 value={formData.address}
-                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                onChange={(e) => handleAddressEdit("address", e.target.value)}
               />
             </div>
 
@@ -193,7 +207,7 @@ export function LeadFormModal({ isOpen, onClose, onSuccess }: LeadFormModalProps
                 className="w-full rounded-md px-3 py-2 text-sm border outline-none"
                 style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
                 value={formData.city}
-                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                onChange={(e) => handleAddressEdit("city", e.target.value)}
               />
             </div>
           </div>

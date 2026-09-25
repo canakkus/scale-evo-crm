@@ -7,6 +7,10 @@
 - **Production Build:** `npm run build`
 - **Database Push:** `npx prisma db push`
 - **Prisma Client Generate:** `npx prisma generate`
+- **Lint:** `npm run lint`
+- **User anlegen:** `npm run users:provision` (braucht `SUPABASE_SERVICE_ROLE_KEY`)
+- **Instagram-Anbindung prüfen:** `npm run instagram:check`
+- **Instagram-Token einrichten:** `npm run instagram:setup -- <kurzlebiges-Token>`
 
 ---
 
@@ -22,6 +26,7 @@
   - Google Places API (Places Search & Address/Phone Enrichment)
   - Groq SDK (Whisper `whisper-large-v3` for speech-to-text with `verbose_json` timestamps, `openai/gpt-oss-120b` for AI Chat, Tool Calling, Task Prioritization & Call Analysis)
   - Google Generative AI (Gemini 1.5 Flash SDK fallback for Menu Detection & Assistant)
+  - Instagram Graph API (Business Discovery für Profildaten — siehe Modul 8)
 
 ---
 
@@ -34,6 +39,9 @@
 ### 2. Multi-Tenancy & Workspace Isolation
 - Leads, pipeline stages, dashboard metrics, tasks, scout sessions, and AI context are scoped per user (`createdById: user.id` or `assignedToId: user.id`).
 - When a new user logs in, they start with a clean isolated workspace.
+- **Geteilte Arbeitsbereiche (`src/lib/workspace.ts`):** `SHARED_WORKSPACE_EMAILS` verknüpft Accounts (Mitglieder mit `,`, Gruppen mit `;`), die gegenseitig **alle** Leads sehen und bearbeiten — inklusive Interaktionen, Aufnahmen und Audits. Tasks, Scout-Sessions und DM-Entwürfe bleiben persönlich.
+- **Lead-Zugriff ausschließlich über `leadScope()` / `findAccessibleLead()`** — nie selbst `OR: [{ createdById }, { assignedToId }]` bauen, nie `findUnique({ where: { id } })` auf einen Lead ohne Scope. Routen mit Lead-ID antworten bei fremden Leads mit 404. Achtung beim Spreaden: `leadScope()` liefert ein Top-Level-`OR`; ein zweites `OR` im selben Objekt überschreibt es still — dann in `AND: [...]` kapseln.
+- Die Gruppe gilt nur, wenn Session-E-Mail und DB-E-Mail des Accounts übereinstimmen. `SESSION_SECRET` hat **keinen** Rückfall auf öffentliche Keys; fehlt es in Produktion, schlägt der Login fehl (gewollt).
 
 ### 3. Groq AI & Automatic Key Rotation (`src/lib/groq-key-manager.ts` & `src/services/groq.ts`)
 - **Key Rotation System:** Supports `GROQ_API_KEY_1` through `GROQ_API_KEY_10` (or single `GROQ_API_KEY`).
@@ -82,17 +90,17 @@
 - **Broad Discovery Mode:** A special category option that parallel-fetches multiple categories at once (restaurants, barbers, retail, etc.), deduplicates results, and uses a weighted scoring algorithm (`rating * log10(reviewCount)`) to rank quality regardless of category limits (supports up to 100 max results).
 
 ### 5. Walk-In Acquisition System & Dual-Pipeline (`/pipeline`, `/leads`, `src/lib/constants.ts`)
-- **Schema & Enums:** `AcquisitionType` (`CALL`, `WALK_IN`), optional `nfcDemoUrl`, and specialized Walk-In statuses:
+- **Schema & Enums:** `AcquisitionType` (`CALL`, `WALK_IN`, `DM` — siehe Modul 8), optional `nfcDemoUrl`, and specialized Walk-In statuses:
   - `WALK_IN_PLANNED`: Vor-Ort-Besuch geplant
   - `DEMO_DISPATCHED`: Vor-Ort-Demo übergeben / hinterlassen
   - `VISITED_INTERESTED`: Besucht — Interesse signalisiert
   - `VISITED_NO_INTEREST`: Besucht — Kein Interesse
-- **Dual-Pipeline View Switcher:** Instant segmented toggle in `/pipeline` between **Cold Call Pipeline** (11 stages) and **Walk-In Pipeline** (11 stages) with custom stage progression (`CALL_NEXT_STATUS`, `WALK_IN_NEXT_STATUS`).
+- **Pipeline View Switcher:** Instant segmented toggle in `/pipeline` zwischen **Cold Call**, **Walk-In** und **Instagram DM** mit eigener Stufenlogik (`CALL_NEXT_STATUS`, `WALK_IN_NEXT_STATUS`, `DM_NEXT_STATUS`).
 - **Card & Table Quick-Actions:**
   - 🗺️ **Google/Apple Maps Navigation:** Direct 1-click route link constructed from lead address/place coordinates.
   - 📡 **NFC Demo URL:** 1-click copy with instant visual "Kopiert!" feedback + external demo preview.
   - 📞 **Direct Call:** Instant dialer link (`tel:`).
-- **Leads Filter & Detail Modals:** Filter bar in `/leads` (`[ Alle ] [ 📞 Cold Calls ] [ 🚶‍♂️ Walk-Ins ]`), acquisition channel badges, and full viewing/editing in `LeadDetailModal` and `LeadFormModal`.
+- **Leads Filter & Detail Modals:** Filter bar in `/leads` (`[ Alle ] [ 📞 Cold Calls ] [ 🚶‍♂️ Walk-Ins ] [ 💬 Instagram DM ]`), acquisition channel badges, and full viewing/editing in `LeadDetailModal` (Tabs: Timeline, Gemini, Outreach) and `LeadFormModal`.
 
 ### 6. Distance & Proximity Scouting (`/lead-scout`, `/restaurant-scout`, `src/lib/distance.ts`)
 - **Haversine Distance Calculator (`src/lib/distance.ts`):** Computes distances from base coordinates (defaults to Stephansplatz, 1010 Wien). Displays distance badges (`X.X km entfernt`) on scout cards.
@@ -124,6 +132,53 @@
 
 ---
 
+### 8. Instagram-Outreach (`/outreach`, `src/services/instagram/`, `src/services/outreach-generator.ts`)
+- **Zweck:** Instagram als Lead-Quelle und Ansprachekanal. Erzeugt personalisierte Erstansprachen — wahlweise als Instagram-DM oder als Telefon-/Walk-In-Gesprächseinstieg.
+- **Discovery (`searchInstagramProfiles` in `src/services/web-search.ts`):** Sucht Profile über die bestehende DuckDuckGo/Bing-Pipeline (`site:instagram.com`), **nicht** über Instagram selbst. Mehrdeutige Treffer werden zur Auswahl gestellt, nie geraten. Im Lead Scout als 5. Kachel der Ergebniskarte sichtbar.
+- **Anreicherung (`src/services/instagram/resolve-provider.ts`):** Wählt automatisch die beste Quelle — Graph API, sonst Apify, sonst öffentlicher Seitenabruf (siehe Modul 9). **Wichtig:** Der öffentliche Abruf liefert ausgeloggt nur Followerzahl und Namen; `biography`, `external_url` und Post-Datum fehlen. Deshalb unterscheidet `InstagramProfile.externalUrlKnown` zwischen *unbekannt* und *nicht vorhanden* — fehlende Daten dürfen **niemals** Score-Punkte erzeugen.
+- **Scoring (`src/services/instagram/score.ts`):** Befüllt erstmals die zuvor ungenutzten Prisma-Felder `score`, `scoreReasons`, `opportunityTags`, `interestingReason`. Signale u. a.: kein Link in Bio (+25), Termine per DM (+20), nur Linktree (+20), aktiv (+15), eigene Website (−30). Schwellen: ≥70 heiß, 40–69 lauwarm, <40 kalt.
+- **Generator (`src/services/outreach-generator.ts`):** Drei editierbare Varianten, drei Tonalitäten, Groq primär mit Gemini als Rückfall. **Ohne konkreten Aufhänger wird nichts generiert** — eine Nachricht ohne Profilbezug ist ein Serienbrief. Der Prompt verbietet ausdrücklich erfundene Zahlen und Behauptungen über nicht übergebene Fakten.
+- **Senden ist strikt Human-in-the-Loop:** Kopieren → Deep-Link `ig.me/m/<handle>` → manuelle Bestätigung. Erst die Bestätigung schreibt `Interaction(INSTAGRAM)` mit vollem Wortlaut, setzt `CONTACTED` + `lastContactAt` und legt den Tag-3-Follow-up-Task an. Kein Auto-Versand — Instagram bietet dafür keine API und sperrt Accounts.
+- **Warm-up & Tagesbudget:** Vor der DM folgen + liken, dann 2 Tage reifen lassen (`WARMUP_TASK_PREFIX` in `src/lib/outreach-shared.ts`, abgebildet über das Task-Modell). Tagesbudget startet bei 5, konfigurierbar bis 20 — warnt, sperrt aber nie.
+- **Dritte Pipeline:** `AcquisitionType.DM` neben `CALL` und `WALK_IN`, mit `DM_PIPELINE_STATUSES` und `DM_NEXT_STATUS`. Bewusst **keine** neuen `LeadStatus`-Werte — `TO_CONTACT`/`CONTACTED`/`REPLIED` bilden den Flow bereits ab.
+- **Fokus-Modus:** Vollbild mit Tastaturkürzeln (C kopieren, Enter bestätigen, S überspringen, 1–3 Variante, D/T Kanal, G neu generieren, W Warm-up, Pfeile navigieren, ? Übersicht).
+
+### 9. Instagram-Datenquellen — Kette, Kosten & Cache (`src/services/instagram/`)
+**Quellenkette (`resolve-provider.ts`): Graph API → Apify → öffentlicher Seitenabruf.** Jede Stufe greift nur, wenn die vorige kein vollständiges Profil liefert. Status aller drei Stufen auf einen Blick: `npm run instagram:check`.
+
+**Stufe 1 — Instagram Graph API (offiziell, gratis):**
+- **Konfiguration:** `INSTAGRAM_GRAPH_TOKEN`, `INSTAGRAM_BUSINESS_ACCOUNT_ID`, optional `INSTAGRAM_GRAPH_VERSION` (Standard `v21.0`). Für die Einrichtung zusätzlich `INSTAGRAM_APP_ID` und `INSTAGRAM_APP_SECRET`.
+- **Was funktioniert:** Direkte Feldabfrage auf den **eigenen** Account liefert vollständige Daten.
+- **Was blockiert ist:** `business_discovery` für **fremde** Profile scheitert mit `(#10) Application does not have permission for this action`. Das braucht **Advanced Access für `instagram_basic`** über Metas App Review inkl. Business-Verifizierung. Sobald Meta das gewährt, bekommt die Graph API **automatisch wieder Vorrang** — am Code ist dafür nichts zu ändern.
+- **Stolperfalle:** Ein Instagram-Konto kann einem Business-Portfolio gehören und trotzdem **nicht mit der Facebook-Seite verbunden** sein. Die Graph API greift ausschließlich über die Seite zu (*Business Suite → Instagram-Konto → Connect assets*).
+- **Token-Lebensdauer:** kurzlebig ~1 Stunde, langlebig ~60 Tage. Läuft die Anreicherung still aus, ist meist das Token abgelaufen.
+
+**Stufe 2 — Apify (`apify-provider.ts`, kostenpflichtig):**
+- **Konfiguration:** `APIFY_TOKEN`, optional `APIFY_INSTAGRAM_ACTOR` (Standard `apify~instagram-profile-scraper`) und `APIFY_TIMEOUT_MS` (Standard 90 s, serverseitiges Limit 300 s). **Kein Token → Provider ist schlicht inaktiv**, exakt wie die Graph API.
+- **Endpunkt:** `POST https://api.apify.com/v2/acts/<actor>/run-sync-get-dataset-items`, Body `{ usernames: string[] }`, Antwort ist direkt das Dataset-Array. **Ein Run pro Aufruf, mehrere Handles gleichzeitig.**
+- **KOSTEN ca. $1,60 / 1.000 Profile.** Jeder Call ist echtes Geld — deshalb Vorfilter, Sammel-Run und Cache (siehe unten).
+- **Kein automatischer Retry.** Ein HTTP 408 heißt **nicht**, dass der Run gestoppt wurde — er läuft weiter und wird abgerechnet. Ein Retry zahlt doppelt. Stattdessen kleinere Blöcke (`APIFY_MAX_BATCH`, aktuell 25).
+- **401/402/403 sind ein eigener, sichtbarer Zustand** (`ApifyHealth.outage`), kein stiller Rückfall. Sonst produziert ein abgelaufenes Token wochenlang „unbekannt“, und niemand versteht, warum alle Scores flach sind. Die UI zeigt dann: *„Apify nicht verfügbar — es wird ohne Bio-Daten weitergearbeitet."*
+- **Schema-Guard (`hasLinkField`, pro Item):** `externalUrlKnown` wird **nur** gesetzt, wenn das Item das Link-Feld als **Schlüssel** trägt (`externalUrl` / `external_url` / `externalUrls` / `website` / `bioLink`) — der Actor liefert für Profile ohne Link `externalUrl: null`, die Schlüssel-Präsenz unterscheidet also „geprüft, es gibt keinen" von „das Feld existiert nicht mehr". Bewusst **pro Item** und nicht per `.some()` über den Batch: ein vollständiger Datensatz darf 24 kaputte daneben nicht legitimieren. Benennt Apify das Feld um (`externalUrls[]` kam historisch genau so dazu), fällt das betroffene Item auf „unbekannt" zurück, statt jedem Lead „kein Link in Bio +25“ und den Tag `NO_WEBSITE` zu verpassen — der einzige Failure Mode, der aktiv **falsche** statt nur fehlende Daten erzeugt.
+- **`latestPosts[]`** wird nach Zeitstempel **sortiert** ausgewertet; Index 0 ist nicht verlässlich der neueste Post.
+
+**Stufe 3 — öffentlicher Seitenabruf (`profile-provider.ts`, gratis):** liefert ausgeloggt nur Followerzahl und Namen. `biography`, `external_url` und Post-Datum fehlen — deshalb unterscheidet `externalUrlKnown` zwischen *unbekannt* und *nicht vorhanden*.
+
+**Snapshot-Cache (`snapshot-cache.ts`, Prisma-Modell `InstagramProfileSnapshot`):**
+- Key ist das **normalisierte Handle**, nicht die `leadId` — ein Profil wird über alle Leads und Scout-Sessions hinweg nur einmal bezahlt.
+- **TTL 30 Tage** (`SNAPSHOT_TTL_DAYS`), unvollständige Abrufe 3 Tage (`INCOMPLETE_TTL_DAYS`).
+- Gespeichert wird **`lastPostAt` als absoluter Timestamp, niemals `daysSinceLastPost`.** Ein relativer Wert würde im Cache täglich verrotten und kostenpflichtige Re-Fetches erzwingen; `daysSinceLastPost` wird beim Lesen neu berechnet.
+- `raw` hält das unveränderte Quell-Item — nur damit lässt sich später nachvollziehen, ob sich Feldnamen geändert haben.
+- **`richSourceAttemptedAt`** hält fest, ob Graph API oder Apify für dieses Handle **tatsächlich befragt** wurden — unabhängig vom Ergebnis. Liefert Apify nichts (gelöscht, umbenannt, gesperrt) oder fällt es mit 402/Timeout aus, landet das Ergebnis als `public-page` mit unbekanntem Link im Cache; ohne diesen Merker wäre so ein Handle dauerhaft „nachholbar" und damit TTL-frei — also bei **jedem** Klick erneut kostenpflichtig.
+
+**Wer darf anreichern (Kostenschutz):**
+- **Anreicherung ausschließlich** über `enrichment.ts` → `POST /api/leads/[id]/instagram` (einzeln) und `POST /api/instagram/enrich` (Sammel-Lauf, `preview: true` zeigt vorab „X Profile werden geprüft“, ohne etwas zu kosten).
+- **`POST /api/outreach/generate` löst NIE einen Abruf aus.** Die Route feuert bei jedem Tonalitäts- und Kanalwechsel, jedem „G“ im Fokus-Modus und jedem Sequenzschritt; sie liest deshalb ausschließlich aus dem Snapshot-Cache und den Lead-Feldern (`score`, `scoreReasons`, `opportunityTags`, `interestingReason`).
+- **Vorfilter vor jedem Abruf** (`planEnrichment`), alles aus bereits gratis vorhandenen Daten: belastbare eigene Website laut `hasSolidWebsite()` → überspringen (denselben Helper nutzt auch das Scoring — `Boolean(lead.website)` würde einen Linktree als eigene Website werten und den Lead um ~50 Punkte zu kalt einstufen); Handle-Konfidenz `low`/`medium` → nicht auf Verdacht scrapen; Snapshot jünger als TTL → überspringen; `isPrivate: true` → dauerhaft überspringen.
+- Bewusst **nicht** gebaut: Queue-Worker, Cron, Credit-Budget pro Nutzer.
+
+**Post-Caption als Aufhänger (`outreach-generator.ts`):** Die Caption des **neuesten** Posts ist der stärkste Anchor (`LATEST_POST`) — aber nur, solange der Beitrag höchstens `LATEST_POST_MAX_AGE_DAYS` (60) alt ist; eine DM zu einem zwei Jahre alten Post wirkt schlechter als gar keine Personalisierung. Captions sind **fremder Nutzertext** und landen in einem Prompt, dessen Ergebnis halb-automatisch verschickt wird. Deshalb: `sanitizeCaption()` kürzt auf 300 Zeichen und entfernt Steuer-/Zaun-Zeichen — **inklusive Zeilenumbrüche, und das ist keine Kosmetik:** die Terminatoren des Zitatblocks stehen auf eigenen Zeilen, eine garantiert einzeilige Caption kann die Blockgrenze also gar nicht nachbauen; und der Prompt übergibt sie als klar markiertes Zitat mit der ausdrücklichen Anweisung, Anweisungen darin zu ignorieren. Dasselbe gilt für den Bio-Text.
+
 ## ⚠️ Important Gotchas
 
 1. **Groq Models & JSON Output:** Use `openai/gpt-oss-120b` with `response_format: { type: "json_object" }` for structured outputs (call analysis, task prioritization). Reasoning models (like `qwen3.6-27b`) can get caught in `<think>` token loops that exhaust the token budget before outputting JSON.
@@ -131,4 +186,8 @@
 3. **Gemini Function Calling:** Function response turns must use `role: "user"` (the API rejects `role: "function"` with a 400 error).
 4. **Google Places Region Code:** Always use `.trim()` on `GOOGLE_PLACES_REGION` to avoid CLDR trailing whitespace errors (e.g. `'AT '`).
 5. **App Router Middleware:** Next.js 16 uses `src/proxy.ts` (with `export async function proxy`) rather than `middleware.ts`.
-
+6. **`tsx` lädt die `.env` NICHT von selbst.** Anders als Next.js und Prisma. Alle Skripte in `package.json` laufen deshalb über `tsx --env-file-if-exists=.env`. Wer ein neues Skript ergänzt und das vergisst, bekommt scheinbar leere Umgebungsvariablen.
+7. **TypeScript ist bewusst auf `^6.0.3` gepinnt.** `typescript-eslint` bricht bei TS 7 hart ab (`typescript-eslint does not support TS 7.0`), wodurch `npm run lint` projektweit unbenutzbar war. Erst wieder hochziehen, wenn typescript-eslint TS 7 unterstützt.
+8. **Instagram-Handles immer über `normalizeInstagramHandle()`** aus `src/lib/utils.ts` normalisieren. Das Feld `Lead.instagram` enthält historisch mal ein nacktes Handle, mal eine volle URL, mal mit `?igshid=`-Anhang. Die Funktion fängt alle Formen ab und weist Fremd-Hosts zurück — ohne sie feuerte das 80-Punkte-Duplikat-Signal in `dedup.ts` nie, und Fremd-URLs wurden fälschlich als gleiches Profil gewertet.
+9. **Lokale Entwicklung gegen eine Kopie:** Statt direkt auf die Supabase-Produktivdaten zu entwickeln, empfiehlt sich ein lokaler Postgres-Container mit einem `pg_dump` der Produktion. Die Supabase-Direktverbindung (`db.<ref>.supabase.co`) löst nur auf **IPv6** auf — ohne IPv6 muss `DIRECT_URL` lokal auf den Session-Pooler (Port 5432) zeigen, sonst schlägt jede Prisma-Operation mit `P1001` fehl.
+10. **Instagram-Profildaten kosten ab jetzt Geld.** Ein `fetchInstagramProfile()` in einer Route, die häufig feuert (Generierung, Vorschau, Listen), löst pro Aufruf einen Apify-Run aus. Lesende Pfade gehen ausnahmslos über `readSnapshot()`/`readSnapshots()` aus `snapshot-cache.ts`; anreichern darf nur `enrichment.ts` hinter dem Vorfilter. Wer eine neue Route baut, prüft zuerst, auf welcher Seite dieser Grenze sie steht.

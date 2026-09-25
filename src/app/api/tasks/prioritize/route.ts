@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getOptionalUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { leadScope } from "@/lib/workspace";
 import { prioritizeTasks } from "@/services/groq";
 
 export async function POST(request: Request) {
@@ -18,10 +19,7 @@ export async function POST(request: Request) {
     const openFollowUps = await prisma.lead.findMany({
       where: {
         status: "FOLLOW_UP",
-        OR: [
-          { createdById: user.id },
-          { assignedToId: user.id },
-        ],
+        ...(await leadScope(user)),
       },
       select: { companyName: true, nextFollowUpAt: true },
       take: 10,

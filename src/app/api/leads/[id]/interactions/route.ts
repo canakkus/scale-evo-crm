@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getOptionalUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { findAccessibleLead } from "@/lib/workspace";
 
 export async function POST(
   request: Request,
@@ -17,6 +18,20 @@ export async function POST(
 
     if (!note?.trim() || !type) {
       return NextResponse.json({ error: "Typ und Notiz sind erforderlich." }, { status: 400 });
+    }
+
+    if (!(await findAccessibleLead(user, leadId))) {
+      return NextResponse.json({ error: "Lead nicht gefunden." }, { status: 404 });
+    }
+
+    if (callRecordingId) {
+      const recording = await prisma.callRecording.findUnique({
+        where: { id: String(callRecordingId) },
+        select: { leadId: true, createdById: true },
+      });
+      if (!recording || (recording.leadId !== leadId && recording.createdById !== user.id)) {
+        return NextResponse.json({ error: "Aufnahme nicht gefunden." }, { status: 404 });
+      }
     }
 
     // Ensure db User record exists

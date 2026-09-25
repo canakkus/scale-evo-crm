@@ -8,9 +8,14 @@ export const DEFAULT_NAV_ITEMS: NavItemConfig[] = [
   { href: "/", label: "Dashboard", visible: true },
   { href: "/leads", label: "Leads", visible: true },
   { href: "/pipeline", label: "Pipeline", visible: true },
+  // Neu hinzugekommene Eintraege haengt resolveNavConfig() automatisch an die
+  // gespeicherte Reihenfolge bestehender Nutzer an (Schritt 2 dort) — sie
+  // verlieren den Tab also nicht, sehen ihn aber am Ende der Liste.
+  { href: "/map", label: "Karte", visible: true },
   { href: "/lead-scout", label: "Lead Scout", visible: true },
   { href: "/restaurant-scout", label: "Restaurant Scout", visible: true },
   { href: "/cold-calls", label: "Cold Calls", visible: true },
+  { href: "/outreach", label: "Outreach", visible: true },
   { href: "/follow-ups", label: "Follow-ups", visible: true },
   { href: "/journal", label: "Journal", visible: true },
   { href: "/tasks", label: "Tasks", visible: true },

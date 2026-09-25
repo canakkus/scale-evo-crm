@@ -3,7 +3,9 @@ import { getOptionalUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import type { LeadStatus, Priority, WebPresence } from "@prisma/client";
 import { INDUSTRIES } from "@/lib/constants";
+import { parseCoordinates } from "@/lib/geo";
 import { pushToAppleEcosystem, isAppleSyncUser } from "@/services/apple-bridge";
+import { leadScope } from "@/lib/workspace";
 
 export async function GET(request: Request) {
   try {
@@ -25,14 +27,8 @@ export async function GET(request: Request) {
     const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "25", 10)));
 
-    const andClauses: any[] = [
-      {
-        OR: [
-          { createdById: user.id },
-          { assignedToId: user.id },
-        ],
-      },
-    ];
+    const scope = await leadScope(user);
+    const andClauses: any[] = [scope];
 
     if (search) {
       andClauses.push({
@@ -130,7 +126,7 @@ export async function GET(request: Request) {
       prisma.lead.findMany({
         where: {
           industry: { not: null },
-          OR: [{ createdById: user.id }, { assignedToId: user.id }],
+          ...scope,
         },
         distinct: ["industry"],
         select: { industry: true },
@@ -181,6 +177,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Firmenname ist erforderlich." }, { status: 400 });
     }
 
+    // Gratis-Verortung: Scout- und Places-Autofill-Pfade liefern die Koordinaten
+    // aus einem Treffer, der ohnehin schon bezahlt wurde. Nur wenn BEIDE Werte
+    // plausibel sind, gilt der Lead als verortet — ein halbes Paar waere eine
+    // Koordinate im Nullmeridian-Nirgendwo.
+    const coords = parseCoordinates(data.latitude, data.longitude);
+
     const lead = await prisma.lead.create({
       data: {
         companyName: data.companyName.trim(),
@@ -206,6 +208,16 @@ export async function POST(request: Request) {
         status: data.status || "NEW",
         priority: data.priority || "MEDIUM",
         score: data.score != null ? parseInt(data.score, 10) : 0,
+        ...(coords
+          ? {
+              latitude: coords.latitude,
+              longitude: coords.longitude,
+              geoSource: "places",
+              geoPrecision: "ROOFTOP",
+              geoStatus: "ok",
+              geoAttemptedAt: new Date(),
+            }
+          : {}),
         nextFollowUpAt: data.nextFollowUpAt ? new Date(data.nextFollowUpAt) : null,
         createdById: dbUser.id,
       },

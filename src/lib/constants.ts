@@ -30,6 +30,7 @@ export const STATUS_LABELS: Record<LeadStatus, string> = {
 export const ACQUISITION_TYPE_LABELS: Record<AcquisitionType, string> = {
   CALL: "Cold Call",
   WALK_IN: "Walk-In",
+  DM: "Instagram DM",
 };
 
 export const CALL_PIPELINE_STATUSES: LeadStatus[] = [
@@ -53,6 +54,20 @@ export const WALK_IN_PIPELINE_STATUSES: LeadStatus[] = [
   "DEMO_DISPATCHED",
   "VISITED_INTERESTED",
   "VISITED_NO_INTEREST",
+  "APPOINTMENT",
+  "OFFER_SENT",
+  "FOLLOW_UP",
+  "WON",
+  "LOST",
+];
+
+export const DM_PIPELINE_STATUSES: LeadStatus[] = [
+  "NEW",
+  "RESEARCHED",
+  "TO_CONTACT",
+  "CONTACTED",
+  "REPLIED",
+  "INTERESTED",
   "APPOINTMENT",
   "OFFER_SENT",
   "FOLLOW_UP",
@@ -96,6 +111,21 @@ export const WALK_IN_NEXT_STATUS: Partial<Record<LeadStatus, LeadStatus>> = {
   WALK_IN_PLANNED: "DEMO_DISPATCHED",
   DEMO_DISPATCHED: "VISITED_INTERESTED",
   VISITED_INTERESTED: "APPOINTMENT",
+  APPOINTMENT: "OFFER_SENT",
+  OFFER_SENT: "FOLLOW_UP",
+  FOLLOW_UP: "WON",
+};
+
+// Die DM-Pipeline nutzt bewusst dieselben Stufen wie Cold Call — in
+// Kombination mit acquisitionType: DM ist der Kontext eindeutig, und es
+// braucht keine zusaetzlichen LeadStatus-Werte.
+export const DM_NEXT_STATUS: Partial<Record<LeadStatus, LeadStatus>> = {
+  NEW: "RESEARCHED",
+  RESEARCHED: "TO_CONTACT",
+  TO_CONTACT: "CONTACTED",
+  CONTACTED: "REPLIED",
+  REPLIED: "INTERESTED",
+  INTERESTED: "APPOINTMENT",
   APPOINTMENT: "OFFER_SENT",
   OFFER_SENT: "FOLLOW_UP",
   FOLLOW_UP: "WON",

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getOptionalUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { findAccessibleLead } from "@/lib/workspace";
 
 export async function PATCH(
   request: Request,
@@ -16,6 +17,15 @@ export async function PATCH(
     const data = await request.json();
 
     const isDone = data.status === "DONE";
+
+    // Tasks sind persoenlich — nur die eigenen duerfen geaendert werden.
+    const existing = await prisma.task.findFirst({ where: { id, userId: user.id }, select: { id: true } });
+    if (!existing) {
+      return NextResponse.json({ error: "Task nicht gefunden." }, { status: 404 });
+    }
+    if (data.leadId && !(await findAccessibleLead(user, String(data.leadId)))) {
+      return NextResponse.json({ error: "Lead nicht gefunden." }, { status: 404 });
+    }
 
     const updated = await prisma.task.update({
       where: { id },
@@ -54,7 +64,10 @@ export async function DELETE(
     }
 
     const { id } = await params;
-    await prisma.task.delete({ where: { id } });
+    const { count } = await prisma.task.deleteMany({ where: { id, userId: user.id } });
+    if (count === 0) {
+      return NextResponse.json({ error: "Task nicht gefunden." }, { status: 404 });
+    }
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("[DELETE /api/tasks/[id]] Error:", error);

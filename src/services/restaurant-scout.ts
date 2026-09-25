@@ -1,8 +1,10 @@
 import { prisma } from "@/lib/prisma";
+import { leadScopeForUserId } from "@/lib/workspace";
 import { mapPlaceToSuggestion, type PlaceSuggestion, type RawPlace } from "@/lib/places";
 import { normalizePhone, normalizeUrl } from "@/lib/utils";
 import { detectRestaurantMenu, type MenuDetectionResult } from "@/lib/menu-detector";
 import { calculateDistanceKm } from "@/lib/distance";
+import { parseCoordinates } from "@/lib/geo";
 
 const PLACES_URL = "https://places.googleapis.com/v1/places:searchText";
 const FIELD_MASK =
@@ -107,6 +109,9 @@ export async function runRestaurantScout(
     });
   }
 
+  // Einmal vor der Schleife — pro Treffer waeren das zwei DB-Abfragen mehr.
+  const scope = await leadScopeForUserId(userId);
+
   // Step 3: Run Menu Detection on candidates in batches of 5
   const BATCH_SIZE = 5;
   const menuResults: Map<string, MenuDetectionResult> = new Map();
@@ -149,12 +154,7 @@ export async function runRestaurantScout(
     const existingLead = await prisma.lead.findFirst({
       where: {
         AND: [
-          {
-            OR: [
-              { createdById: userId },
-              { assignedToId: userId },
-            ],
-          },
+          scope,
           {
             OR: [
               ...(normMaps ? [{ googleMapsUrl: normMaps }] : []),
@@ -179,6 +179,20 @@ export async function runRestaurantScout(
         : null
     );
 
+    // Gratis-Verortung: lat/lng stecken schon im Places-Treffer (FIELD_MASK
+    // enthaelt places.location) und wurden bisher beim Anlegen weggeworfen.
+    const coords = parseCoordinates(place.latitude, place.longitude);
+    const geoFields = coords
+      ? {
+          latitude: coords.latitude,
+          longitude: coords.longitude,
+          geoSource: "places",
+          geoPrecision: "ROOFTOP",
+          geoStatus: "ok",
+          geoAttemptedAt: now,
+        }
+      : {};
+
     if (existingLead) {
       // Update existing lead with latest menu info
       const updated = await prisma.lead.update({
@@ -190,6 +204,9 @@ export async function runRestaurantScout(
           menuCheckedAt: now,
           ...(place.rating !== null && { googleRating: place.rating }),
           ...(place.reviewCount !== null && { googleReviewCount: place.reviewCount }),
+          // Nur nachtragen, wenn der Lead noch gar nicht verortet ist. Eine
+          // bereits gesetzte (ggf. manuell korrigierte) Position bleibt stehen.
+          ...(existingLead.latitude == null ? geoFields : {}),
         },
       });
 
@@ -233,6 +250,7 @@ export async function runRestaurantScout(
           menuUrl: menu.menuUrl,
           menuSnippet: menu.menuSnippet,
           menuCheckedAt: now,
+          ...geoFields,
           createdById: dbUser.id,
         },
       });
