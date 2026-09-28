@@ -200,6 +200,7 @@ model Lead {
   callRecordings CallRecording[]
   scoutResults ScoutResult[]
   dmDrafts     DmDraft[]
+  attachments  LeadAttachment[]
 
   @@index([status])
   @@index([acquisitionType])
@@ -594,3 +595,18 @@ model InstagramProfileSnapshot {
   @@index([fetchedAt])
   @@index([source])
 }
+
+model LeadAttachment {
+  id        String   @id @default(cuid())
+  leadId    String
+  url       String
+  fileName  String
+  fileSize  Int?
+  mimeType  String?
+  createdAt DateTime @default(now())
+
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId, createdAt])
+}
+

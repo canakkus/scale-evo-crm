@@ -88,6 +88,7 @@ export async function GET(
         // Tasks sind persoenlich — auch am geteilten Lead nur die eigenen.
         tasks: { where: { userId: user.id }, orderBy: { createdAt: "desc" } },
         callRecordings: { orderBy: { createdAt: "desc" } },
+        attachments: { orderBy: { createdAt: "desc" } },
       },
     });
 

@@ -44,3 +44,9 @@ Thumbs.db
 cookies.txt
 *.log
 .venv/
+
+# AI Agent Rules & Context — NIEMALS auf GitHub pushen!
+CLAUDE.md
+AGENTS.md
+GEMINI.md
+*.local.md

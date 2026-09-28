@@ -39,6 +39,7 @@ import {
 import { StatusBadge } from "@/components/ui/status-badge";
 import { OutreachLeadPanel } from "@/components/outreach/outreach-lead-panel";
 import { CustomAudioPlayer } from "@/components/ui/custom-audio-player";
+import { LeadAttachments } from "./lead-attachments";
 import { STATUS_LABELS, INTERACTION_LABELS } from "@/lib/constants";
 import { formatDate, timeAgo, normalizeInstagramHandle, instagramProfileUrl } from "@/lib/utils";
 import type { LeadStatus, InteractionType } from "@prisma/client";
@@ -1369,6 +1370,21 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                         ))
                       )}
                     </div>
+
+                    {/* Bilder & Screenshots */}
+                    <LeadAttachments
+                      leadId={lead.id}
+                      attachments={lead.attachments || []}
+                      onUpdate={() => {
+                        onUpdate();
+                        fetch(`/api/leads/${lead.id}`)
+                          .then((r) => r.json())
+                          .then((d) => {
+                            if (d.lead) setLead(d.lead);
+                          })
+                          .catch(console.error);
+                      }}
+                    />
                   </div>
                 </div>
               ) : (
