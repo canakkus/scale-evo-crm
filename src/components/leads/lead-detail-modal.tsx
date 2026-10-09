@@ -53,7 +53,7 @@ type LeadDetailModalProps = {
 export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalProps) {
   const [lead, setLead] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(true);
   const [notesText, setNotesText] = useState("");
   const [savingNotes, setSavingNotes] = useState(false);
   const [checkingMenu, setCheckingMenu] = useState(false);

@@ -7,6 +7,10 @@ import { parseCoordinates } from "@/lib/geo";
 import { pushToAppleEcosystem, isAppleSyncUser } from "@/services/apple-bridge";
 import { leadScope } from "@/lib/workspace";
 
+// In-memory cache for distinct industries to avoid redundant database scans on every keystroke/request
+let cachedIndustries: { list: string[]; timestamp: number } | null = null;
+const CACHE_TTL_MS = 60 * 1000; // 1 minute
+
 export async function GET(request: Request) {
   try {
     const user = await getOptionalUser();
@@ -116,7 +120,27 @@ export async function GET(request: Request) {
     const validSortFields = ["createdAt", "updatedAt", "score", "companyName", "status", "lastContactAt"];
     const sortField = validSortFields.includes(sortBy) ? sortBy : "updatedAt";
 
-    const [leads, total, distinctIndustries] = await Promise.all([
+    // Distinct industries cached to avoid DB bottleneck on every keystroke
+    const now = Date.now();
+    let allIndustries: string[];
+
+    if (cachedIndustries && now - cachedIndustries.timestamp < CACHE_TTL_MS) {
+      allIndustries = cachedIndustries.list;
+    } else {
+      const distinctIndustries = await prisma.lead.findMany({
+        where: {
+          industry: { not: null },
+          ...scope,
+        },
+        distinct: ["industry"],
+        select: { industry: true },
+      });
+      const dbIndustries = distinctIndustries.map((d) => d.industry).filter(Boolean) as string[];
+      allIndustries = Array.from(new Set([...INDUSTRIES, ...dbIndustries])).sort();
+      cachedIndustries = { list: allIndustries, timestamp: now };
+    }
+
+    const [leads, total] = await Promise.all([
       prisma.lead.findMany({
         where,
         orderBy: { [sortField]: sortOrder },
@@ -129,18 +153,7 @@ export async function GET(request: Request) {
         },
       }),
       prisma.lead.count({ where }),
-      prisma.lead.findMany({
-        where: {
-          industry: { not: null },
-          ...scope,
-        },
-        distinct: ["industry"],
-        select: { industry: true },
-      }),
     ]);
-
-    const dbIndustries = distinctIndustries.map((d) => d.industry).filter(Boolean) as string[];
-    const allIndustries = Array.from(new Set([...INDUSTRIES, ...dbIndustries])).sort();
 
     return NextResponse.json({
       leads,

@@ -40,6 +40,7 @@ export function LeadsTable() {
 
   // Filters & Search
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [acquisitionFilter, setAcquisitionFilter] = useState<string>("");
   const [isFocusFilter, setIsFocusFilter] = useState(false);
@@ -59,11 +60,19 @@ export function LeadsTable() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
 
+  // Debounce search input to avoid laggy keystrokes & excessive API requests
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 280);
+    return () => clearTimeout(timer);
+  }, [search]);
+
   const fetchLeads = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (search.trim()) params.set("search", search.trim());
+      if (debouncedSearch.trim()) params.set("search", debouncedSearch.trim());
       if (statusFilter) params.set("status", statusFilter);
       if (acquisitionFilter) params.set("acquisitionType", acquisitionFilter);
       if (isFocusFilter) params.set("isFocus", "true");
@@ -92,7 +101,7 @@ export function LeadsTable() {
     } finally {
       setLoading(false);
     }
-  }, [search, statusFilter, acquisitionFilter, isFocusFilter, relevantOnlyFilter, industryFilters, updatedDateFilter, customDate, page]);
+  }, [debouncedSearch, statusFilter, acquisitionFilter, isFocusFilter, relevantOnlyFilter, industryFilters, updatedDateFilter, customDate, page]);
 
   async function handleToggleFocus(leadId: string, currentVal: boolean) {
     const nextVal = !currentVal;
