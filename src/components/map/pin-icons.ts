@@ -10,12 +10,14 @@ const CHANNEL_RING: Record<AcquisitionType, string> = {
   CALL: "var(--bg)", // ruhigster Ring — das ist die grosse Mehrheit der Leads
   WALK_IN: "var(--text)",
   DM: "var(--channel-dm-tx)",
+  EMAIL: "#F59E0B",
 };
 
 const CHANNEL_CLASS: Record<AcquisitionType, string> = {
   CALL: "map-pin--call",
   WALK_IN: "map-pin--walkin",
   DM: "map-pin--dm",
+  EMAIL: "map-pin--email",
 };
 
 /**

@@ -21,6 +21,9 @@ import {
   Copy,
   RefreshCw,
   Sparkles,
+  Mail,
+  Flame,
+  Ban,
 } from "lucide-react";
 import { StatusBadge, PriorityDot } from "@/components/ui/status-badge";
 import { LeadFormModal } from "@/components/leads/lead-form-modal";
@@ -39,6 +42,8 @@ export function LeadsTable() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [acquisitionFilter, setAcquisitionFilter] = useState<string>("");
+  const [isFocusFilter, setIsFocusFilter] = useState(false);
+  const [relevantOnlyFilter, setRelevantOnlyFilter] = useState(false);
   const [industryFilters, setIndustryFilters] = useState<string[]>([]);
   const [availableIndustries, setAvailableIndustries] = useState<string[]>([]);
   const [isIndustryDropdownOpen, setIsIndustryDropdownOpen] = useState(false);
@@ -61,6 +66,8 @@ export function LeadsTable() {
       if (search.trim()) params.set("search", search.trim());
       if (statusFilter) params.set("status", statusFilter);
       if (acquisitionFilter) params.set("acquisitionType", acquisitionFilter);
+      if (isFocusFilter) params.set("isFocus", "true");
+      if (relevantOnlyFilter) params.set("relevantOnly", "true");
       if (industryFilters.length > 0) params.set("industry", industryFilters.join(","));
       if (updatedDateFilter) {
         if (updatedDateFilter === "custom") {
@@ -85,7 +92,37 @@ export function LeadsTable() {
     } finally {
       setLoading(false);
     }
-  }, [search, statusFilter, acquisitionFilter, industryFilters, updatedDateFilter, customDate, page]);
+  }, [search, statusFilter, acquisitionFilter, isFocusFilter, relevantOnlyFilter, industryFilters, updatedDateFilter, customDate, page]);
+
+  async function handleToggleFocus(leadId: string, currentVal: boolean) {
+    const nextVal = !currentVal;
+    setLeads((prev) => prev.map((l) => (l.id === leadId ? { ...l, isFocus: nextVal } : l)));
+    try {
+      await fetch(`/api/leads/${leadId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isFocus: nextVal }),
+      });
+    } catch (err) {
+      console.error(err);
+      fetchLeads();
+    }
+  }
+
+  async function handleQuickMarkNotRelevant(leadId: string, e: React.MouseEvent) {
+    e.stopPropagation();
+    setLeads((prev) => prev.map((l) => (l.id === leadId ? { ...l, status: "NOT_RELEVANT" } : l)));
+    try {
+      await fetch(`/api/leads/${leadId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "NOT_RELEVANT" }),
+      });
+    } catch (err) {
+      console.error(err);
+      fetchLeads();
+    }
+  }
 
   function handleCopyNfc(e: React.MouseEvent, url: string, leadId: string) {
     e.stopPropagation();
@@ -195,6 +232,63 @@ export function LeadsTable() {
             >
               <span>💬</span>
               <span>Instagram DM</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setAcquisitionFilter("EMAIL");
+                setPage(1);
+              }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                acquisitionFilter === "EMAIL"
+                  ? "shadow-sm"
+                  : "opacity-75 hover:opacity-100 hover:text-[var(--text)]"
+              }`}
+              style={{
+                background: acquisitionFilter === "EMAIL" ? "#F59E0B" : "transparent",
+                color: acquisitionFilter === "EMAIL" ? "#000" : "var(--text-2)",
+              }}
+            >
+              <Mail className="w-3.5 h-3.5 opacity-80" />
+              <span>E-Mails</span>
+            </button>
+          </div>
+
+          {/* Quick Focus & Relevance Toggles */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                setIsFocusFilter((prev) => !prev);
+                setPage(1);
+              }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
+                isFocusFilter
+                  ? "shadow-sm border-amber-500/50 bg-amber-500/15 text-amber-300"
+                  : "border-[var(--border)] bg-[var(--surface)] text-[var(--text-2)] hover:text-[var(--text)]"
+              }`}
+              title="Zeigt nur Leads, die für die nächsten 2 Wochen vorgemerkt sind"
+            >
+              <Star className={`w-3.5 h-3.5 ${isFocusFilter ? "fill-amber-400 text-amber-400" : ""}`} />
+              <span>2-Wochen-Fokus</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setRelevantOnlyFilter((prev) => !prev);
+                setPage(1);
+              }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
+                relevantOnlyFilter
+                  ? "shadow-sm border-emerald-500/50 bg-emerald-500/15 text-emerald-300"
+                  : "border-[var(--border)] bg-[var(--surface)] text-[var(--text-2)] hover:text-[var(--text)]"
+              }`}
+              title="Blendet irrelevante und verlorene Leads aus"
+            >
+              <Flame className={`w-3.5 h-3.5 ${relevantOnlyFilter ? "text-emerald-400" : ""}`} />
+              <span>Nur Relevante</span>
             </button>
           </div>
 
@@ -451,7 +545,27 @@ export function LeadsTable() {
                       {/* Firma */}
                       <td className="px-5 py-4 align-top">
                         <div className="flex items-center gap-2 font-semibold text-base mb-1" style={{ color: "var(--text)" }}>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggleFocus(lead.id, !!lead.isFocus);
+                            }}
+                            title={lead.isFocus ? "2-Wochen-Fokus entfernen" : "Für 2-Wochen-Fokus vormerken"}
+                            className={`p-1 rounded-md transition-all shrink-0 ${
+                              lead.isFocus
+                                ? "text-amber-400 bg-amber-400/15"
+                                : "text-[var(--text-3)] hover:text-amber-400 hover:bg-[var(--surface-2)] opacity-40 group-hover:opacity-100"
+                            }`}
+                          >
+                            <Star className={`w-4 h-4 ${lead.isFocus ? "fill-amber-400 text-amber-400" : ""}`} />
+                          </button>
                           <span>{lead.companyName}</span>
+                          {lead.isFocus && (
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                              2-Wochen-Fokus
+                            </span>
+                          )}
                           {lead.hasMenu === true && (
                             <span className="text-xs font-normal px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
                               Karte
@@ -463,7 +577,7 @@ export function LeadsTable() {
                             </span>
                           )}
                         </div>
-                        <div className="text-xs font-medium" style={{ color: "var(--text-2)" }}>
+                        <div className="text-xs font-medium pl-6" style={{ color: "var(--text-2)" }}>
                           {lead.industry || "—"}
                         </div>
                       </td>
@@ -477,13 +591,21 @@ export function LeadsTable() {
                             style={
                               lead.acquisitionType === "DM"
                                 ? { background: "var(--channel-dm-bg)", color: "var(--channel-dm-tx)" }
+                                : lead.acquisitionType === "EMAIL"
+                                ? { background: "rgba(245, 158, 11, 0.15)", color: "#f59e0b" }
                                 : {
                                     background: isWalkIn ? "rgba(168, 85, 247, 0.1)" : "rgba(59, 130, 246, 0.1)",
                                     color: isWalkIn ? "rgb(192, 132, 252)" : "rgb(96, 165, 250)",
                                   }
                             }
                           >
-                            {lead.acquisitionType === "DM" ? "Instagram DM" : isWalkIn ? "Walk-In" : "Cold Call"}
+                            {lead.acquisitionType === "DM"
+                              ? "Instagram DM"
+                              : lead.acquisitionType === "EMAIL"
+                              ? "E-Mail"
+                              : isWalkIn
+                              ? "Walk-In"
+                              : "Cold Call"}
                           </span>
                         </div>
                       </td>
@@ -582,6 +704,15 @@ export function LeadsTable() {
                             </button>
                           )}
 
+                          <button
+                            type="button"
+                            onClick={(e) => handleQuickMarkNotRelevant(lead.id, e)}
+                            className="p-2 rounded-lg hover:bg-[var(--surface-2)] transition-colors opacity-70 hover:opacity-100"
+                            title="Als 'Nicht relevant' markieren (aussortieren)"
+                            style={{ color: "var(--text-3)" }}
+                          >
+                            <Ban className="w-4 h-4" />
+                          </button>
                           <button
                             onClick={() => setSelectedLeadId(lead.id)}
                             className="p-2 rounded-lg hover:bg-[var(--surface-2)] transition-colors"

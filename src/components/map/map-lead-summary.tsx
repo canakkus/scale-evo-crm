@@ -16,6 +16,7 @@ const CHANNEL_TOKENS: Record<AcquisitionType, { bg: string; tx: string }> = {
   CALL: { bg: "var(--channel-call-bg)", tx: "var(--channel-call-tx)" },
   WALK_IN: { bg: "var(--channel-walkin-bg)", tx: "var(--channel-walkin-tx)" },
   DM: { bg: "var(--channel-dm-bg)", tx: "var(--channel-dm-tx)" },
+  EMAIL: { bg: "rgba(245, 158, 11, 0.15)", tx: "#f59e0b" },
 };
 
 export function ChannelBadge({ type }: { type: AcquisitionType }) {

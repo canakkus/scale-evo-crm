@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import type { AcquisitionType } from "@prisma/client";
 import { leadScopeForUserId } from "@/lib/workspace";
 import { normalizeInstagramHandle } from "@/lib/utils";
 import type { InstagramInsight, InstagramSnapshotView, ScoutResult } from "@/lib/lead-scout-types";
@@ -37,7 +38,7 @@ export type InsightRequest = {
   websiteUnknown: boolean;
 };
 
-type LeadRef = { id: string; instagram: string | null; acquisitionType: "CALL" | "WALK_IN" | "DM" };
+type LeadRef = { id: string; instagram: string | null; acquisitionType: AcquisitionType };
 
 function toView(cached: CachedProfile): InstagramSnapshotView {
   const { profile } = cached;

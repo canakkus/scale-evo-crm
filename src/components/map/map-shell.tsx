@@ -158,7 +158,7 @@ export function MapShell() {
 
   const channelCounts = useMemo(() => {
     const base = allLeads.filter((lead) => matchesFilters(lead, filters, "channel"));
-    const counts: Record<ChannelFilter, number> = { ALL: base.length, CALL: 0, WALK_IN: 0, DM: 0 };
+    const counts: Record<ChannelFilter, number> = { ALL: base.length, CALL: 0, WALK_IN: 0, DM: 0, EMAIL: 0 };
     for (const lead of base) {
       counts[lead.acquisitionType as AcquisitionType] = (counts[lead.acquisitionType as AcquisitionType] ?? 0) + 1;
     }

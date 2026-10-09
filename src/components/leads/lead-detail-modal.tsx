@@ -85,6 +85,7 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
   const [isEditing, setIsEditing] = useState(false);
   const [editCompanyName, setEditCompanyName] = useState("");
   const [editAcquisitionType, setEditAcquisitionType] = useState<string>("CALL");
+  const [editIsFocus, setEditIsFocus] = useState(false);
   const [editNfcDemoUrl, setEditNfcDemoUrl] = useState("");
   const [editIndustry, setEditIndustry] = useState("");
   const [editAddress, setEditAddress] = useState("");
@@ -190,6 +191,7 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
           // Initialize edit values
           setEditCompanyName(data.lead.companyName || "");
           setEditAcquisitionType(data.lead.acquisitionType || "CALL");
+          setEditIsFocus(Boolean(data.lead.isFocus));
           setEditNfcDemoUrl(data.lead.nfcDemoUrl || "");
           setEditIndustry(data.lead.industry || "");
           setEditAddress(data.lead.address || "");
@@ -265,6 +267,7 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
         body: JSON.stringify({
           companyName: editCompanyName,
           acquisitionType: editAcquisitionType,
+          isFocus: editIsFocus,
           nfcDemoUrl: editNfcDemoUrl,
           industry: editIndustry,
           address: editAddress,
@@ -457,8 +460,31 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b shrink-0" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
           <div className="flex items-center gap-3">
-            <h2 className="font-heading text-xl font-bold" style={{ color: "var(--text)" }}>
-              {lead?.companyName || "Lädt…"}
+            <h2 className="font-heading text-xl font-bold flex items-center gap-2" style={{ color: "var(--text)" }}>
+              <span>{lead?.companyName || "Lädt…"}</span>
+              {lead && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const nextVal = !lead.isFocus;
+                    setLead({ ...lead, isFocus: nextVal });
+                    await fetch(`/api/leads/${lead.id}`, {
+                      method: "PATCH",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ isFocus: nextVal }),
+                    });
+                    onUpdate();
+                  }}
+                  title={lead.isFocus ? "2-Wochen-Fokus entfernen" : "Für 2-Wochen-Fokus vormerken"}
+                  className={`p-1 rounded-md transition-all ${
+                    lead.isFocus
+                      ? "text-amber-400 bg-amber-400/15"
+                      : "text-[var(--text-3)] hover:text-amber-400 hover:bg-[var(--surface-3)]"
+                  }`}
+                >
+                  <Star className={`w-4 h-4 ${lead.isFocus ? "fill-amber-400 text-amber-400" : ""}`} />
+                </button>
+              )}
             </h2>
             {lead && <StatusBadge status={lead.status} />}
           </div>
@@ -525,16 +551,41 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                 {/* Akquise-Kanal */}
                 <div className="flex flex-col gap-1">
                   <span className="font-semibold text-xs text-[var(--text-3)]">Akquise-Kanal:</span>
-                  <div>
+                  <div className="flex items-center gap-2">
                     <span
                       className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-md"
                       style={{
-                        background: lead.acquisitionType === "WALK_IN" ? "rgba(168, 85, 247, 0.1)" : "rgba(59, 130, 246, 0.1)",
-                        color: lead.acquisitionType === "WALK_IN" ? "rgb(192, 132, 252)" : "rgb(96, 165, 250)",
+                        background:
+                          lead.acquisitionType === "DM"
+                            ? "var(--channel-dm-bg)"
+                            : lead.acquisitionType === "EMAIL"
+                            ? "rgba(245, 158, 11, 0.15)"
+                            : lead.acquisitionType === "WALK_IN"
+                            ? "rgba(168, 85, 247, 0.1)"
+                            : "rgba(59, 130, 246, 0.1)",
+                        color:
+                          lead.acquisitionType === "DM"
+                            ? "var(--channel-dm-tx)"
+                            : lead.acquisitionType === "EMAIL"
+                            ? "#f59e0b"
+                            : lead.acquisitionType === "WALK_IN"
+                            ? "rgb(192, 132, 252)"
+                            : "rgb(96, 165, 250)",
                       }}
                     >
-                      {lead.acquisitionType === "DM" ? "Instagram DM" : lead.acquisitionType === "WALK_IN" ? "Walk-In" : "Cold Call"}
+                      {lead.acquisitionType === "DM"
+                        ? "Instagram DM"
+                        : lead.acquisitionType === "EMAIL"
+                        ? "E-Mail Akquise"
+                        : lead.acquisitionType === "WALK_IN"
+                        ? "Walk-In"
+                        : "Cold Call"}
                     </span>
+                    {lead.isFocus && (
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                        ⭐ 2-Wochen-Fokus
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -1017,7 +1068,20 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                       <option value="CALL">Cold Call</option>
                       <option value="WALK_IN">Walk-In</option>
                       <option value="DM">Instagram DM</option>
+                      <option value="EMAIL">E-Mail Akquise</option>
                     </select>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-1">
+                    <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold" style={{ color: "var(--text)" }}>
+                      <input
+                        type="checkbox"
+                        checked={editIsFocus}
+                        onChange={(e) => setEditIsFocus(e.target.checked)}
+                        className="rounded border-[var(--border)] accent-amber-400"
+                      />
+                      <span>⭐ Für 2-Wochen-Fokus vormerken</span>
+                    </label>
                   </div>
 
                   <div>

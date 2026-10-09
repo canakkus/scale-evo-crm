@@ -631,6 +631,18 @@ function Legend() {
             />
             Instagram DM — Kreis mit Ring
           </li>
+          <li className="flex items-center gap-2 text-[11px]" style={{ color: "var(--text-2)" }}>
+            <span
+              className="shrink-0 rounded-full"
+              style={{
+                width: 10,
+                height: 10,
+                background: "var(--text-2)",
+                boxShadow: "0 0 0 1px var(--bg), 0 0 0 3px #F59E0B",
+              }}
+            />
+            E-Mail — Kreis mit Goldring
+          </li>
         </ul>
       </div>
 

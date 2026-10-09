@@ -22,6 +22,7 @@ export const STATUS_LABELS: Record<LeadStatus, string> = {
   LOST: "Verloren",
   NOT_RELEVANT: "Nicht relevant",
   WALK_IN_PLANNED: "Walk-In geplant",
+  WALK_IN_SCHEDULED: "Fokus: Nächste 2 Wochen",
   VISITED_INTERESTED: "Besucht (Interessiert)",
   VISITED_NO_INTEREST: "Besucht (Kein Interesse)",
   DEMO_DISPATCHED: "Demo versendet",
@@ -31,6 +32,7 @@ export const ACQUISITION_TYPE_LABELS: Record<AcquisitionType, string> = {
   CALL: "Cold Call",
   WALK_IN: "Walk-In",
   DM: "Instagram DM",
+  EMAIL: "E-Mail Akquise",
 };
 
 export const CALL_PIPELINE_STATUSES: LeadStatus[] = [
@@ -51,6 +53,7 @@ export const WALK_IN_PIPELINE_STATUSES: LeadStatus[] = [
   "NEW",
   "RESEARCHED",
   "WALK_IN_PLANNED",
+  "WALK_IN_SCHEDULED",
   "DEMO_DISPATCHED",
   "VISITED_INTERESTED",
   "VISITED_NO_INTEREST",
@@ -62,6 +65,20 @@ export const WALK_IN_PIPELINE_STATUSES: LeadStatus[] = [
 ];
 
 export const DM_PIPELINE_STATUSES: LeadStatus[] = [
+  "NEW",
+  "RESEARCHED",
+  "TO_CONTACT",
+  "CONTACTED",
+  "REPLIED",
+  "INTERESTED",
+  "APPOINTMENT",
+  "OFFER_SENT",
+  "FOLLOW_UP",
+  "WON",
+  "LOST",
+];
+
+export const EMAIL_PIPELINE_STATUSES: LeadStatus[] = [
   "NEW",
   "RESEARCHED",
   "TO_CONTACT",
@@ -88,6 +105,7 @@ export const PIPELINE_STATUSES: LeadStatus[] = [
   "WON",
   "LOST",
   "WALK_IN_PLANNED",
+  "WALK_IN_SCHEDULED",
   "VISITED_INTERESTED",
   "VISITED_NO_INTEREST",
   "DEMO_DISPATCHED",
@@ -108,7 +126,8 @@ export const CALL_NEXT_STATUS: Partial<Record<LeadStatus, LeadStatus>> = {
 export const WALK_IN_NEXT_STATUS: Partial<Record<LeadStatus, LeadStatus>> = {
   NEW: "RESEARCHED",
   RESEARCHED: "WALK_IN_PLANNED",
-  WALK_IN_PLANNED: "DEMO_DISPATCHED",
+  WALK_IN_PLANNED: "WALK_IN_SCHEDULED",
+  WALK_IN_SCHEDULED: "DEMO_DISPATCHED",
   DEMO_DISPATCHED: "VISITED_INTERESTED",
   VISITED_INTERESTED: "APPOINTMENT",
   APPOINTMENT: "OFFER_SENT",
@@ -131,9 +150,22 @@ export const DM_NEXT_STATUS: Partial<Record<LeadStatus, LeadStatus>> = {
   FOLLOW_UP: "WON",
 };
 
+export const EMAIL_NEXT_STATUS: Partial<Record<LeadStatus, LeadStatus>> = {
+  NEW: "RESEARCHED",
+  RESEARCHED: "TO_CONTACT",
+  TO_CONTACT: "CONTACTED",
+  CONTACTED: "REPLIED",
+  REPLIED: "INTERESTED",
+  INTERESTED: "APPOINTMENT",
+  APPOINTMENT: "OFFER_SENT",
+  OFFER_SENT: "FOLLOW_UP",
+  FOLLOW_UP: "WON",
+};
+
 export const NEXT_STATUS: Partial<Record<LeadStatus, LeadStatus>> = {
   ...CALL_NEXT_STATUS,
   ...WALK_IN_NEXT_STATUS,
+  ...EMAIL_NEXT_STATUS,
 };
 
 export const PRIORITY_LABELS: Record<Priority, string> = {

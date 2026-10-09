@@ -1,4 +1,4 @@
-import type { PreferredContactMethod, WebPresence } from "@prisma/client";
+import type { AcquisitionType, PreferredContactMethod, WebPresence } from "@prisma/client";
 import type { PlaceSuggestion } from "@/lib/places";
 import type { AuditResult } from "@/services/audit/types";
 
@@ -99,7 +99,7 @@ export type InstagramInsight = {
   /** Nur mit Snapshot. Ohne Snapshot gibt es bewusst KEINEN Score (keine 0). */
   score: { score: number; approximate: boolean; reasons: Array<{ key: string; label: string; points: number }> } | null;
   /** Lead im CRM mit genau diesem Handle (normalisiert). */
-  crmLead: { id: string; acquisitionType: "CALL" | "WALK_IN" | "DM" } | null;
+  crmLead: { id: string; acquisitionType: AcquisitionType } | null;
 };
 
 export type ChainInfo = {

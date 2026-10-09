@@ -6,8 +6,10 @@ import {
   DM_PIPELINE_STATUSES,
   DM_NEXT_STATUS,
   WALK_IN_PIPELINE_STATUSES,
+  EMAIL_PIPELINE_STATUSES,
   CALL_NEXT_STATUS,
   WALK_IN_NEXT_STATUS,
+  EMAIL_NEXT_STATUS,
   STATUS_LABELS,
   ACQUISITION_TYPE_LABELS,
 } from "@/lib/constants";
@@ -30,6 +32,7 @@ import {
   Plus,
   Search,
   RefreshCw,
+  Mail,
 } from "lucide-react";
 import type { AcquisitionType, LeadStatus } from "@prisma/client";
 
@@ -75,9 +78,19 @@ export function PipelineBoardComponent() {
     () => leads.filter((l) => l.acquisitionType === "DM"),
     [leads]
   );
+  const emailLeads = useMemo(
+    () => leads.filter((l) => l.acquisitionType === "EMAIL"),
+    [leads]
+  );
 
   const activeLeads =
-    activeTab === "CALL" ? coldCallLeads : activeTab === "WALK_IN" ? walkInLeads : dmLeads;
+    activeTab === "CALL"
+      ? coldCallLeads
+      : activeTab === "WALK_IN"
+      ? walkInLeads
+      : activeTab === "DM"
+      ? dmLeads
+      : emailLeads;
 
   // Filter leads by search query if present
   const displayedLeads = useMemo(() => {
@@ -96,10 +109,18 @@ export function PipelineBoardComponent() {
     activeTab === "CALL"
       ? CALL_PIPELINE_STATUSES
       : activeTab === "WALK_IN"
-        ? WALK_IN_PIPELINE_STATUSES
-        : DM_PIPELINE_STATUSES;
+      ? WALK_IN_PIPELINE_STATUSES
+      : activeTab === "DM"
+      ? DM_PIPELINE_STATUSES
+      : EMAIL_PIPELINE_STATUSES;
   const activeNextMap =
-    activeTab === "CALL" ? CALL_NEXT_STATUS : activeTab === "WALK_IN" ? WALK_IN_NEXT_STATUS : DM_NEXT_STATUS;
+    activeTab === "CALL"
+      ? CALL_NEXT_STATUS
+      : activeTab === "WALK_IN"
+      ? WALK_IN_NEXT_STATUS
+      : activeTab === "DM"
+      ? DM_NEXT_STATUS
+      : EMAIL_NEXT_STATUS;
 
   async function handleAdvanceStatus(leadId: string, currentStatus: LeadStatus) {
     const next = activeNextMap[currentStatus];
@@ -149,6 +170,26 @@ export function PipelineBoardComponent() {
     navigator.clipboard.writeText(url);
     setCopiedNfcId(leadId);
     setTimeout(() => setCopiedNfcId(null), 2000);
+  }
+
+  async function handleToggleFocus(leadId: string, currentVal: boolean, e: React.MouseEvent) {
+    e.stopPropagation();
+    const nextVal = !currentVal;
+    setLeads((prev) => prev.map((l) => (l.id === leadId ? { ...l, isFocus: nextVal } : l)));
+
+    try {
+      const res = await fetch(`/api/leads/${leadId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isFocus: nextVal }),
+      });
+      if (!res.ok) {
+        fetchLeads();
+      }
+    } catch (err) {
+      console.error(err);
+      fetchLeads();
+    }
   }
 
   // --- Drag & Drop Handlers ---
@@ -249,6 +290,32 @@ export function PipelineBoardComponent() {
               }}
             >
               {dmLeads.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("EMAIL")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+              activeTab === "EMAIL"
+                ? "shadow-md scale-[1.02]"
+                : "opacity-75 hover:opacity-100 hover:text-[var(--text)]"
+            }`}
+            style={{
+              background: activeTab === "EMAIL" ? "#F59E0B" : "transparent",
+              color: activeTab === "EMAIL" ? "#000" : "var(--text-2)",
+            }}
+          >
+            <Mail className="w-3.5 h-3.5" />
+            <span>E-Mail</span>
+            <span
+              className="px-2 py-0.5 rounded-full text-[10px] font-bold"
+              style={{
+                background: activeTab === "EMAIL" ? "rgba(0,0,0,0.2)" : "var(--surface-3)",
+                color: activeTab === "EMAIL" ? "#000" : "var(--text-3)",
+              }}
+            >
+              {emailLeads.length}
             </span>
           </button>
         </div>
@@ -361,15 +428,31 @@ export function PipelineBoardComponent() {
                           }`}
                           style={{
                             background: "var(--surface)",
-                            boxShadow: "0 1px 3px rgba(0,0,0,0.02), 0 0 0 1px var(--border)",
+                            boxShadow: lead.isFocus
+                              ? "0 0 0 1.5px #F59E0B, 0 2px 8px rgba(245, 158, 11, 0.15)"
+                              : "0 1px 3px rgba(0,0,0,0.02), 0 0 0 1px var(--border)",
                           }}
                         >
                           <div className="flex gap-3 items-center justify-between">
                             {/* Clean Card Content (Typography-driven) */}
                             <div className="flex-1 min-w-0">
-                              <h4 className="text-[14px] font-medium leading-tight mb-1" style={{ color: "var(--text)" }}>
-                                {lead.companyName}
-                              </h4>
+                              <div className="flex items-center gap-1.5 mb-1">
+                                <h4 className="text-[14px] font-medium leading-tight flex-1 truncate" style={{ color: "var(--text)" }}>
+                                  {lead.companyName}
+                                </h4>
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleToggleFocus(lead.id, !!lead.isFocus, e)}
+                                  title={lead.isFocus ? "2-Wochen-Fokus entfernen" : "Für 2-Wochen-Fokus vormerken"}
+                                  className={`p-1 rounded-md transition-all shrink-0 ${
+                                    lead.isFocus
+                                      ? "text-amber-400 bg-amber-400/10 hover:bg-amber-400/20"
+                                      : "text-[var(--text-3)] hover:text-amber-400 hover:bg-[var(--surface-2)] opacity-40 group-hover:opacity-100"
+                                  }`}
+                                >
+                                  <Star className={`w-3.5 h-3.5 ${lead.isFocus ? "fill-amber-400" : ""}`} />
+                                </button>
+                              </div>
                               
                               <div className="text-[13px] space-y-0.5" style={{ color: "var(--text-2)" }}>
                                 <p>

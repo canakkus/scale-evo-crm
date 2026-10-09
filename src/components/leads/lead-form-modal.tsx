@@ -20,6 +20,7 @@ export function LeadFormModal({ isOpen, onClose, onSuccess }: LeadFormModalProps
   const [formData, setFormData] = useState({
     companyName: "",
     acquisitionType: "CALL" as AcquisitionType,
+    isFocus: false,
     nfcDemoUrl: "",
     industry: "Friseur",
     address: "",
@@ -160,7 +161,21 @@ export function LeadFormModal({ isOpen, onClose, onSuccess }: LeadFormModalProps
               >
                 <option value="CALL">Cold Call</option>
                 <option value="WALK_IN">Walk-In</option>
+                <option value="DM">Instagram DM</option>
+                <option value="EMAIL">E-Mail Akquise</option>
               </select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <label className="flex items-center gap-2 cursor-pointer text-xs font-medium" style={{ color: "var(--text)" }}>
+                <input
+                  type="checkbox"
+                  checked={formData.isFocus}
+                  onChange={(e) => setFormData({ ...formData, isFocus: e.target.checked })}
+                  className="rounded border-[var(--border)] accent-amber-400"
+                />
+                <span>⭐ Für 2-Wochen-Fokus vormerken</span>
+              </label>
             </div>
 
             <div>

@@ -16,6 +16,7 @@ enum AcquisitionType {
   CALL
   WALK_IN
   DM
+  EMAIL
 }
 
 enum OutreachChannel {
@@ -56,6 +57,7 @@ enum LeadStatus {
   LOST
   NOT_RELEVANT
   WALK_IN_PLANNED
+  WALK_IN_SCHEDULED
   VISITED_INTERESTED
   VISITED_NO_INTEREST
   DEMO_DISPATCHED
@@ -166,6 +168,7 @@ model Lead {
   menuCheckedAt          DateTime?
   acquisitionType        AcquisitionType         @default(CALL)
   nfcDemoUrl             String?
+  isFocus                Boolean                 @default(false)
 
   // --- Verortung (Lead-Karte /map) -----------------------------------------
   // Koordinaten kommen entweder gratis aus Google Places (Scout/Autofill) oder

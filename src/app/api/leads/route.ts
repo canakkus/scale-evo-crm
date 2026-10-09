@@ -19,6 +19,8 @@ export async function GET(request: Request) {
     const status = searchParams.get("status") as LeadStatus | null;
     const acquisitionType = searchParams.get("acquisitionType") as any | null;
     const priority = searchParams.get("priority") as Priority | null;
+    const isFocusParam = searchParams.get("isFocus");
+    const relevantOnly = searchParams.get("relevantOnly") === "true";
     const webPresence = searchParams.get("webPresence") as WebPresence | null;
     const industryParam = searchParams.get("industry")?.trim();
     const updatedDate = searchParams.get("updatedDate")?.trim(); // e.g. "today", "yesterday", "thisWeek", or "2026-08-27"
@@ -46,6 +48,10 @@ export async function GET(request: Request) {
     if (status) where.status = status;
     if (acquisitionType) where.acquisitionType = acquisitionType;
     if (priority) where.priority = priority;
+    if (isFocusParam === "true") where.isFocus = true;
+    if (relevantOnly) {
+      where.status = { notIn: ["NOT_RELEVANT", "LOST"] };
+    }
     if (webPresence) where.webPresence = webPresence;
 
     if (updatedDate) {
@@ -205,6 +211,7 @@ export async function POST(request: Request) {
         source: data.source || "manuell",
         acquisitionType: data.acquisitionType || "CALL",
         nfcDemoUrl: data.nfcDemoUrl ? String(data.nfcDemoUrl).trim() : null,
+        isFocus: data.isFocus === true,
         status: data.status || "NEW",
         priority: data.priority || "MEDIUM",
         score: data.score != null ? parseInt(data.score, 10) : 0,
