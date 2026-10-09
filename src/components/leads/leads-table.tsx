@@ -149,13 +149,13 @@ export function LeadsTable() {
 
   return (
     <div className="space-y-6">
-      {/* Action Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        {/* Search Input & Acquisition Type Switcher */}
-        <div className="flex items-center gap-2.5 flex-1 min-w-0">
+      {/* Action Bar / Controls */}
+      <div className="flex flex-col gap-3">
+        {/* Top Row: Channel Switcher & Primary Actions */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
           {/* Acquisition Toggle */}
           <div
-            className="inline-flex p-0.5 rounded-xl border max-w-fit shrink-0 shadow-inner"
+            className="inline-flex p-0.5 rounded-xl border max-w-full overflow-x-auto shrink-0 shadow-inner"
             style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}
           >
             <button
@@ -164,7 +164,7 @@ export function LeadsTable() {
                 setAcquisitionFilter("");
                 setPage(1);
               }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
                 acquisitionFilter === ""
                   ? "shadow-sm"
                   : "opacity-75 hover:opacity-100 hover:text-[var(--text)]"
@@ -182,7 +182,7 @@ export function LeadsTable() {
                 setAcquisitionFilter("CALL");
                 setPage(1);
               }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
                 acquisitionFilter === "CALL"
                   ? "shadow-sm"
                   : "opacity-75 hover:opacity-100 hover:text-[var(--text)]"
@@ -201,7 +201,7 @@ export function LeadsTable() {
                 setAcquisitionFilter("WALK_IN");
                 setPage(1);
               }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
                 acquisitionFilter === "WALK_IN"
                   ? "shadow-sm"
                   : "opacity-75 hover:opacity-100 hover:text-[var(--text)]"
@@ -220,7 +220,7 @@ export function LeadsTable() {
                 setAcquisitionFilter("DM");
                 setPage(1);
               }}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
                 acquisitionFilter === "DM"
                   ? "shadow-sm"
                   : "opacity-75 hover:opacity-100 hover:text-[var(--text)]"
@@ -240,7 +240,7 @@ export function LeadsTable() {
                 setAcquisitionFilter("EMAIL");
                 setPage(1);
               }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
                 acquisitionFilter === "EMAIL"
                   ? "shadow-sm"
                   : "opacity-75 hover:opacity-100 hover:text-[var(--text)]"
@@ -255,15 +255,15 @@ export function LeadsTable() {
             </button>
           </div>
 
-          {/* Quick Focus & Relevance Toggles */}
-          <div className="flex items-center gap-1.5 shrink-0">
+          {/* Quick Focus & Relevance Buttons + New Lead */}
+          <div className="flex items-center gap-2 flex-wrap">
             <button
               type="button"
               onClick={() => {
                 setIsFocusFilter((prev) => !prev);
                 setPage(1);
               }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all whitespace-nowrap ${
                 isFocusFilter
                   ? "shadow-sm border-amber-500/50 bg-amber-500/15 text-amber-300"
                   : "border-[var(--border)] bg-[var(--surface)] text-[var(--text-2)] hover:text-[var(--text)]"
@@ -280,7 +280,7 @@ export function LeadsTable() {
                 setRelevantOnlyFilter((prev) => !prev);
                 setPage(1);
               }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all whitespace-nowrap ${
                 relevantOnlyFilter
                   ? "shadow-sm border-emerald-500/50 bg-emerald-500/15 text-emerald-300"
                   : "border-[var(--border)] bg-[var(--surface)] text-[var(--text-2)] hover:text-[var(--text)]"
@@ -290,14 +290,40 @@ export function LeadsTable() {
               <Flame className={`w-3.5 h-3.5 ${relevantOnlyFilter ? "text-emerald-400" : ""}`} />
               <span>Nur Relevante</span>
             </button>
-          </div>
 
+            {/* Refresh Button */}
+            <button
+              type="button"
+              onClick={() => fetchLeads()}
+              disabled={loading}
+              title="Leads aktualisieren"
+              className="flex items-center justify-center rounded-xl p-2 sm:px-2.5 sm:py-1.5 text-xs sm:text-sm font-medium border outline-none transition-all cursor-pointer hover:bg-[var(--surface-2)] active:scale-95 disabled:opacity-50"
+              style={{ background: "var(--surface)", borderColor: "var(--border)" }}
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-[var(--accent)]" : ""}`} style={{ color: "var(--text-2)" }} />
+              <span className="hidden lg:inline ml-1.5" style={{ color: "var(--text-2)" }}>Aktualisieren</span>
+            </button>
+
+            {/* New Lead Button */}
+            <button
+              onClick={() => setIsFormOpen(true)}
+              className="flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs sm:text-sm font-semibold shadow-sm transition-all hover:opacity-90 active:scale-95 shrink-0"
+              style={{ background: "var(--accent)", color: "var(--bg)" }}
+            >
+              <Plus className="w-4 h-4" />
+              <span>Neuer Lead</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Bottom Row: Search & Detail Filters */}
+        <div className="flex flex-wrap items-center justify-between gap-2.5">
           {/* Search Input */}
-          <div className="relative flex-1 min-w-[140px] max-w-xs">
+          <div className="relative flex-1 min-w-[200px] max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: "var(--text-3)" }} />
             <input
               type="text"
-              placeholder="Lead suchen..."
+              placeholder="Lead suchen (Firma, Stadt, Kontakt, Telefon)..."
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
@@ -320,60 +346,59 @@ export function LeadsTable() {
               </button>
             )}
           </div>
-        </div>
 
-        {/* Filters & Add Button */}
-        <div className="flex items-center gap-2 shrink-0">
-          {/* Update Date Filter */}
-          <div className="flex items-center gap-1.5">
+          {/* Filter Dropdowns */}
+          <div className="flex items-center gap-2 flex-wrap shrink-0">
+            {/* Update Date Filter */}
+            <div className="flex items-center gap-1.5">
+              <select
+                value={updatedDateFilter}
+                onChange={(e) => {
+                  setUpdatedDateFilter(e.target.value);
+                  setPage(1);
+                  if (e.target.value !== "custom") {
+                    setCustomDate("");
+                  }
+                }}
+                className="rounded-xl px-2.5 py-1.5 text-xs sm:text-sm font-medium border outline-none cursor-pointer"
+                style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-2)" }}
+              >
+                <option value="">Jederzeit</option>
+                <option value="today">Heute</option>
+                <option value="yesterday">Gestern</option>
+                <option value="thisWeek">Diese Woche</option>
+                <option value="custom">Datum...</option>
+              </select>
+
+              {updatedDateFilter === "custom" && (
+                <input
+                  type="date"
+                  value={customDate}
+                  onChange={(e) => {
+                    setCustomDate(e.target.value);
+                    setPage(1);
+                  }}
+                  className="rounded-xl px-2.5 py-1.5 text-xs sm:text-sm border outline-none cursor-pointer animate-fade-in"
+                  style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-2)" }}
+                />
+              )}
+            </div>
+
+            {/* Status Filter */}
             <select
-              value={updatedDateFilter}
+              value={statusFilter}
               onChange={(e) => {
-                setUpdatedDateFilter(e.target.value);
+                setStatusFilter(e.target.value);
                 setPage(1);
-                if (e.target.value !== "custom") {
-                  setCustomDate("");
-                }
               }}
               className="rounded-xl px-2.5 py-1.5 text-xs sm:text-sm font-medium border outline-none cursor-pointer"
               style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-2)" }}
             >
-              <option value="">Jederzeit</option>
-              <option value="today">Heute</option>
-              <option value="yesterday">Gestern</option>
-              <option value="thisWeek">Diese Woche</option>
-              <option value="custom">Datum...</option>
+              <option value="">Alle Status</option>
+              {Object.entries(STATUS_LABELS).map(([key, label]) => (
+                <option key={key} value={key}>{label}</option>
+              ))}
             </select>
-
-            {updatedDateFilter === "custom" && (
-              <input
-                type="date"
-                value={customDate}
-                onChange={(e) => {
-                  setCustomDate(e.target.value);
-                  setPage(1);
-                }}
-                className="rounded-xl px-2.5 py-1.5 text-xs sm:text-sm border outline-none cursor-pointer animate-fade-in"
-                style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-2)" }}
-              />
-            )}
-          </div>
-
-          {/* Status Filter */}
-          <select
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
-              setPage(1);
-            }}
-            className="rounded-xl px-2.5 py-1.5 text-xs sm:text-sm font-medium border outline-none cursor-pointer"
-            style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-2)" }}
-          >
-            <option value="">Alle Status</option>
-            {Object.entries(STATUS_LABELS).map(([key, label]) => (
-              <option key={key} value={key}>{label}</option>
-            ))}
-          </select>
 
           {/* Multi-Select Industry Filter */}
           <div className="relative">
@@ -477,31 +502,9 @@ export function LeadsTable() {
               </>
             )}
           </div>
-
-          {/* Refresh Button */}
-          <button
-            type="button"
-            onClick={() => fetchLeads()}
-            disabled={loading}
-            title="Leads aktualisieren"
-            className="flex items-center justify-center rounded-xl p-2 sm:px-2.5 sm:py-1.5 text-xs sm:text-sm font-medium border outline-none transition-all cursor-pointer hover:bg-[var(--surface-2)] active:scale-95 disabled:opacity-50"
-            style={{ background: "var(--surface)", borderColor: "var(--border)" }}
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-[var(--accent)]" : ""}`} style={{ color: "var(--text-2)" }} />
-            <span className="hidden xl:inline ml-1.5" style={{ color: "var(--text-2)" }}>Aktualisieren</span>
-          </button>
-
-          {/* New Lead Button */}
-          <button
-            onClick={() => setIsFormOpen(true)}
-            className="flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs sm:text-sm font-semibold shadow-sm transition-all hover:opacity-90 active:scale-95 shrink-0"
-            style={{ background: "var(--accent)", color: "var(--bg)" }}
-          >
-            <Plus className="w-4 h-4" />
-            <span>Neuer Lead</span>
-          </button>
         </div>
       </div>
+    </div>
 
       {/* Table Container */}
       <div className="rounded-xl border overflow-hidden shadow-sm" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
