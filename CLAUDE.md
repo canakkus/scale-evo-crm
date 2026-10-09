@@ -89,18 +89,24 @@
 - **City Autocomplete:** Saves past searched cities per user session and provides an HTML `<datalist>` for fast location input, combining major default cities with user history.
 - **Broad Discovery Mode:** A special category option that parallel-fetches multiple categories at once (restaurants, barbers, retail, etc.), deduplicates results, and uses a weighted scoring algorithm (`rating * log10(reviewCount)`) to rank quality regardless of category limits (supports up to 100 max results).
 
-### 5. Walk-In Acquisition System & Dual-Pipeline (`/pipeline`, `/leads`, `src/lib/constants.ts`)
-- **Schema & Enums:** `AcquisitionType` (`CALL`, `WALK_IN`, `DM` — siehe Modul 8), optional `nfcDemoUrl`, and specialized Walk-In statuses:
+### 5. Walk-In Acquisition System & Multi-Pipeline (`/pipeline`, `/leads`, `src/lib/constants.ts`)
+- **Schema & Enums:** `AcquisitionType` (`CALL`, `WALK_IN`, `DM`, `EMAIL`), optional `nfcDemoUrl`, `isFocus` (2-Wochen-Fokus Flag), and specialized Walk-In statuses:
   - `WALK_IN_PLANNED`: Vor-Ort-Besuch geplant
+  - `WALK_IN_SCHEDULED`: Fokus: Nächste 2 Wochen (Aktive Tour / Sprint)
   - `DEMO_DISPATCHED`: Vor-Ort-Demo übergeben / hinterlassen
   - `VISITED_INTERESTED`: Besucht — Interesse signalisiert
   - `VISITED_NO_INTEREST`: Besucht — Kein Interesse
-- **Pipeline View Switcher:** Instant segmented toggle in `/pipeline` zwischen **Cold Call**, **Walk-In** und **Instagram DM** mit eigener Stufenlogik (`CALL_NEXT_STATUS`, `WALK_IN_NEXT_STATUS`, `DM_NEXT_STATUS`).
+- **Pipeline View Switcher:** Instant segmented toggle in `/pipeline` zwischen **Cold Call**, **Walk-In**, **Instagram DM** und **E-Mail Akquise** mit eigener Stufenlogik (`CALL_NEXT_STATUS`, `WALK_IN_NEXT_STATUS`, `DM_NEXT_STATUS`, `EMAIL_NEXT_STATUS`).
+- **Walk-In 2-Wochen-Fokus & Relevanz-System:**
+  - 1-Klick Fokus-Stern (`isFocus`) direkt auf Karten und Tabellenzeilen, um die 10–15 aktiven Leads für die anstehende 2-Wochen-Tour blitzschnell zu markieren.
+  - Dedizierte Kanban-Spalte `WALK_IN_SCHEDULED` („Fokus: Nächste 2 Wochen“) in der Walk-In Pipeline zum einfachen Drag-and-Drop.
+  - Filterleiste in `/leads`: Schnellauswahl `[ Alle ] [ Calls ] [ Walk-Ins ] [ Instagram DM ] [ E-Mails ]` plus Sofortfilter `[ ⭐ 2-Wochen-Fokus ]` und `[ 🔥 Nur Relevante ]` (blendet verlorene und irrelevante Leads sofort aus).
+  - 1-Klick Aussortieren (Ban-Icon) direkt in der Lead-Tabelle für `NOT_RELEVANT`.
 - **Card & Table Quick-Actions:**
   - 🗺️ **Google/Apple Maps Navigation:** Direct 1-click route link constructed from lead address/place coordinates.
   - 📡 **NFC Demo URL:** 1-click copy with instant visual "Kopiert!" feedback + external demo preview.
   - 📞 **Direct Call:** Instant dialer link (`tel:`).
-- **Leads Filter & Detail Modals:** Filter bar in `/leads` (`[ Alle ] [ 📞 Cold Calls ] [ 🚶‍♂️ Walk-Ins ] [ 💬 Instagram DM ]`), acquisition channel badges, and full viewing/editing in `LeadDetailModal` (Tabs: Timeline, Gemini, Outreach) and `LeadFormModal`.
+- **Leads Filter & Detail Modals:** Filter bar in `/leads`, acquisition channel badges, and full viewing/editing in `LeadDetailModal` (Tabs: Timeline, Gemini, Outreach) and `LeadFormModal`.
 
 ### 6. Distance & Proximity Scouting (`/lead-scout`, `/restaurant-scout`, `src/lib/distance.ts`)
 - **Haversine Distance Calculator (`src/lib/distance.ts`):** Computes distances from base coordinates (defaults to Stephansplatz, 1010 Wien). Displays distance badges (`X.X km entfernt`) on scout cards.
