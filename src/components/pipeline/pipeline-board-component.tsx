@@ -10,6 +10,7 @@ import {
   CALL_NEXT_STATUS,
   WALK_IN_NEXT_STATUS,
   EMAIL_NEXT_STATUS,
+  PIPELINE_STATUSES,
   STATUS_LABELS,
   ACQUISITION_TYPE_LABELS,
 } from "@/lib/constants";
@@ -39,7 +40,7 @@ import type { AcquisitionType, LeadStatus } from "@prisma/client";
 export function PipelineBoardComponent() {
   const [leads, setLeads] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<AcquisitionType>("CALL");
+  const [activeTab, setActiveTab] = useState<AcquisitionType | "FOCUS">("CALL");
   const [draggedLead, setDraggedLead] = useState<string | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
@@ -65,7 +66,11 @@ export function PipelineBoardComponent() {
     fetchLeads();
   }, [fetchLeads]);
 
-  // Split leads by acquisition type
+  // Split leads by acquisition type or focus
+  const focusLeads = useMemo(
+    () => leads.filter((l) => Boolean(l.isFocus)),
+    [leads]
+  );
   const coldCallLeads = useMemo(
     () => leads.filter((l) => (l.acquisitionType || "CALL") === "CALL"),
     [leads]
@@ -84,7 +89,9 @@ export function PipelineBoardComponent() {
   );
 
   const activeLeads =
-    activeTab === "CALL"
+    activeTab === "FOCUS"
+      ? focusLeads
+      : activeTab === "CALL"
       ? coldCallLeads
       : activeTab === "WALK_IN"
       ? walkInLeads
@@ -106,7 +113,9 @@ export function PipelineBoardComponent() {
   }, [activeLeads, searchQuery]);
 
   const activeColumns =
-    activeTab === "CALL"
+    activeTab === "FOCUS"
+      ? (["NEW", "RESEARCHED", "TO_CONTACT", "CONTACTED", "WALK_IN_SCHEDULED", "INTERESTED", "APPOINTMENT", "OFFER_SENT", "FOLLOW_UP", "WON"] as LeadStatus[])
+      : activeTab === "CALL"
       ? CALL_PIPELINE_STATUSES
       : activeTab === "WALK_IN"
       ? WALK_IN_PIPELINE_STATUSES
@@ -114,7 +123,18 @@ export function PipelineBoardComponent() {
       ? DM_PIPELINE_STATUSES
       : EMAIL_PIPELINE_STATUSES;
   const activeNextMap =
-    activeTab === "CALL"
+    activeTab === "FOCUS"
+      ? {
+          NEW: "RESEARCHED",
+          RESEARCHED: "TO_CONTACT",
+          TO_CONTACT: "CONTACTED",
+          CONTACTED: "INTERESTED",
+          INTERESTED: "APPOINTMENT",
+          APPOINTMENT: "OFFER_SENT",
+          OFFER_SENT: "FOLLOW_UP",
+          FOLLOW_UP: "WON",
+        } as Partial<Record<LeadStatus, LeadStatus>>
+      : activeTab === "CALL"
       ? CALL_NEXT_STATUS
       : activeTab === "WALK_IN"
       ? WALK_IN_NEXT_STATUS
@@ -183,6 +203,27 @@ export function PipelineBoardComponent() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isFocus: nextVal }),
       });
+
+      if (!res.ok) {
+        fetchLeads();
+      }
+    } catch (err) {
+      console.error(err);
+      fetchLeads();
+    }
+  }
+
+  async function handleQuickChangeAcquisition(leadId: string, newType: string, e: React.MouseEvent | React.ChangeEvent) {
+    e.stopPropagation();
+    setLeads((prev) => prev.map((l) => (l.id === leadId ? { ...l, acquisitionType: newType } : l)));
+
+    try {
+      const res = await fetch(`/api/leads/${leadId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ acquisitionType: newType }),
+      });
+
       if (!res.ok) {
         fetchLeads();
       }
@@ -232,13 +273,35 @@ export function PipelineBoardComponent() {
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
         {/* Apple-style Segmented Control */}
         <div
-          className="inline-flex p-1 rounded-xl"
+          className="inline-flex p-1 rounded-xl max-w-full overflow-x-auto"
           style={{ background: "var(--surface-2)" }}
         >
           <button
             type="button"
+            onClick={() => setActiveTab("FOCUS")}
+            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[13px] font-bold transition-all whitespace-nowrap ${
+              activeTab === "FOCUS"
+                ? "shadow-md bg-amber-500 text-black scale-[1.02]"
+                : "opacity-80 hover:opacity-100 text-amber-300"
+            }`}
+          >
+            <Star className={`w-3.5 h-3.5 ${activeTab === "FOCUS" ? "fill-black text-black" : "fill-amber-400 text-amber-400"}`} />
+            <span>2-Wochen-Fokus</span>
+            <span
+              className="px-2 py-0.5 rounded-full text-[10px] font-bold"
+              style={{
+                background: activeTab === "FOCUS" ? "rgba(0,0,0,0.2)" : "rgba(245, 158, 11, 0.2)",
+                color: activeTab === "FOCUS" ? "#000" : "#fbbf24",
+              }}
+            >
+              {focusLeads.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => setActiveTab("CALL")}
-            className={`px-5 py-1.5 rounded-lg text-[13px] font-medium transition-all ${
+            className={`px-5 py-1.5 rounded-lg text-[13px] font-medium transition-all whitespace-nowrap ${
               activeTab === "CALL"
                 ? "shadow-sm"
                 : "opacity-70 hover:opacity-100"
@@ -472,6 +535,28 @@ export function PipelineBoardComponent() {
                                     ].filter(Boolean).join(" · ")}
                                   </p>
                                 )}
+
+                                <div className="pt-1.5" onClick={(e) => e.stopPropagation()}>
+                                  <select
+                                    value={lead.acquisitionType || "CALL"}
+                                    onChange={(e) => handleQuickChangeAcquisition(lead.id, e.target.value, e)}
+                                    className="text-[11px] font-semibold px-2 py-0.5 rounded-md border outline-none cursor-pointer"
+                                    style={
+                                      lead.acquisitionType === "DM"
+                                        ? { background: "var(--channel-dm-bg)", color: "var(--channel-dm-tx)", borderColor: "rgba(236,72,153,0.3)" }
+                                        : lead.acquisitionType === "EMAIL"
+                                        ? { background: "rgba(245, 158, 11, 0.15)", color: "#f59e0b", borderColor: "rgba(245, 158, 11, 0.3)" }
+                                        : lead.acquisitionType === "WALK_IN"
+                                        ? { background: "rgba(168, 85, 247, 0.15)", color: "rgb(192, 132, 252)", borderColor: "rgba(168, 85, 247, 0.3)" }
+                                        : { background: "rgba(59, 130, 246, 0.15)", color: "rgb(96, 165, 250)", borderColor: "rgba(59, 130, 246, 0.3)" }
+                                    }
+                                  >
+                                    <option value="CALL" className="bg-[var(--surface)] text-[var(--text)]">Cold Call</option>
+                                    <option value="WALK_IN" className="bg-[var(--surface)] text-[var(--text)]">Walk-In</option>
+                                    <option value="DM" className="bg-[var(--surface)] text-[var(--text)]">Instagram DM</option>
+                                    <option value="EMAIL" className="bg-[var(--surface)] text-[var(--text)]">E-Mail</option>
+                                  </select>
+                                </div>
                               </div>
                             </div>
 

@@ -237,6 +237,24 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
     }
   }
 
+  async function handleAcquisitionTypeChange(newType: string) {
+    if (!lead) return;
+    try {
+      const res = await fetch(`/api/leads/${lead.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ acquisitionType: newType }),
+      });
+      if (res.ok) {
+        setLead({ ...lead, acquisitionType: newType });
+        setEditAcquisitionType(newType);
+        onUpdate();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
   async function handleSaveNotes() {
     if (!lead) return;
     setSavingNotes(true);
@@ -529,6 +547,24 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                 {Object.entries(STATUS_LABELS).map(([key, label]) => (
                   <option key={key} value={key}>{label}</option>
                 ))}
+              </select>
+            </div>
+
+            {/* Akquise-Weg Switcher */}
+            <div>
+              <label className="block text-xs font-semibold mb-2" style={{ color: "var(--text-2)" }}>
+                Akquise-Weg wählen
+              </label>
+              <select
+                className="w-full rounded-md px-3 py-2.5 text-xs font-medium border outline-none cursor-pointer"
+                style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
+                value={lead.acquisitionType || "CALL"}
+                onChange={(e) => handleAcquisitionTypeChange(e.target.value)}
+              >
+                <option value="CALL">📞 Cold Call</option>
+                <option value="WALK_IN">🚶 Walk-In</option>
+                <option value="DM">💬 Instagram DM</option>
+                <option value="EMAIL">✉️ E-Mail Akquise</option>
               </select>
             </div>
 

@@ -133,6 +133,21 @@ export function LeadsTable() {
     }
   }
 
+  async function handleQuickChangeAcquisition(leadId: string, newType: string, e: React.MouseEvent | React.ChangeEvent) {
+    e.stopPropagation();
+    setLeads((prev) => prev.map((l) => (l.id === leadId ? { ...l, acquisitionType: newType } : l)));
+    try {
+      await fetch(`/api/leads/${leadId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ acquisitionType: newType }),
+      });
+    } catch (err) {
+      console.error(err);
+      fetchLeads();
+    }
+  }
+
   function handleCopyNfc(e: React.MouseEvent, url: string, leadId: string) {
     e.stopPropagation();
     navigator.clipboard.writeText(url);
@@ -595,30 +610,30 @@ export function LeadsTable() {
                       </td>
 
                       {/* Typ & Status */}
-                      <td className="px-5 py-4 align-top">
+                      <td className="px-5 py-4 align-top" onClick={(e) => e.stopPropagation()}>
                         <div className="flex flex-col gap-2 items-start">
                           <StatusBadge status={lead.status} />
-                          <span
-                            className="text-xs font-medium px-2 py-1 rounded-md whitespace-nowrap"
-                            style={
-                              lead.acquisitionType === "DM"
-                                ? { background: "var(--channel-dm-bg)", color: "var(--channel-dm-tx)" }
-                                : lead.acquisitionType === "EMAIL"
-                                ? { background: "rgba(245, 158, 11, 0.15)", color: "#f59e0b" }
-                                : {
-                                    background: isWalkIn ? "rgba(168, 85, 247, 0.1)" : "rgba(59, 130, 246, 0.1)",
-                                    color: isWalkIn ? "rgb(192, 132, 252)" : "rgb(96, 165, 250)",
-                                  }
-                            }
-                          >
-                            {lead.acquisitionType === "DM"
-                              ? "Instagram DM"
-                              : lead.acquisitionType === "EMAIL"
-                              ? "E-Mail"
-                              : isWalkIn
-                              ? "Walk-In"
-                              : "Cold Call"}
-                          </span>
+                          <div className="relative">
+                            <select
+                              value={lead.acquisitionType || "CALL"}
+                              onChange={(e) => handleQuickChangeAcquisition(lead.id, e.target.value, e)}
+                              className="text-xs font-semibold px-2 py-1 rounded-md border outline-none cursor-pointer transition-all hover:opacity-90"
+                              style={
+                                lead.acquisitionType === "DM"
+                                  ? { background: "var(--channel-dm-bg)", color: "var(--channel-dm-tx)", borderColor: "rgba(236,72,153,0.3)" }
+                                  : lead.acquisitionType === "EMAIL"
+                                  ? { background: "rgba(245, 158, 11, 0.15)", color: "#f59e0b", borderColor: "rgba(245, 158, 11, 0.3)" }
+                                  : isWalkIn
+                                  ? { background: "rgba(168, 85, 247, 0.15)", color: "rgb(192, 132, 252)", borderColor: "rgba(168, 85, 247, 0.3)" }
+                                  : { background: "rgba(59, 130, 246, 0.15)", color: "rgb(96, 165, 250)", borderColor: "rgba(59, 130, 246, 0.3)" }
+                              }
+                            >
+                              <option value="CALL" className="bg-[var(--surface)] text-[var(--text)]">Cold Call</option>
+                              <option value="WALK_IN" className="bg-[var(--surface)] text-[var(--text)]">Walk-In</option>
+                              <option value="DM" className="bg-[var(--surface)] text-[var(--text)]">Instagram DM</option>
+                              <option value="EMAIL" className="bg-[var(--surface)] text-[var(--text)]">E-Mail</option>
+                            </select>
+                          </div>
                         </div>
                       </td>
 
