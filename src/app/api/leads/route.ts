@@ -6,6 +6,7 @@ import { INDUSTRIES } from "@/lib/constants";
 import { parseCoordinates } from "@/lib/geo";
 import { pushToAppleEcosystem, isAppleSyncUser } from "@/services/apple-bridge";
 import { leadScope } from "@/lib/workspace";
+import { notifyLeadCreated } from "@/lib/discord";
 
 // In-memory cache for distinct industries to avoid redundant database scans on every keystroke/request
 let cachedIndustries: { list: string[]; timestamp: number } | null = null;
@@ -261,6 +262,16 @@ export async function POST(request: Request) {
         });
       }
     }
+
+    // Discord Alert for the 3 ScaleEvo members
+    notifyLeadCreated({
+      id: lead.id,
+      companyName: lead.companyName,
+      city: lead.city,
+      status: lead.status,
+      industry: lead.industry,
+      creatorName: dbUser.displayName || user.email?.split("@")[0],
+    });
 
     return NextResponse.json({ lead }, { status: 201 });
   } catch (error) {

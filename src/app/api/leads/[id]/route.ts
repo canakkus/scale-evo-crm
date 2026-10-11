@@ -5,6 +5,7 @@ import { mapPlaceToSuggestion, type RawPlace } from "@/lib/places";
 import { parseCoordinates } from "@/lib/geo";
 import { pushToAppleEcosystem, isAppleSyncUser } from "@/services/apple-bridge";
 import { findAccessibleLead, leadScope } from "@/lib/workspace";
+import { notifyLeadStatusChanged } from "@/lib/discord";
 
 async function getPlaceDetailsFromUrl(url: string, defaultName: string): Promise<RawPlace | null> {
   const apiKey = process.env.GOOGLE_PLACES_API_KEY;
@@ -278,6 +279,17 @@ export async function PATCH(
           console.error("[PATCH /api/leads/[id]] Apple sync background error:", err);
         });
       }
+    }
+
+    // Discord Alert on status changes (Won, Meeting, Lost)
+    if (data.status && data.status !== existingLead.status) {
+      notifyLeadStatusChanged({
+        id: updated.id,
+        companyName: updated.companyName,
+        oldStatus: existingLead.status,
+        newStatus: updated.status,
+        userName: user.email?.split("@")[0] || "Team",
+      });
     }
 
     return NextResponse.json({ lead: updated });
