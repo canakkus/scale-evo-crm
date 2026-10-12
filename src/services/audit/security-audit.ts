@@ -26,7 +26,7 @@ export type SecurityAuditResult = {
 };
 
 const USER_AGENT =
-  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15";
 
 const SEVERITY_POINTS: Record<AuditSeverity, number> = {
   INFO: 0,
@@ -85,7 +85,7 @@ export async function runSecurityAudit(input: string): Promise<SecurityAuditResu
     headers: { "User-Agent": USER_AGENT, "Accept-Language": "de-DE,de;q=0.9,en;q=0.8" },
     redirect: "follow",
     cache: "no-store",
-    signal: AbortSignal.timeout(10_000),
+    signal: AbortSignal.timeout(9_000),
   }).catch((err: unknown) => {
     tlsFailureMessage = err instanceof Error ? `${err.message}${(err as { cause?: { code?: string } }).cause?.code ? ` (${(err as { cause?: { code?: string } }).cause?.code})` : ""}` : String(err);
     return null;
@@ -96,7 +96,7 @@ export async function runSecurityAudit(input: string): Promise<SecurityAuditResu
       headers: { "User-Agent": USER_AGENT },
       redirect: "follow",
       cache: "no-store",
-      signal: AbortSignal.timeout(8_000),
+      signal: AbortSignal.timeout(7_000),
     }).catch(() => null);
 
     if (response) {
@@ -123,7 +123,7 @@ export async function runSecurityAudit(input: string): Promise<SecurityAuditResu
       description: "Timeout oder Verbindungsfehler beim Laden der Seite.",
       snippet: tlsFailureMessage ? clip(tlsFailureMessage) : undefined,
     });
-    return { url, issues, reachable: false, shouldScreenshot: true };
+    return { url, issues, reachable: false, shouldScreenshot: false };
   }
 
   const finalUrl = response.url || url;
