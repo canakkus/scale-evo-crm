@@ -119,7 +119,7 @@ export async function GET(request: Request) {
       }
     }
 
-    const validSortFields = ["createdAt", "updatedAt", "score", "companyName", "status", "lastContactAt"];
+    const validSortFields = ["createdAt", "updatedAt", "score", "companyName", "status", "lastContactAt", "auditSeverity"];
     const sortField = validSortFields.includes(sortBy) ? sortBy : "updatedAt";
 
     // Distinct industries cached to avoid DB bottleneck on every keystroke

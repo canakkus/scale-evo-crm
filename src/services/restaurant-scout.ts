@@ -5,6 +5,7 @@ import { normalizePhone, normalizeUrl } from "@/lib/utils";
 import { detectRestaurantMenu, type MenuDetectionResult } from "@/lib/menu-detector";
 import { calculateDistanceKm } from "@/lib/distance";
 import { parseCoordinates } from "@/lib/geo";
+import { enqueueLeadAudit } from "@/services/audit/run-lead-audit";
 
 const PLACES_URL = "https://places.googleapis.com/v1/places:searchText";
 const FIELD_MASK =
@@ -246,6 +247,7 @@ export async function runRestaurantScout(
           googleReviewCount: place.reviewCount,
           source: "Restaurant-Scout",
           status: "NEW",
+          auditStatus: normWeb ? "pending" : "idle",
           hasMenu: menu.hasMenu,
           menuUrl: menu.menuUrl,
           menuSnippet: menu.menuSnippet,
@@ -254,6 +256,10 @@ export async function runRestaurantScout(
           createdById: dbUser.id,
         },
       });
+
+      if (normWeb) {
+        enqueueLeadAudit(created.id);
+      }
 
       processedLeads.push({
         id: created.id,

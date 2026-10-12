@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { runScrapling } from "@/services/scrapling";
 import { computeSeverityScore, runSecurityAudit, type AuditIssueDraft } from "./security-audit";
+import { assertPublicHttpUrl } from "./url-guard";
 
 const BUCKET = "lead-attachments";
 /** Mindestabstand zwischen zwei Audits (schont System-Chrome und fremde Server). */
@@ -53,6 +54,7 @@ async function takeAndStoreScreenshot(
 ): Promise<{ issues: AuditIssueDraft[]; stored: boolean }> {
   const extra: AuditIssueDraft[] = [];
   try {
+    await assertPublicHttpUrl(url);
     const shot = (await runScrapling("screenshot", { url })) as {
       image_base64?: string;
       console_errors?: string[];

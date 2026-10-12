@@ -1,6 +1,7 @@
 import * as cheerio from "cheerio";
 import type { AuditCategory, AuditSeverity } from "@prisma/client";
 import { normalizeUrl } from "@/lib/utils";
+import { assertPublicHttpUrl } from "./url-guard";
 
 /**
  * Passiver Erst-Audit einer Lead-Website. Es wird genau EINE Seite per GET
@@ -62,6 +63,20 @@ export async function runSecurityAudit(input: string): Promise<SecurityAuditResu
   const add = (issue: AuditIssueDraft) => {
     if (!issues.some((existing) => existing.code === issue.code)) issues.push(issue);
   };
+
+  try {
+    await assertPublicHttpUrl(url);
+  } catch (err: unknown) {
+    add({
+      category: "SECURITY",
+      severity: "CRITICAL",
+      code: "invalid-target-url",
+      title: "Ungültige oder nicht-öffentliche Zieladresse",
+      description: err instanceof Error ? err.message : "Die angegebene Website-Adresse ist ungültig oder privat.",
+      snippet: url,
+    });
+    return { url, issues, reachable: false, shouldScreenshot: false };
+  }
 
   const startedAt = performance.now();
   let tlsFailureMessage: string | null = null;

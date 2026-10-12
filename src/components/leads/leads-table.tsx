@@ -603,6 +603,28 @@ export function LeadsTable() {
                               Keine Karte
                             </span>
                           )}
+                          {lead.auditSeverity != null && (
+                            <span
+                              className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${
+                                lead.auditSeverity >= 60
+                                  ? "bg-red-500/15 text-red-400 border-red-500/25"
+                                  : lead.auditSeverity >= 30
+                                  ? "bg-amber-500/15 text-amber-400 border-amber-500/25"
+                                  : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                              }`}
+                              title={`Website Risiko-Score: ${lead.auditSeverity}/100`}
+                            >
+                              Audit {lead.auditSeverity}
+                            </span>
+                          )}
+                          {(lead.auditStatus === "pending" || lead.auditStatus === "running") && (
+                            <span
+                              className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 animate-pulse"
+                              title="Website-Audit läuft..."
+                            >
+                              Scan…
+                            </span>
+                          )}
                         </div>
                         <div className="text-xs font-medium pl-6" style={{ color: "var(--text-2)" }}>
                           {lead.industry || "—"}
