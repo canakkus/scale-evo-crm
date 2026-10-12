@@ -60,7 +60,41 @@ def fetch_html(url):
     except Exception as e:
         return {"error": str(e)}
 
+def fetch_screenshot(url):
+    # System-Chrome (channel="chrome") statt gebundeltem Chromium: kein Extra-Download noetig.
+    import base64
+    from playwright.sync_api import sync_playwright
+
+    console_errors = []
+    failed_requests = []
+    with sync_playwright() as p:
+        browser = p.chromium.launch(channel="chrome", headless=True)
+        try:
+            context = browser.new_context(
+                viewport={"width": 1280, "height": 800},
+                ignore_https_errors=True,
+                locale="de-AT",
+            )
+            page = context.new_page()
+            page.on("console", lambda m: console_errors.append(m.text[:300]) if m.type == "error" else None)
+            page.on("pageerror", lambda e: console_errors.append(("Uncaught: " + str(e))[:300]))
+            page.on(
+                "response",
+                lambda r: failed_requests.append(f"{r.status} {r.url}"[:300]) if r.status >= 400 else None,
+            )
+            page.goto(url, wait_until="domcontentloaded", timeout=20000)
+            page.wait_for_timeout(1500)
+            png = page.screenshot(type="png", full_page=False)
+        finally:
+            browser.close()
+    return {
+        "image_base64": base64.b64encode(png).decode("ascii"),
+        "console_errors": console_errors[:10],
+        "failed_requests": failed_requests[:10],
+    }
+
 if __name__ == "__main__":
+
     try:
         input_data = json.loads(sys.stdin.read())
         action = input_data.get("action")
@@ -74,6 +108,9 @@ if __name__ == "__main__":
             print(json.dumps(res))
         elif action == "fetch_html":
             res = fetch_html(payload.get("url"))
+            print(json.dumps(res))
+        elif action == "screenshot":
+            res = fetch_screenshot(payload.get("url"))
             print(json.dumps(res))
         else:
             print(json.dumps({"error": "unknown action"}))

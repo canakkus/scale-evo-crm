@@ -40,6 +40,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { OutreachLeadPanel } from "@/components/outreach/outreach-lead-panel";
 import { CustomAudioPlayer } from "@/components/ui/custom-audio-player";
 import { LeadAttachments } from "./lead-attachments";
+import { LeadAuditSection } from "./lead-audit-section";
 import { STATUS_LABELS, INTERACTION_LABELS } from "@/lib/constants";
 import { formatDate, timeAgo, normalizeInstagramHandle, instagramProfileUrl } from "@/lib/utils";
 import type { LeadStatus, InteractionType } from "@prisma/client";
@@ -1470,6 +1471,16 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                         ))
                       )}
                     </div>
+
+                    {/* Website-Probleme & Audit (lazy) */}
+                    {lead.website && (
+                      <LeadAuditSection
+                        leadId={lead.id}
+                        initialStatus={lead.auditStatus}
+                        initialSeverity={lead.auditSeverity}
+                        onChanged={onUpdate}
+                      />
+                    )}
 
                     {/* Bilder & Screenshots */}
                     <LeadAttachments

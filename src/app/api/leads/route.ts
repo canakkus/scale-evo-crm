@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
+import { enqueueLeadAudit } from "@/services/audit/run-lead-audit";
 import { getOptionalUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import type { LeadStatus, Priority, WebPresence } from "@prisma/client";
@@ -228,6 +229,7 @@ export async function POST(request: Request) {
         isFocus: data.isFocus === true,
         status: data.status || "NEW",
         priority: data.priority || "MEDIUM",
+        auditStatus: data.website ? "pending" : "idle",
         score: data.score != null ? parseInt(data.score, 10) : 0,
         ...(coords
           ? {
@@ -272,6 +274,11 @@ export async function POST(request: Request) {
       industry: lead.industry,
       creatorName: dbUser.displayName || user.email?.split("@")[0],
     });
+
+    // Erst-Audit im Hintergrund: laeuft nach der Response, serialisiert mit Cooldown.
+    if (lead.website) {
+      after(() => enqueueLeadAudit(lead.id));
+    }
 
     return NextResponse.json({ lead }, { status: 201 });
   } catch (error) {
