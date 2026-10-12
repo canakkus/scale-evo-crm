@@ -41,3 +41,5 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 - **ScaleEvo-Schreibregel**: Systemregeln aktualisiert, damit "ScaleEvo" durchgängig zusammengeschrieben wird.
 - **Vault Cleanup**: `node_modules` und `auth_info` (WhatsApp Bridge, Amoeba) wurden für eine sauberere Indizierung über `.obsidian/app.json` ignoriert.
 - **UI & Mobile Optimization**: Pipeline Buttons überarbeitet (Flex-Layout statt Absolute, größere Touch-Targets für iPad) und Suchfeld für Custom Categories (wie 'Shisha Bar') inkl. Google Places Fallback im Lead-Scout hinzugefügt.
+- **Analytics Lead-Creator Aufschlüsselung (`feature/analytics-leads-by-user`)**: Team-Performance-Übersicht im Analytics-Fenster (`/analytics`) integriert. Zeigt Leads aufgeschlüsselt nach Ersteller (`createdBy`), prozentualen Anteil, Abschlusszahlen sowie eine Detail-Liste der zuletzt erstellten Leads pro Benutzer mit Lead-Modal-Vorschau.
+
