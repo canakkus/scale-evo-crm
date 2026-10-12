@@ -24,6 +24,7 @@ import {
   Mail,
   Flame,
   Ban,
+  ShieldAlert,
 } from "lucide-react";
 import { StatusBadge, PriorityDot } from "@/components/ui/status-badge";
 import { LeadFormModal } from "@/components/leads/lead-form-modal";
@@ -540,7 +541,7 @@ export function LeadsTable() {
                 <th className="px-5 py-3 font-medium" style={{ color: "var(--text-2)" }}>Typ & Status</th>
                 <th className="px-5 py-3 font-medium" style={{ color: "var(--text-2)" }}>Kontakt</th>
                 <th className="px-5 py-3 font-medium" style={{ color: "var(--text-2)" }}>Adresse / Stadt</th>
-                <th className="px-5 py-3 font-medium" style={{ color: "var(--text-2)" }}>Bewertung</th>
+                <th className="px-5 py-3 font-medium" style={{ color: "var(--text-2)" }}>Bewertung &amp; Audit</th>
                 <th className="px-5 py-3 font-medium text-right" style={{ color: "var(--text-2)" }}>Aktionen</th>
               </tr>
             </thead>
@@ -706,20 +707,51 @@ export function LeadsTable() {
                       </td>
 
                       {/* Rating */}
+                      {/* Rating & Audit */}
                       <td className="px-5 py-4 align-top">
-                        {lead.googleRating != null ? (
-                          <div className="flex items-center gap-1.5">
-                            <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-                            <span className="font-semibold text-sm" style={{ color: "var(--text)" }}>
-                              {lead.googleRating.toFixed(1)}
+                        <div className="flex flex-col gap-1.5 items-start">
+                          {lead.googleRating != null ? (
+                            <div className="flex items-center gap-1.5">
+                              <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400 shrink-0" />
+                              <span className="font-semibold text-sm" style={{ color: "var(--text)" }}>
+                                {lead.googleRating.toFixed(1)}
+                              </span>
+                              {lead.googleReviewCount != null && (
+                                <span className="text-xs" style={{ color: "var(--text-3)" }}>({lead.googleReviewCount})</span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-xs" style={{ color: "var(--text-3)" }}>—</span>
+                          )}
+
+                          {/* Website Audit Risk Score */}
+                          {lead.auditSeverity != null ? (
+                            <span
+                              className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md border ${
+                                lead.auditSeverity >= 60
+                                  ? "bg-red-500/15 text-red-400 border-red-500/30"
+                                  : lead.auditSeverity >= 30
+                                  ? "bg-amber-500/15 text-amber-400 border-amber-500/30"
+                                  : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                              }`}
+                              title={`Website Risiko-Score: ${lead.auditSeverity}/100`}
+                            >
+                              <ShieldAlert className="w-3 h-3 shrink-0" />
+                              Audit {lead.auditSeverity}/100
                             </span>
-                            {lead.googleReviewCount != null && (
-                              <span className="text-xs" style={{ color: "var(--text-3)" }}>({lead.googleReviewCount})</span>
-                            )}
-                          </div>
-                        ) : (
-                          <span style={{ color: "var(--text-3)" }}>—</span>
-                        )}
+                          ) : (lead.auditStatus === "pending" || lead.auditStatus === "running") ? (
+                            <span
+                              className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20 animate-pulse"
+                              title="Website-Audit läuft..."
+                            >
+                              Scan läuft…
+                            </span>
+                          ) : lead.website ? (
+                            <span className="text-[10px]" style={{ color: "var(--text-3)" }}>
+                              Audit offen
+                            </span>
+                          ) : null}
+                        </div>
                       </td>
 
                       {/* Actions */}
