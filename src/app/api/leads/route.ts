@@ -226,7 +226,7 @@ export async function POST(request: Request) {
         source: data.source || "manuell",
         acquisitionType: data.acquisitionType || "CALL",
         nfcDemoUrl: data.nfcDemoUrl ? String(data.nfcDemoUrl).trim() : null,
-        isFocus: data.isFocus === true,
+        isFocus: (data.status === "NOT_RELEVANT") ? false : (data.isFocus === true),
         status: data.status || "NEW",
         priority: data.priority || "MEDIUM",
         auditStatus: data.website ? "pending" : "idle",

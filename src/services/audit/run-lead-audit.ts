@@ -12,6 +12,77 @@ export const AUDIT_RERUN_COOLDOWN_MS = 10 * 60_000;
 
 let queueTail: Promise<unknown> = Promise.resolve();
 
+export type BatchAuditState = {
+  running: boolean;
+  current: number;
+  total: number;
+  currentLeadName?: string;
+  cancelRequested?: boolean;
+};
+
+let globalBatchState: BatchAuditState = {
+  running: false,
+  current: 0,
+  total: 0,
+};
+
+export function getBatchAuditState(): BatchAuditState {
+  return { ...globalBatchState };
+}
+
+export function cancelBatchAudit(): void {
+  if (globalBatchState.running) {
+    globalBatchState.cancelRequested = true;
+  }
+}
+
+export async function startBatchAudit(leadIds: string[]): Promise<boolean> {
+  if (globalBatchState.running) {
+    return false;
+  }
+  globalBatchState = {
+    running: true,
+    current: 0,
+    total: leadIds.length,
+    cancelRequested: false,
+  };
+
+  // Run in background without blocking caller
+  (async () => {
+    try {
+      for (let i = 0; i < leadIds.length; i++) {
+        if (globalBatchState.cancelRequested) {
+          break;
+        }
+        const id = leadIds[i];
+        globalBatchState.current = i + 1;
+        const lead = await prisma.lead.findUnique({
+          where: { id },
+          select: { companyName: true, website: true },
+        });
+        if (lead) {
+          globalBatchState.currentLeadName = lead.companyName;
+          if (lead.website) {
+            await runLeadAudit(id).catch((err) => {
+              console.error("[batch-audit] Error auditing lead", id, err);
+            });
+            await new Promise((r) => setTimeout(r, QUEUE_COOLDOWN_MS));
+          }
+        }
+      }
+    } finally {
+      globalBatchState = {
+        running: false,
+        current: 0,
+        total: 0,
+        cancelRequested: false,
+      };
+    }
+  })();
+
+  return true;
+}
+
 /**
  * Serialisiert alle Audits (Concurrency 1) mit Cooldown dazwischen.
  * Reicht fuer Einzelanlage und Sammel-Import; bewusst kein externer Queue-Worker.
@@ -31,6 +102,7 @@ export function enqueueLeadAudit(leadId: string): Promise<void> {
   queueTail = job;
   return job;
 }
+
 
 function storagePathFromPublicUrl(url: string): string | null {
   const marker = `/${BUCKET}/`;

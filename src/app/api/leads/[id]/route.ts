@@ -247,7 +247,9 @@ export async function PATCH(
         menuCheckedAt: data.menuCheckedAt !== undefined ? (data.menuCheckedAt ? new Date(data.menuCheckedAt) : null) : existingLead.menuCheckedAt,
         acquisitionType: data.acquisitionType !== undefined ? data.acquisitionType : existingLead.acquisitionType,
         nfcDemoUrl: data.nfcDemoUrl !== undefined ? (data.nfcDemoUrl ? String(data.nfcDemoUrl).trim() : null) : existingLead.nfcDemoUrl,
-        isFocus: data.isFocus !== undefined ? Boolean(data.isFocus) : existingLead.isFocus,
+        isFocus: (data.status === "NOT_RELEVANT" || (!data.status && existingLead.status === "NOT_RELEVANT"))
+          ? false
+          : (data.isFocus !== undefined ? Boolean(data.isFocus) : existingLead.isFocus),
         status: data.status !== undefined ? data.status : existingLead.status,
         priority: data.priority !== undefined ? data.priority : existingLead.priority,
         score: data.score !== undefined ? parseInt(data.score, 10) : existingLead.score,

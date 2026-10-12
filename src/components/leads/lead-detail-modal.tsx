@@ -230,7 +230,15 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
         body: JSON.stringify({ status: newStatus }),
       });
       if (res.ok) {
-        setLead({ ...lead, status: newStatus });
+        const data = await res.json().catch(() => null);
+        setLead({
+          ...lead,
+          status: newStatus,
+          isFocus: data?.lead?.isFocus !== undefined ? data.lead.isFocus : (newStatus === "NOT_RELEVANT" ? false : lead.isFocus),
+        });
+        if (newStatus === "NOT_RELEVANT") {
+          setEditIsFocus(false);
+        }
         onUpdate();
       }
     } catch (err) {
@@ -1071,6 +1079,55 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                       (Website erforderlich für KI-Check)
                     </span>
                   )}
+                </div>
+
+                {/* Lead Meta: Timestamps & Erstellt von */}
+                <div className="pt-4 border-t mt-4 space-y-2.5 text-xs" style={{ borderColor: "var(--border)" }}>
+                  <div className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-[11px]" style={{ color: "var(--text-3)" }}>
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>Lead-Metadaten & Historie</span>
+                  </div>
+
+                  <div className="p-3 rounded-lg border space-y-2" style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}>
+                    {/* Erstellt von */}
+                    <div className="flex items-center justify-between">
+                      <span style={{ color: "var(--text-3)" }}>Erstellt von:</span>
+                      <div className="flex items-center gap-1.5">
+                        <div
+                          className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0 border"
+                          style={{
+                            background: "var(--surface-3)",
+                            borderColor: "var(--border)",
+                            color: "var(--accent)",
+                          }}
+                        >
+                          {(lead.createdBy?.displayName || lead.createdBy?.email || "U").charAt(0).toUpperCase()}
+                        </div>
+                        <span className="font-semibold" style={{ color: "var(--text)" }}>
+                          {lead.createdBy?.displayName || (lead.createdBy?.email ? lead.createdBy.email.split("@")[0] : "—")}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Erstellt am / Timestamps */}
+                    <div className="flex items-center justify-between">
+                      <span style={{ color: "var(--text-3)" }}>Erstellt am:</span>
+                      <span className="font-mono text-[11px] font-medium" style={{ color: "var(--text-2)" }}>
+                        {lead.createdAt
+                          ? `${formatDate(lead.createdAt)} · ${new Intl.DateTimeFormat("de-AT", { hour: "2-digit", minute: "2-digit" }).format(new Date(lead.createdAt))} Uhr`
+                          : "—"}
+                      </span>
+                    </div>
+
+                    {lead.updatedAt && (
+                      <div className="flex items-center justify-between">
+                        <span style={{ color: "var(--text-3)" }}>Zuletzt aktualisiert:</span>
+                        <span className="font-mono text-[11px] font-medium" style={{ color: "var(--text-2)" }}>
+                          {`${formatDate(lead.updatedAt)} · ${new Intl.DateTimeFormat("de-AT", { hour: "2-digit", minute: "2-digit" }).format(new Date(lead.updatedAt))} Uhr`}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             ) : (

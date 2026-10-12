@@ -57,6 +57,16 @@ export function LeadsTable() {
   const [totalLeads, setTotalLeads] = useState(0);
   const [copiedNfcId, setCopiedNfcId] = useState<string | null>(null);
 
+  // Selection & Batch Audit
+  const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
+  const [batchState, setBatchState] = useState<{
+    running: boolean;
+    current: number;
+    total: number;
+    currentLeadName?: string;
+    cancelRequested?: boolean;
+  } | null>(null);
+
   // Modals
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
@@ -121,7 +131,7 @@ export function LeadsTable() {
 
   async function handleQuickMarkNotRelevant(leadId: string, e: React.MouseEvent) {
     e.stopPropagation();
-    setLeads((prev) => prev.map((l) => (l.id === leadId ? { ...l, status: "NOT_RELEVANT" } : l)));
+    setLeads((prev) => prev.map((l) => (l.id === leadId ? { ...l, status: "NOT_RELEVANT", isFocus: false } : l)));
     try {
       await fetch(`/api/leads/${leadId}`, {
         method: "PATCH",
@@ -165,6 +175,118 @@ export function LeadsTable() {
     try {
       const res = await fetch(`/api/leads/${id}`, { method: "DELETE" });
       if (res.ok) {
+        fetchLeads();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  // Poll batch audit state & auto-refresh on finish
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+
+    async function checkBatchState() {
+      try {
+        const res = await fetch("/api/leads/batch-audit");
+        if (res.ok) {
+          const data = await res.json();
+          setBatchState((prev) => {
+            if (prev?.running && !data.state?.running) {
+              fetchLeads();
+            }
+            return data.state;
+          });
+        }
+      } catch {
+        // network error ignore
+      }
+    }
+
+    checkBatchState();
+
+    if (batchState?.running) {
+      interval = setInterval(checkBatchState, 2500);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [batchState?.running, fetchLeads]);
+
+  // Selection helpers
+  const visibleLeadIds = leads.map((l) => l.id);
+  const allVisibleSelected =
+    visibleLeadIds.length > 0 && visibleLeadIds.every((id) => selectedLeadIds.includes(id));
+  const someVisibleSelected =
+    visibleLeadIds.some((id) => selectedLeadIds.includes(id)) && !allVisibleSelected;
+
+  function handleToggleSelectAll() {
+    if (allVisibleSelected) {
+      setSelectedLeadIds((prev) => prev.filter((id) => !visibleLeadIds.includes(id)));
+    } else {
+      setSelectedLeadIds((prev) => Array.from(new Set([...prev, ...visibleLeadIds])));
+    }
+  }
+
+  function handleToggleSelect(leadId: string) {
+    setSelectedLeadIds((prev) =>
+      prev.includes(leadId) ? prev.filter((id) => id !== leadId) : [...prev, leadId]
+    );
+  }
+
+  // Batch trigger handlers
+  async function handleStartBatchAll() {
+    if (batchState?.running) return;
+    if (!confirm("Möchtest du den automatischen Security- & Health-Check für alle Leads mit Website starten?")) {
+      return;
+    }
+    try {
+      const res = await fetch("/api/leads/batch-audit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ all: true }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setBatchState(data.state);
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        alert(errData.error || "Fehler beim Starten des Health-Checks.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Netzwerkfehler beim Starten des Health-Checks.");
+    }
+  }
+
+  async function handleStartBatchSelected() {
+    if (batchState?.running || selectedLeadIds.length === 0) return;
+    try {
+      const res = await fetch("/api/leads/batch-audit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ leadIds: selectedLeadIds }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setBatchState(data.state);
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        alert(errData.error || "Fehler beim Starten des Health-Checks.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Netzwerkfehler beim Starten des Health-Checks.");
+    }
+  }
+
+  async function handleCancelBatch() {
+    try {
+      const res = await fetch("/api/leads/batch-audit", { method: "DELETE" });
+      if (res.ok) {
+        const data = await res.json();
+        setBatchState(data.state);
         fetchLeads();
       }
     } catch (err) {
@@ -327,6 +449,23 @@ export function LeadsTable() {
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-[var(--accent)]" : ""}`} style={{ color: "var(--text-2)" }} />
               <span className="hidden lg:inline ml-1.5" style={{ color: "var(--text-2)" }}>Aktualisieren</span>
+            </button>
+
+            {/* Health-Check All Button */}
+            <button
+              type="button"
+              onClick={handleStartBatchAll}
+              disabled={batchState?.running}
+              title="Automatischer Health- & Security-Check für alle Leads mit Website"
+              className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs sm:text-sm font-semibold border transition-all shrink-0 ${
+                batchState?.running
+                  ? "opacity-60 cursor-not-allowed border-blue-500/40 bg-blue-500/10 text-blue-300"
+                  : "border-blue-500/30 bg-blue-500/15 text-blue-300 hover:bg-blue-500/25 active:scale-95"
+              }`}
+            >
+              <ShieldAlert className={`w-4 h-4 ${batchState?.running ? "animate-pulse text-blue-400" : "text-blue-400"}`} />
+              <span className="hidden sm:inline">{batchState?.running ? "Scan läuft…" : "Health-Check (Alle)"}</span>
+              <span className="sm:hidden">{batchState?.running ? "Scan…" : "Audit"}</span>
             </button>
 
             {/* New Lead Button */}
@@ -531,31 +670,120 @@ export function LeadsTable() {
       </div>
     </div>
 
+      {/* Batch Running Progress Banner */}
+      {batchState?.running && (
+        <div
+          className="rounded-xl p-3 border flex flex-col sm:flex-row items-center justify-between gap-3 animate-fade-in shadow-sm"
+          style={{ background: "rgba(59, 130, 246, 0.08)", borderColor: "rgba(59, 130, 246, 0.3)" }}
+        >
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <div className="w-5 h-5 rounded-full border-2 border-blue-400 border-t-transparent animate-spin shrink-0" />
+            <div className="min-w-0">
+              <div className="text-xs font-bold flex items-center gap-2 text-blue-400">
+                <span>Website Health-Check läuft… ({batchState.current} / {batchState.total})</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300">
+                  {Math.round((batchState.current / Math.max(batchState.total, 1)) * 100)}%
+                </span>
+              </div>
+              {batchState.currentLeadName && (
+                <div className="text-[11px] truncate max-w-xs sm:max-w-md text-blue-300/80">
+                  Aktiv: {batchState.currentLeadName}
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-3 shrink-0 w-full sm:w-auto justify-end">
+            <div className="w-32 bg-blue-950/60 rounded-full h-2 overflow-hidden border border-blue-500/30">
+              <div
+                className="bg-blue-400 h-full transition-all duration-300"
+                style={{ width: `${Math.round((batchState.current / Math.max(batchState.total, 1)) * 100)}%` }}
+              />
+            </div>
+            <button
+              type="button"
+              onClick={handleCancelBatch}
+              disabled={batchState.cancelRequested}
+              className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-red-500/20 text-red-300 hover:bg-red-500/30 border border-red-500/30 transition-all disabled:opacity-50"
+            >
+              {batchState.cancelRequested ? "Bricht ab…" : "Abbrechen"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Multi-Select Action Bar */}
+      {selectedLeadIds.length > 0 && (
+        <div
+          className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl border animate-fade-in shadow-sm"
+          style={{ background: "var(--surface-2)", borderColor: "var(--accent)" }}
+        >
+          <div className="flex items-center gap-2 text-xs font-semibold" style={{ color: "var(--text)" }}>
+            <span className="w-2 h-2 rounded-full" style={{ background: "var(--accent)" }} />
+            <span>
+              {selectedLeadIds.length} {selectedLeadIds.length === 1 ? "Lead" : "Leads"} ausgewählt
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleStartBatchSelected}
+              disabled={batchState?.running}
+              className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold shadow-sm transition-all hover:opacity-90 active:scale-95 disabled:opacity-50"
+              style={{ background: "var(--accent)", color: "var(--bg)" }}
+            >
+              <ShieldAlert className="w-3.5 h-3.5" />
+              <span>Ausgewählte scannen ({selectedLeadIds.length})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedLeadIds([])}
+              className="px-2.5 py-1 rounded-lg text-xs font-medium hover:bg-[var(--surface-3)] transition-colors"
+              style={{ color: "var(--text-3)" }}
+            >
+              Auswahl aufheben
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Table Container */}
       <div className="rounded-xl border overflow-hidden shadow-sm" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm border-collapse">
             <thead>
               <tr className="border-b" style={{ borderColor: "var(--border)", background: "var(--surface-2)" }}>
+                <th className="w-10 px-4 py-3 text-center">
+                  <input
+                    type="checkbox"
+                    checked={allVisibleSelected}
+                    ref={(el) => {
+                      if (el) el.indeterminate = someVisibleSelected;
+                    }}
+                    onChange={handleToggleSelectAll}
+                    className="w-4 h-4 rounded border cursor-pointer accent-[var(--accent)]"
+                    title="Alle sichtbaren Leads auswählen"
+                  />
+                </th>
                 <th className="px-5 py-3 font-medium" style={{ color: "var(--text-2)" }}>Firma / Branche</th>
                 <th className="px-5 py-3 font-medium" style={{ color: "var(--text-2)" }}>Typ & Status</th>
                 <th className="px-5 py-3 font-medium" style={{ color: "var(--text-2)" }}>Kontakt</th>
                 <th className="px-5 py-3 font-medium" style={{ color: "var(--text-2)" }}>Adresse / Stadt</th>
                 <th className="px-5 py-3 font-medium" style={{ color: "var(--text-2)" }}>Bewertung &amp; Audit</th>
+                <th className="px-5 py-3 font-medium" style={{ color: "var(--text-2)" }}>Erstellt von</th>
                 <th className="px-5 py-3 font-medium text-right" style={{ color: "var(--text-2)" }}>Aktionen</th>
               </tr>
             </thead>
             <tbody className="divide-y" style={{ borderColor: "var(--border)" }}>
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-5 py-12 text-center" style={{ color: "var(--text-3)" }}>
+                  <td colSpan={8} className="px-5 py-12 text-center" style={{ color: "var(--text-3)" }}>
                     <div className="w-6 h-6 rounded-full border-2 border-t-transparent animate-spin mx-auto mb-3" style={{ borderColor: "var(--border-2)", borderTopColor: "var(--accent)" }} />
                     Leads werden geladen…
                   </td>
                 </tr>
               ) : leads.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-5 py-12 text-center text-base" style={{ color: "var(--text-3)" }}>
+                  <td colSpan={8} className="px-5 py-12 text-center text-base" style={{ color: "var(--text-3)" }}>
                     Keine Leads gefunden.
                   </td>
                 </tr>
@@ -570,6 +798,16 @@ export function LeadsTable() {
                       onClick={() => setSelectedLeadId(lead.id)}
                       className="hover:bg-[var(--surface-3)] transition-colors cursor-pointer group"
                     >
+                      {/* Checkbox */}
+                      <td className="w-10 px-4 py-4 text-center align-top" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={selectedLeadIds.includes(lead.id)}
+                          onChange={() => handleToggleSelect(lead.id)}
+                          className="w-4 h-4 rounded border cursor-pointer accent-[var(--accent)]"
+                          aria-label={`${lead.companyName} auswählen`}
+                        />
+                      </td>
                       {/* Firma */}
                       <td className="px-5 py-4 align-top">
                         <div className="flex items-center gap-2 font-semibold text-base mb-1" style={{ color: "var(--text)" }}>
@@ -751,6 +989,41 @@ export function LeadsTable() {
                               Audit offen
                             </span>
                           ) : null}
+                        </div>
+                      </td>
+
+                      {/* Erstellt von */}
+                      <td className="px-5 py-4 align-top" onClick={(e) => e.stopPropagation()}>
+                        <div
+                          className="flex items-center gap-2"
+                          title={
+                            lead.createdBy?.displayName
+                              ? ("Erstellt von " + lead.createdBy.displayName)
+                              : lead.createdBy?.email
+                              ? ("Erstellt von " + lead.createdBy.email)
+                              : "Erstellt von Team"
+                          }
+                        >
+                          <div
+                            className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 border"
+                            style={{
+                              background: "var(--surface-3)",
+                              borderColor: "var(--border)",
+                              color: "var(--accent)",
+                            }}
+                          >
+                            {(lead.createdBy?.displayName || lead.createdBy?.email || "U").charAt(0).toUpperCase()}
+                          </div>
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-xs font-medium truncate max-w-[120px]" style={{ color: "var(--text)" }}>
+                              {lead.createdBy?.displayName || (lead.createdBy?.email ? lead.createdBy.email.split("@")[0] : "—")}
+                            </span>
+                            {lead.createdBy?.email && (
+                              <span className="text-[10px] truncate max-w-[120px]" style={{ color: "var(--text-3)" }}>
+                                {lead.createdBy.email}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </td>
 

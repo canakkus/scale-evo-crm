@@ -167,7 +167,7 @@ export function PipelineBoardComponent() {
 
   async function handleSetStatus(leadId: string, status: LeadStatus) {
     // Optimistic update
-    setLeads((prev) => prev.map((l) => (l.id === leadId ? { ...l, status } : l)));
+    setLeads((prev) => prev.map((l) => (l.id === leadId ? { ...l, status, ...(status === "NOT_RELEVANT" ? { isFocus: false } : {}) } : l)));
 
     try {
       const res = await fetch(`/api/leads/${leadId}`, {
