@@ -27,6 +27,8 @@ export async function GET(request: Request) {
     const priority = searchParams.get("priority") as Priority | null;
     const isFocusParam = searchParams.get("isFocus");
     const relevantOnly = searchParams.get("relevantOnly") === "true";
+    const createdByIdParam = searchParams.get("createdById")?.trim();
+    const assignedToIdParam = searchParams.get("assignedToId")?.trim();
     const webPresence = searchParams.get("webPresence") as WebPresence | null;
     const industryParam = searchParams.get("industry")?.trim();
     const updatedDate = searchParams.get("updatedDate")?.trim(); // e.g. "today", "yesterday", "thisWeek", or "2026-08-27"
@@ -51,6 +53,8 @@ export async function GET(request: Request) {
 
     const where: Record<string, any> = { AND: andClauses };
 
+    if (createdByIdParam) where.createdById = createdByIdParam;
+    if (assignedToIdParam) where.assignedToId = assignedToIdParam;
     if (status) where.status = status;
     if (acquisitionType) where.acquisitionType = acquisitionType;
     if (priority) where.priority = priority;
