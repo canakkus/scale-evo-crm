@@ -167,15 +167,26 @@ export function LeadFormModal({ isOpen, onClose, onSuccess }: LeadFormModalProps
             </div>
 
             <div className="flex items-center gap-2">
-              <label className="flex items-center gap-2 cursor-pointer text-xs font-medium" style={{ color: "var(--text)" }}>
+              <label
+                className={`flex items-center gap-2 text-xs font-medium ${
+                  formData.status === "NOT_RELEVANT" ? "opacity-40 cursor-not-allowed" : "cursor-pointer"
+                }`}
+                style={{ color: "var(--text)" }}
+              >
                 <input
                   type="checkbox"
-                  checked={formData.isFocus}
+                  checked={formData.isFocus && formData.status !== "NOT_RELEVANT"}
+                  disabled={formData.status === "NOT_RELEVANT"}
                   onChange={(e) => setFormData({ ...formData, isFocus: e.target.checked })}
                   className="rounded border-[var(--border)] accent-amber-400"
                 />
                 <span>⭐ Für 2-Wochen-Fokus vormerken</span>
               </label>
+              {formData.status === "NOT_RELEVANT" && (
+                <span className="text-[10px]" style={{ color: "var(--text-3)" }}>
+                  (Nicht relevant)
+                </span>
+              )}
             </div>
 
             <div>
@@ -320,7 +331,14 @@ export function LeadFormModal({ isOpen, onClose, onSuccess }: LeadFormModalProps
                 className="w-full rounded-md px-3 py-2 text-sm border outline-none"
                 style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
                 value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value as LeadStatus })}
+                onChange={(e) => {
+                  const newStatus = e.target.value as LeadStatus;
+                  setFormData({
+                    ...formData,
+                    status: newStatus,
+                    ...(newStatus === "NOT_RELEVANT" ? { isFocus: false } : {}),
+                  });
+                }}
               >
                 {Object.entries(STATUS_LABELS).map(([key, label]) => (
                   <option key={key} value={key}>{label}</option>

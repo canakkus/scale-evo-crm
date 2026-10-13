@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import type { LeadStatus } from "@prisma/client";
-import { AlertTriangle, AtSign, History, Loader2, MapPin, Navigation, Radar, Settings } from "lucide-react";
+import { AlertTriangle, AtSign, History, Loader2, MapPin, Navigation, Radar, Settings, Sparkles } from "lucide-react";
 import { cn, timeAgo } from "@/lib/utils";
 import { useUserLocation } from "@/lib/location-context";
 import {
@@ -20,6 +20,7 @@ import { InstagramResults } from "./instagram-results";
 import { ScoutFunnel } from "./scout-funnel";
 import { ScoutResultCard } from "./scout-result-card";
 import { Segment, ToggleChip } from "./scout-ui";
+import { ScoutV4Beta } from "./scout-v4-beta";
 
 const TREATWELL_CATEGORIES = ["Barber", "Friseur", "Spa & Wellness", "Nagelstudio", "Kosmetik", "Massage", "Wimpern"];
 
@@ -45,7 +46,7 @@ const CATEGORIES = [
   { label: "Gastronomie", slug: "Gastronomie" },
 ];
 
-export type ScoutTab = "standard" | "instagram";
+export type ScoutTab = "standard" | "instagram" | "v4-beta";
 type TriFilter = "all" | "yes" | "no";
 type RadiusChoice = "city" | "3" | "5";
 
@@ -121,9 +122,9 @@ export function LeadScoutComponent({ initialTab = "standard" }: { initialTab?: S
   const togglePreset = (key: keyof IgPresets) => setPresets((previous) => ({ ...previous, [key]: !previous[key] }));
 
   // Jeder Reiter hat seine eigene Antwort — ein Reiterwechsel sucht nie.
-  const [responses, setResponses] = useState<Record<ScoutTab, LeadScoutResponse | null>>({ standard: null, instagram: null });
-  const [versions, setVersions] = useState<Record<ScoutTab, number>>({ standard: 0, instagram: 0 });
-  const [errors, setErrors] = useState<Record<ScoutTab, string | null>>({ standard: null, instagram: null });
+  const [responses, setResponses] = useState<Record<ScoutTab, LeadScoutResponse | null>>({ standard: null, instagram: null, "v4-beta": null });
+  const [versions, setVersions] = useState<Record<ScoutTab, number>>({ standard: 0, instagram: 0, "v4-beta": 0 });
+  const [errors, setErrors] = useState<Record<ScoutTab, string | null>>({ standard: null, instagram: null, "v4-beta": null });
   const [loading, setLoading] = useState(false);
   // Laeuft im IG-Reiter eine Aktion (Anlegen, Vorschau, bezahlte Pruefung),
   // sind Reiterwechsel, neue Suche und Session-Laden gesperrt.
@@ -312,6 +313,7 @@ export function LeadScoutComponent({ initialTab = "standard" }: { initialTab?: S
   const tabs: Array<{ key: ScoutTab; label: string; icon: React.ReactNode; count: number | null }> = [
     { key: "standard", label: "Standard", icon: <Radar className="w-4 h-4" />, count: standardCount },
     { key: "instagram", label: "Instagram", icon: <AtSign className="w-4 h-4" />, count: instagramCount },
+    { key: "v4-beta", label: "Lead Scout 4.0 Beta", icon: <Sparkles className="w-4 h-4 text-amber-400" />, count: null },
   ];
 
   return (
@@ -362,7 +364,11 @@ export function LeadScoutComponent({ initialTab = "standard" }: { initialTab?: S
       </div>
 
       <div id="scout-tab-panel" role="tabpanel" aria-labelledby={`scout-tab-${tab}`} className="space-y-6">
-        {/* ---- Suchkarte ---- */}
+        {tab === "v4-beta" ? (
+          <ScoutV4Beta />
+        ) : (
+          <>
+            {/* ---- Suchkarte ---- */}
         <div className="rounded-xl border p-6 space-y-6" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
           <div className="flex items-center justify-between">
             <h2 className="font-heading text-lg font-bold flex items-center gap-2" style={{ color: "var(--text)" }}>
@@ -731,8 +737,10 @@ export function LeadScoutComponent({ initialTab = "standard" }: { initialTab?: S
             )}
           </div>
         )}
-      </div>
-    </div>
+      </>
+    )}
+  </div>
+</div>
   );
 }
 

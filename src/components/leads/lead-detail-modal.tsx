@@ -492,7 +492,9 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
               {lead && (
                 <button
                   type="button"
+                  disabled={lead.status === "NOT_RELEVANT" && !lead.isFocus}
                   onClick={async () => {
+                    if (lead.status === "NOT_RELEVANT" && !lead.isFocus) return;
                     const nextVal = !lead.isFocus;
                     setLead({ ...lead, isFocus: nextVal });
                     await fetch(`/api/leads/${lead.id}`, {
@@ -502,9 +504,17 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                     });
                     onUpdate();
                   }}
-                  title={lead.isFocus ? "2-Wochen-Fokus entfernen" : "Für 2-Wochen-Fokus vormerken"}
+                  title={
+                    lead.status === "NOT_RELEVANT" && !lead.isFocus
+                      ? "Irrelevante Leads können keinen 2-Wochen-Fokus erhalten"
+                      : lead.isFocus
+                      ? "2-Wochen-Fokus entfernen"
+                      : "Für 2-Wochen-Fokus vormerken"
+                  }
                   className={`p-1 rounded-md transition-all ${
-                    lead.isFocus
+                    lead.status === "NOT_RELEVANT" && !lead.isFocus
+                      ? "text-[var(--text-3)] opacity-20 cursor-not-allowed"
+                      : lead.isFocus
                       ? "text-amber-400 bg-amber-400/15"
                       : "text-[var(--text-3)] hover:text-amber-400 hover:bg-[var(--surface-3)]"
                   }`}
@@ -1167,15 +1177,24 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                   </div>
 
                   <div className="flex items-center gap-2 pt-1">
-                    <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold" style={{ color: "var(--text)" }}>
+                    <label
+                      className={`flex items-center gap-2 text-xs font-semibold ${
+                        lead?.status === "NOT_RELEVANT" ? "opacity-40 cursor-not-allowed" : "cursor-pointer"
+                      }`}
+                      style={{ color: "var(--text)" }}
+                    >
                       <input
                         type="checkbox"
                         checked={editIsFocus}
+                        disabled={lead?.status === "NOT_RELEVANT"}
                         onChange={(e) => setEditIsFocus(e.target.checked)}
                         className="rounded border-[var(--border)] accent-amber-400"
                       />
                       <span>⭐ Für 2-Wochen-Fokus vormerken</span>
                     </label>
+                    {lead?.status === "NOT_RELEVANT" && (
+                      <span className="text-[10px] text-[var(--text-3)]">(Irrelevante Leads haben keinen Fokus)</span>
+                    )}
                   </div>
 
                   <div>

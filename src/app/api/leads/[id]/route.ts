@@ -260,6 +260,10 @@ export async function PATCH(
         ...geoReset,
         ...enrichedGeo,
       },
+      include: {
+        createdBy: { select: { id: true, displayName: true, email: true } },
+        assignedTo: { select: { id: true, displayName: true, email: true } },
+      },
     });
 
     // Auto-sync fixed follow-up to Apple Reminders & Calendar for canakkus378@gmail.com

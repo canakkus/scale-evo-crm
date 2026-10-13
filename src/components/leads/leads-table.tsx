@@ -114,7 +114,10 @@ export function LeadsTable() {
     }
   }, [debouncedSearch, statusFilter, acquisitionFilter, isFocusFilter, relevantOnlyFilter, industryFilters, updatedDateFilter, customDate, page]);
 
-  async function handleToggleFocus(leadId: string, currentVal: boolean) {
+  async function handleToggleFocus(leadId: string, currentVal: boolean, currentStatus?: string) {
+    if (currentStatus === "NOT_RELEVANT" && !currentVal) {
+      return; // Irrelevante Leads dürfen keinen 2-Wochen-Fokus erhalten
+    }
     const nextVal = !currentVal;
     setLeads((prev) => prev.map((l) => (l.id === leadId ? { ...l, isFocus: nextVal } : l)));
     try {
@@ -813,13 +816,22 @@ export function LeadsTable() {
                         <div className="flex items-center gap-2 font-semibold text-base mb-1" style={{ color: "var(--text)" }}>
                           <button
                             type="button"
+                            disabled={lead.status === "NOT_RELEVANT" && !lead.isFocus}
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleToggleFocus(lead.id, !!lead.isFocus);
+                              handleToggleFocus(lead.id, !!lead.isFocus, lead.status);
                             }}
-                            title={lead.isFocus ? "2-Wochen-Fokus entfernen" : "Für 2-Wochen-Fokus vormerken"}
+                            title={
+                              lead.status === "NOT_RELEVANT" && !lead.isFocus
+                                ? "Irrelevante Leads können keinen 2-Wochen-Fokus erhalten"
+                                : lead.isFocus
+                                ? "2-Wochen-Fokus entfernen"
+                                : "Für 2-Wochen-Fokus vormerken"
+                            }
                             className={`p-1 rounded-md transition-all shrink-0 ${
-                              lead.isFocus
+                              lead.status === "NOT_RELEVANT" && !lead.isFocus
+                                ? "text-[var(--text-3)] opacity-20 cursor-not-allowed"
+                                : lead.isFocus
                                 ? "text-amber-400 bg-amber-400/15"
                                 : "text-[var(--text-3)] hover:text-amber-400 hover:bg-[var(--surface-2)] opacity-40 group-hover:opacity-100"
                             }`}
