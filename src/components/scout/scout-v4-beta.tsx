@@ -93,11 +93,19 @@ export function ScoutV4Beta() {
   const [allViennaSelected, setAllViennaSelected] = useState(false);
   const [selectedIndustry, setSelectedIndustry] = useState("Gastronomie");
   const [targetCount, setTargetCount] = useState(30);
+  const [runs, setRuns] = useState(1);
 
   const [loading, setLoading] = useState(false);
   const [scoutProgress, setScoutProgress] = useState(0);
   const [scoutStep, setScoutStep] = useState<string>("Bereit");
   const [scoutError, setScoutError] = useState<string | null>(null);
+
+  // Scheduler State
+  const [showScheduler, setShowScheduler] = useState(false);
+  const [scheduleEnabled, setScheduleEnabled] = useState(true);
+  const [scheduleTime, setScheduleTime] = useState("03:00");
+  const [scheduleLastRun, setScheduleLastRun] = useState<string | null>(null);
+  const [savingSchedule, setSavingSchedule] = useState(false);
 
   const [funnelStats, setFunnelStats] = useState<FunnelStats | null>(null);
   const [hotLeads, setHotLeads] = useState<LeadItem[]>([]);
@@ -115,7 +123,7 @@ export function ScoutV4Beta() {
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 15;
 
-  // Hintergrund-Zustand beim Laden abfragen & Polling bei aktivem Lauf
+  // Hintergrund-Zustand & Zeitplan beim Laden abfragen
   useEffect(() => {
     let timer: NodeJS.Timeout | null = null;
     let isMounted = true;
@@ -156,7 +164,22 @@ export function ScoutV4Beta() {
       }
     }
 
+    async function loadSchedule() {
+      try {
+        const res = await fetch("/api/scout/night-run/schedule");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!isMounted || !data.schedule) return;
+        setScheduleEnabled(data.schedule.enabled ?? true);
+        setScheduleTime(data.schedule.scheduledTime || "03:00");
+        setScheduleLastRun(data.schedule.lastRunAt || null);
+      } catch (err) {
+        console.error("Schedule load error:", err);
+      }
+    }
+
     checkState();
+    loadSchedule();
 
     return () => {
       isMounted = false;
@@ -204,6 +227,7 @@ export function ScoutV4Beta() {
           districts: districtsToScout,
           category: selectedIndustry === "Alle" ? "Gastronomie" : selectedIndustry,
           targetCount,
+          runs,
         }),
       });
 
@@ -262,6 +286,35 @@ export function ScoutV4Beta() {
       console.error(err);
       setLoading(false);
       setScoutError(err.message || "Fehler beim Starten.");
+    }
+  }
+
+  async function handleSaveSchedule() {
+    setSavingSchedule(true);
+    try {
+      const res = await fetch("/api/scout/night-run/schedule", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          enabled: scheduleEnabled,
+          scheduledTime: scheduleTime,
+          runs,
+          targetCount,
+          category: selectedIndustry,
+          districts: allViennaSelected
+            ? ALL_VIENNA_DISTRICTS.map((d) => d.split(" ")[0] + " Wien")
+            : selectedDistricts.map((d) => d.split(" ")[0] + " Wien"),
+        }),
+      });
+
+      if (res.ok) {
+        setToastMessage(`✓ Nacht-Scout Zeitplan gespeichert (${scheduleTime} Uhr, ${runs} Runs)`);
+        setTimeout(() => setToastMessage(null), 3500);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSavingSchedule(false);
     }
   }
 
@@ -389,7 +442,7 @@ export function ScoutV4Beta() {
 
           <div>
             <label className="text-xs font-semibold mb-1.5 block" style={{ color: "var(--text-2)" }}>
-              Ziel-Ergebnisgröße (Top Leads)
+              Ziel-Ergebnisgröße (Schritte)
             </label>
             <div className="flex items-center gap-2">
               {[20, 30, 50].map((count) => (
@@ -410,7 +463,42 @@ export function ScoutV4Beta() {
           </div>
         </div>
 
-        {/* Row 2: Bezirke / Ganz Wien */}
+        {/* Row 2: Multi-Run Durchläufe */}
+        <div className="p-3.5 rounded-xl border space-y-2" style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}>
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-semibold flex items-center gap-1.5" style={{ color: "var(--text)" }}>
+              <Layers className="w-3.5 h-3.5 text-blue-400" />
+              <span>Multi-Run Durchläufe (Batch-Queue)</span>
+            </label>
+            <span className="text-[11px] font-mono font-medium text-[var(--text-3)]">
+              Ziel: {runs} {runs === 1 ? "Run" : "Runs"} × Top {targetCount} = bis zu <strong className="text-[var(--text)]">{runs * targetCount} Hot Leads</strong>
+            </span>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { count: 1, label: "1x Run (Sofort)", desc: "15–20s Schnell-Scan" },
+              { count: 3, label: "3x Runs (Batch)", desc: "Mehrere Bezirks-Tranchen" },
+              { count: 5, label: "5x Runs (Deep Scan)", desc: "Großflächiger Wien-Scan" },
+            ].map((r) => (
+              <button
+                key={r.count}
+                type="button"
+                onClick={() => setRuns(r.count)}
+                className={`py-2 px-2.5 rounded-xl text-left border transition-all cursor-pointer ${
+                  runs === r.count
+                    ? "border-blue-500 bg-blue-500/10 text-blue-300 shadow-sm"
+                    : "border-[var(--border)] text-[var(--text-3)] hover:text-[var(--text)] bg-[var(--surface)]"
+                }`}
+              >
+                <div className="text-xs font-bold">{r.label}</div>
+                <div className="text-[10px] text-[var(--text-3)] mt-0.5">{r.desc}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Row 3: Bezirke / Ganz Wien */}
         <div>
           <div className="flex items-center justify-between mb-2">
             <label className="text-xs font-semibold" style={{ color: "var(--text-2)" }}>
@@ -450,8 +538,31 @@ export function ScoutV4Beta() {
           </div>
         </div>
 
-        {/* Start Button */}
-        <div className="flex justify-end pt-2">
+        {/* Action Row & Scheduler Button */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t" style={{ borderColor: "var(--border)" }}>
+          <button
+            type="button"
+            onClick={() => setShowScheduler(!showScheduler)}
+            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl border transition-all cursor-pointer hover:bg-[var(--surface-2)]"
+            style={{
+              background: showScheduler ? "var(--surface-2)" : "transparent",
+              borderColor: "var(--border)",
+              color: "var(--text-2)",
+            }}
+          >
+            <Clock className="w-3.5 h-3.5 text-blue-400" />
+            <span>Nacht-Scout Scheduler</span>
+            <span
+              className={`text-[10px] px-1.5 py-0.5 rounded font-mono font-bold ${
+                scheduleEnabled
+                  ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/25"
+                  : "bg-zinc-500/15 text-zinc-400"
+              }`}
+            >
+              {scheduleEnabled ? `${scheduleTime} Uhr (Aktiv)` : "Inaktiv"}
+            </span>
+          </button>
+
           <button
             type="button"
             onClick={handleStartScout}
@@ -460,9 +571,79 @@ export function ScoutV4Beta() {
             style={{ background: "var(--accent)", color: "var(--bg)" }}
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Flame className="w-4 h-4" />}
-            <span>{loading ? "Scout läuft im Hintergrund…" : "Scout & Trichter jetzt starten"}</span>
+            <span>{loading ? "Scout läuft im Hintergrund…" : `Scout starten (${runs} ${runs === 1 ? "Run" : "Runs"})`}</span>
           </button>
         </div>
+
+        {/* Scheduler Drawer / Settings Card */}
+        {showScheduler && (
+          <div
+            className="rounded-xl border p-4 space-y-3.5 animate-fade-in"
+            style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-blue-400" />
+                <span className="text-xs font-bold text-[var(--text)]">Automatischer Nacht-Lauf (Scheduler)</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setScheduleEnabled(!scheduleEnabled)}
+                className={`text-xs font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                  scheduleEnabled
+                    ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
+                    : "bg-[var(--surface-3)] text-[var(--text-3)] border-[var(--border)]"
+                }`}
+              >
+                {scheduleEnabled ? "✓ Täglich Aktiv" : "Pausiert"}
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+              <div>
+                <label className="text-[11px] font-semibold text-[var(--text-3)] block mb-1">
+                  Uhrzeit für Nacht-Lauf
+                </label>
+                <input
+                  type="time"
+                  value={scheduleTime}
+                  onChange={(e) => setScheduleTime(e.target.value)}
+                  className="w-full px-3 py-1.5 rounded-lg border outline-none font-mono text-xs"
+                  style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-semibold text-[var(--text-3)] block mb-1">
+                  Durchläufe & Schrittgröße
+                </label>
+                <div className="px-3 py-1.5 rounded-lg border text-xs" style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}>
+                  {runs} Runs × Top {targetCount} Leads
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-semibold text-[var(--text-3)] block mb-1">
+                  Letzter Durchlauf
+                </label>
+                <div className="px-3 py-1.5 rounded-lg border text-xs font-mono text-[var(--text-2)]" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
+                  {scheduleLastRun ? new Date(scheduleLastRun).toLocaleString("de-AT", { dateStyle: "short", timeStyle: "short" }) : "Noch kein Lauf"}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-1">
+              <button
+                type="button"
+                onClick={handleSaveSchedule}
+                disabled={savingSchedule}
+                className="px-4 py-1.5 rounded-lg text-xs font-bold bg-blue-500 text-white hover:bg-blue-600 transition-all cursor-pointer disabled:opacity-50"
+              >
+                {savingSchedule ? "Speichert…" : "Zeitplan speichern"}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Live Server-Background Progress Banner */}

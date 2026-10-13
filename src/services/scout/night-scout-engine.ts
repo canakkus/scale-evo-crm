@@ -8,6 +8,7 @@ export type NightScoutOptions = {
   districts?: string[];
   category?: string;
   targetCount?: number;
+  runs?: number;
 };
 
 export type NightScoutFunnelStats = {
@@ -41,6 +42,8 @@ export type NightScoutState = {
   sessionId?: string;
   step: string;
   progress: number;
+  currentRun?: number;
+  totalRuns?: number;
   stats?: NightScoutFunnelStats;
   leads?: NightLeadItem[];
   allLeads?: NightLeadItem[];
@@ -180,11 +183,14 @@ export async function startNightScoutPipeline(
           ? options.districts
           : ["1010 Wien", "1070 Wien", "1020 Wien"];
       const category = options.category || "Gastronomie";
-      const targetCount = options.targetCount || 50;
+      const targetCount = options.targetCount || 30;
+      const totalRuns = Math.max(1, Math.min(5, options.runs || 1));
 
       // 1. Duplikat-Check Setup
       globalNightScoutState.step = "Lade bestehenden CRM-Bestand...";
-      globalNightScoutState.progress = 15;
+      globalNightScoutState.progress = 10;
+      globalNightScoutState.currentRun = 1;
+      globalNightScoutState.totalRuns = totalRuns;
 
       const scope = await leadScopeForUserId(userId);
       const existingLeads = await prisma.lead.findMany({
@@ -226,154 +232,191 @@ export async function startNightScoutPipeline(
         if (r.phone) knownPhones.add(r.phone.replace(/[^0-9]/g, ""));
       }
 
-      // 2. Stage 0: Mass Gathering (Places API)
-      globalNightScoutState.step = `Sammle Betriebe aus ${districts.length} Bezirken...`;
-      globalNightScoutState.progress = 30;
-
-      let rawCandidates: any[] = [];
-      const DISTRICT_BATCH = 6;
-      for (let i = 0; i < districts.length; i += DISTRICT_BATCH) {
-        const batch = districts.slice(i, i + DISTRICT_BATCH);
-        const results = await Promise.all(
-          batch.map((district) => fetchPlacesForQuery(`${category} in ${district}`, 20))
-        );
-        for (const list of results) {
-          rawCandidates.push(...list);
+      // Partition districts across the requested runs
+      const districtChunks: string[][] = [];
+      const chunkSize = Math.max(1, Math.ceil(districts.length / totalRuns));
+      for (let r = 0; r < totalRuns; r++) {
+        const slice = districts.slice(r * chunkSize, (r + 1) * chunkSize);
+        if (slice.length > 0) {
+          districtChunks.push(slice);
         }
       }
+      if (districtChunks.length === 0) {
+        districtChunks.push(districts);
+      }
+      const actualRuns = districtChunks.length;
 
-      const totalRawFound = rawCandidates.length;
+      let totalRawFound = 0;
       let droppedDuplicates = 0;
       let droppedModernWebsites = 0;
       let droppedInactiveSocial = 0;
 
-      // 3. Stage 1: Duplikate filtern
-      globalNightScoutState.step = "Prüfe Duplikate & bestehende Leads...";
-      globalNightScoutState.progress = 50;
-
-      const eligibleCandidates: any[] = [];
-      for (const place of rawCandidates) {
-        const name = place.displayName?.text || "";
-        const address = place.formattedAddress || "";
-        const phone = place.internationalPhoneNumber || null;
-        const website = place.websiteUri || null;
-
-        if (!name) continue;
-
-        const normWeb = website ? normalizeUrl(website) : null;
-        const cleanPhone = phone ? phone.replace(/[^0-9]/g, "") : null;
-
-        if (normWeb && knownWebsites.has(normWeb)) {
-          droppedDuplicates++;
-          continue;
-        }
-        if (cleanPhone && cleanPhone.length > 5 && knownPhones.has(cleanPhone)) {
-          droppedDuplicates++;
-          continue;
-        }
-
-        const dupCheck = findDuplicates(
-          { companyName: name, website: normWeb, phone, address },
-          existingLeads as DuplicateCandidate[]
-        );
-        if (dupCheck.some((d) => d.confidence === "high" || d.score >= 0.85)) {
-          droppedDuplicates++;
-          continue;
-        }
-
-        eligibleCandidates.push(place);
-      }
-
-      // 4. Stage 2: Schnelle parallele Website & Tech-Prüfung (Chunks von 6)
-      globalNightScoutState.step = `Analysiere Websites & Mängel für ${eligibleCandidates.length} Betriebe...`;
-      globalNightScoutState.progress = 70;
-
-      const filteredCandidates: NightLeadItem[] = [];
       const allScoutedLeads: NightLeadItem[] = [];
-      const CHUNK_SIZE = 6;
+      const filteredCandidates: NightLeadItem[] = [];
 
-      for (let i = 0; i < eligibleCandidates.length; i += CHUNK_SIZE) {
-        const chunk = eligibleCandidates.slice(i, i + CHUNK_SIZE);
-        const audits = await Promise.all(
-          chunk.map(async (place) => {
-            const name = place.displayName?.text || "";
-            const address = place.formattedAddress || "";
-            const phone = place.internationalPhoneNumber || null;
-            const website = place.websiteUri || null;
-            const googleRating = place.rating || null;
-            const reviewCount = place.userRatingCount || null;
-            const googleMapsUrl = place.googleMapsUri || null;
-            const types: string[] = place.types || [];
+      for (let runIdx = 0; runIdx < actualRuns; runIdx++) {
+        const runDistricts = districtChunks[runIdx];
+        const runNum = runIdx + 1;
+        const baseProgress = Math.round((runIdx / actualRuns) * 85);
 
-            let walkInScore = 40;
-            const reasons: string[] = [];
-            let websiteStatus: "missing" | "outdated" | "unsecure" | "ok" = "ok";
-            let isModern = false;
+        globalNightScoutState.currentRun = runNum;
+        globalNightScoutState.totalRuns = actualRuns;
+        globalNightScoutState.step =
+          actualRuns > 1
+            ? `Run ${runNum}/${actualRuns}: Sammle Betriebe aus ${runDistricts.length} Bezirken...`
+            : `Sammle Betriebe aus ${runDistricts.length} Bezirken...`;
+        globalNightScoutState.progress = Math.max(15, baseProgress + 5);
 
-            if (!website) {
-              walkInScore += 35;
-              websiteStatus = "missing";
-              reasons.push("Keine Website vorhanden (Exzellenter Walk-In Hebel)");
-            } else {
-              const audit = await fastWebsiteAudit(website);
-              if (audit.hasMobileIssue || audit.hasSslIssue || audit.isOldCopyright || audit.isOldCms || audit.issueCount >= 2) {
-                walkInScore += 25;
-                websiteStatus = audit.isOldCopyright ? "outdated" : "unsecure";
-                if (audit.hasMobileIssue) reasons.push("Website nicht mobile-optimiert");
-                if (audit.isOldCopyright) reasons.push("Veraltetes Website-Copyright");
-                if (audit.hasSslIssue) reasons.push("Sicherheits- / SSL-Probleme");
-                if (audit.isOldCms) reasons.push("Altes CMS / Baukasten");
-              } else if (audit.issueCount === 0 && (googleRating || 0) < 4.2) {
-                isModern = true;
-                reasons.push("Moderne Website vorhanden");
+        let rawCandidates: any[] = [];
+        const DISTRICT_BATCH = 6;
+        for (let i = 0; i < runDistricts.length; i += DISTRICT_BATCH) {
+          const batch = runDistricts.slice(i, i + DISTRICT_BATCH);
+          const results = await Promise.all(
+            batch.map((district) => fetchPlacesForQuery(`${category} in ${district}`, 20))
+          );
+          for (const list of results) {
+            rawCandidates.push(...list);
+          }
+        }
+
+        totalRawFound += rawCandidates.length;
+
+        // Stage 1: Duplikate filtern
+        if (actualRuns > 1) {
+          globalNightScoutState.step = `Run ${runNum}/${actualRuns}: Prüfe Duplikate & bestehende Leads...`;
+        } else {
+          globalNightScoutState.step = "Prüfe Duplikate & bestehende Leads...";
+        }
+        globalNightScoutState.progress = Math.max(25, baseProgress + 12);
+
+        const eligibleCandidates: any[] = [];
+        for (const place of rawCandidates) {
+          const name = place.displayName?.text || "";
+          const address = place.formattedAddress || "";
+          const phone = place.internationalPhoneNumber || null;
+          const website = place.websiteUri || null;
+
+          if (!name) continue;
+
+          const normWeb = website ? normalizeUrl(website) : null;
+          const cleanPhone = phone ? phone.replace(/[^0-9]/g, "") : null;
+
+          if (normWeb && knownWebsites.has(normWeb)) {
+            droppedDuplicates++;
+            continue;
+          }
+          if (cleanPhone && cleanPhone.length > 5 && knownPhones.has(cleanPhone)) {
+            droppedDuplicates++;
+            continue;
+          }
+
+          const dupCheck = findDuplicates(
+            { companyName: name, website: normWeb, phone, address },
+            existingLeads as DuplicateCandidate[]
+          );
+          if (dupCheck.some((d) => d.confidence === "high" || d.score >= 0.85)) {
+            droppedDuplicates++;
+            continue;
+          }
+
+          if (normWeb) knownWebsites.add(normWeb);
+          if (cleanPhone) knownPhones.add(cleanPhone);
+
+          eligibleCandidates.push(place);
+        }
+
+        // Stage 2: Schnelle parallele Website & Tech-Prüfung (Chunks von 6)
+        if (actualRuns > 1) {
+          globalNightScoutState.step = `Run ${runNum}/${actualRuns}: Analysiere Websites für ${eligibleCandidates.length} Betriebe...`;
+        } else {
+          globalNightScoutState.step = `Analysiere Websites & Mängel für ${eligibleCandidates.length} Betriebe...`;
+        }
+        globalNightScoutState.progress = Math.max(40, baseProgress + 20);
+
+        const CHUNK_SIZE = 6;
+        for (let i = 0; i < eligibleCandidates.length; i += CHUNK_SIZE) {
+          const chunk = eligibleCandidates.slice(i, i + CHUNK_SIZE);
+          const audits = await Promise.all(
+            chunk.map(async (place) => {
+              const name = place.displayName?.text || "";
+              const address = place.formattedAddress || "";
+              const phone = place.internationalPhoneNumber || null;
+              const website = place.websiteUri || null;
+              const googleRating = place.rating || null;
+              const reviewCount = place.userRatingCount || null;
+              const googleMapsUrl = place.googleMapsUri || null;
+              const types: string[] = place.types || [];
+
+              let walkInScore = 40;
+              const reasons: string[] = [];
+              let websiteStatus: "missing" | "outdated" | "unsecure" | "ok" = "ok";
+              let isModern = false;
+
+              if (!website) {
+                walkInScore += 35;
+                websiteStatus = "missing";
+                reasons.push("Keine Website vorhanden (Exzellenter Walk-In Hebel)");
+              } else {
+                const audit = await fastWebsiteAudit(website);
+                if (audit.hasMobileIssue || audit.hasSslIssue || audit.isOldCopyright || audit.isOldCms || audit.issueCount >= 2) {
+                  walkInScore += 25;
+                  websiteStatus = audit.isOldCopyright ? "outdated" : "unsecure";
+                  if (audit.hasMobileIssue) reasons.push("Website nicht mobile-optimiert");
+                  if (audit.isOldCopyright) reasons.push("Veraltetes Website-Copyright");
+                  if (audit.hasSslIssue) reasons.push("Sicherheits- / SSL-Probleme");
+                  if (audit.isOldCms) reasons.push("Altes CMS / Baukasten");
+                } else if (audit.issueCount === 0 && (googleRating || 0) < 4.2) {
+                  isModern = true;
+                  reasons.push("Moderne Website vorhanden");
+                }
               }
-            }
 
-            // Social & Linktree Check
-            let hasInstagram = false;
-            let instagramHandle: string | null = null;
-            if (website && (website.includes("instagram.com") || website.includes("linktr.ee"))) {
-              hasInstagram = true;
-              walkInScore += 30;
-              reasons.push("Nutzt Linktree/Instagram als Website-Ersatz");
-            } else if (googleRating && googleRating >= 4.0 && reviewCount && reviewCount >= 15) {
-              walkInScore += 15;
-              reasons.push(`${reviewCount} Google-Bewertungen (${googleRating}★)`);
-            }
+              // Social & Linktree Check
+              let hasInstagram = false;
+              let instagramHandle: string | null = null;
+              if (website && (website.includes("instagram.com") || website.includes("linktr.ee"))) {
+                hasInstagram = true;
+                walkInScore += 30;
+                reasons.push("Nutzt Linktree/Instagram als Website-Ersatz");
+              } else if (googleRating && googleRating >= 4.0 && reviewCount && reviewCount >= 15) {
+                walkInScore += 15;
+                reasons.push(`${reviewCount} Google-Bewertungen (${googleRating}★)`);
+              }
 
-            // Popular Times Walk-In Zeitfenster
-            const bestVisitTime = calculateBestVisitSlot(category, types);
+              // Popular Times Walk-In Zeitfenster
+              const bestVisitTime = calculateBestVisitSlot(category, types);
 
-            return {
-              isModern,
-              item: {
-                companyName: name,
-                address,
-                city: "Wien",
-                phone,
-                website,
-                industry: category,
-                googleMapsUrl,
-                googleRating,
-                reviewCount,
-                hasInstagram,
-                instagramHandle,
-                walkInScore: Math.min(100, walkInScore),
-                opportunityReasons: reasons,
-                bestVisitTime,
-                websiteStatus,
-              } as NightLeadItem,
-            };
-          })
-        );
+              return {
+                isModern,
+                item: {
+                  companyName: name,
+                  address,
+                  city: "Wien",
+                  phone,
+                  website,
+                  industry: category,
+                  googleMapsUrl,
+                  googleRating,
+                  reviewCount,
+                  hasInstagram,
+                  instagramHandle,
+                  walkInScore: Math.min(100, walkInScore),
+                  opportunityReasons: reasons,
+                  bestVisitTime,
+                  websiteStatus,
+                } as NightLeadItem,
+              };
+            })
+          );
 
-        for (const res of audits) {
-          if (res.item) {
-            allScoutedLeads.push(res.item);
-            if (res.isModern) {
-              droppedModernWebsites++;
-            } else {
-              filteredCandidates.push(res.item);
+          for (const res of audits) {
+            if (res.item) {
+              allScoutedLeads.push(res.item);
+              if (res.isModern) {
+                droppedModernWebsites++;
+              } else {
+                filteredCandidates.push(res.item);
+              }
             }
           }
         }
@@ -381,10 +424,11 @@ export async function startNightScoutPipeline(
 
       // 5. Ranking & Speichern
       globalNightScoutState.step = "Berechne beste Besuchszeiten & erstelle Ranking...";
-      globalNightScoutState.progress = 90;
+      globalNightScoutState.progress = 95;
 
       filteredCandidates.sort((a, b) => b.walkInScore - a.walkInScore);
-      const topLeads = filteredCandidates.slice(0, targetCount);
+      const totalTargetLeads = targetCount * actualRuns;
+      const topLeads = filteredCandidates.slice(0, totalTargetLeads);
 
       const stats: NightScoutFunnelStats = {
         totalRawFound,
@@ -396,12 +440,13 @@ export async function startNightScoutPipeline(
 
       const session = await prisma.scoutSession.create({
         data: {
-          name: `Night Scout: ${districts.slice(0, 2).join(", ")} (${new Date().toLocaleDateString("de-AT")})`,
+          name: `Night Scout: ${districts.slice(0, 2).join(", ")} (${actualRuns > 1 ? `${actualRuns} Runs, ` : ""}${new Date().toLocaleDateString("de-AT")})`,
           searchQuery: `Night Scout Funnel: ${category}`,
           city: "Wien",
           filters: {
             districts,
             category,
+            runs: actualRuns,
             funnel: stats,
           },
           resultCount: topLeads.length,

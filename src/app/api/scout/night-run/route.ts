@@ -54,12 +54,14 @@ export async function POST(request: Request) {
     const districts = Array.isArray(body.districts) && body.districts.length > 0 ? body.districts : ["1010 Wien", "1070 Wien"];
     const category = body.category || "Gastronomie";
     const targetCount = Number(body.targetCount) || 30;
+    const runs = Math.max(1, Math.min(5, Number(body.runs) || 1));
 
     const started = await startNightScoutPipeline(
       {
         districts,
         category,
         targetCount,
+        runs,
       },
       user.id
     );
