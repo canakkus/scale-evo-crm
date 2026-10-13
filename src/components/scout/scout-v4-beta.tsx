@@ -95,10 +95,16 @@ export function ScoutV4Beta() {
   const [targetCount, setTargetCount] = useState(30);
 
   const [loading, setLoading] = useState(false);
+  const [scoutProgress, setScoutProgress] = useState(0);
+  const [scoutStep, setScoutStep] = useState<string>("Bereit");
+  const [scoutError, setScoutError] = useState<string | null>(null);
+
   const [funnelStats, setFunnelStats] = useState<FunnelStats | null>(null);
   const [hotLeads, setHotLeads] = useState<LeadItem[]>([]);
+  const [poolLeads, setPoolLeads] = useState<LeadItem[]>([]);
   const [importedCompanyNames, setImportedCompanyNames] = useState<Set<string>>(new Set());
   const [importing, setImporting] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Umschalter: Top Walk-In Fokus vs. Gesamter Wien-Pool
   const [viewMode, setViewMode] = useState<"hot" | "pool">("hot");
@@ -108,6 +114,55 @@ export function ScoutV4Beta() {
   const [poolFilterWebsite, setPoolFilterWebsite] = useState<"all" | "missing" | "has">("all");
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 15;
+
+  // Hintergrund-Zustand beim Laden abfragen & Polling bei aktivem Lauf
+  useEffect(() => {
+    let timer: NodeJS.Timeout | null = null;
+    let isMounted = true;
+
+    async function checkState() {
+      try {
+        const res = await fetch("/api/scout/night-run");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!isMounted) return;
+
+        const state = data?.state;
+        if (!state) return;
+
+        if (state.running) {
+          setLoading(true);
+          setScoutProgress(state.progress || 10);
+          setScoutStep(state.step || "Scout läuft im Hintergrund...");
+          setScoutError(null);
+          timer = setTimeout(checkState, 1500);
+        } else {
+          setLoading(false);
+          setScoutProgress(state.progress || 0);
+          setScoutStep(state.step || "Bereit");
+
+          if (state.error) {
+            setScoutError(state.error);
+          } else if (state.leads && state.leads.length > 0) {
+            setHotLeads(state.leads);
+            setPoolLeads(state.allLeads && state.allLeads.length > 0 ? state.allLeads : state.leads);
+            if (state.stats) {
+              setFunnelStats(state.stats);
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Scout polling error:", err);
+      }
+    }
+
+    checkState();
+
+    return () => {
+      isMounted = false;
+      if (timer) clearTimeout(timer);
+    };
+  }, []);
 
   function toggleDistrict(d: string) {
     if (allViennaSelected) {
@@ -132,10 +187,14 @@ export function ScoutV4Beta() {
 
   async function handleStartScout() {
     setLoading(true);
+    setScoutProgress(10);
+    setScoutStep("Initialisiere Scout-Pipeline...");
+    setScoutError(null);
     setFunnelStats(null);
+
     try {
       const districtsToScout = allViennaSelected
-        ? ["1010 Wien", "1020 Wien", "1070 Wien", "1080 Wien"] // Schneller Wien-Querschnitt
+        ? ALL_VIENNA_DISTRICTS.map((d) => d.split(" ")[0] + " Wien")
         : selectedDistricts.map((d) => d.split(" ")[0] + " Wien");
 
       const res = await fetch("/api/scout/night-run", {
@@ -148,42 +207,78 @@ export function ScoutV4Beta() {
         }),
       });
 
-      if (!res.ok) throw new Error("Fehler beim Scouten.");
-      const data = await res.json();
-      setFunnelStats(data.stats);
-      setHotLeads(data.leads || []);
-      setViewMode("hot");
-    } catch (err) {
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        if (res.status === 409 && errData.state) {
+          setScoutStep(errData.state.step || "Bereits aktiv");
+          setScoutProgress(errData.state.progress || 20);
+        } else {
+          throw new Error(errData.error || "Fehler beim Starten des Scouts.");
+        }
+      }
+
+      // Reaktives Polling starten
+      let isPolling = true;
+      const poll = async () => {
+        if (!isPolling) return;
+        try {
+          const pollRes = await fetch("/api/scout/night-run");
+          if (pollRes.ok) {
+            const data = await pollRes.json();
+            const state = data?.state;
+            if (state) {
+              if (state.running) {
+                setLoading(true);
+                setScoutProgress(state.progress || 20);
+                setScoutStep(state.step || "Scout läuft...");
+                setTimeout(poll, 1500);
+                return;
+              } else {
+                setLoading(false);
+                setScoutProgress(100);
+                setScoutStep("Fertig");
+                if (state.error) {
+                  setScoutError(state.error);
+                } else if (state.leads) {
+                  setHotLeads(state.leads);
+                  setPoolLeads(state.allLeads && state.allLeads.length > 0 ? state.allLeads : state.leads);
+                  if (state.stats) setFunnelStats(state.stats);
+                  setViewMode("hot");
+                  setToastMessage(`${state.leads.length} Hot Leads erfolgreich analysiert!`);
+                  setTimeout(() => setToastMessage(null), 4000);
+                }
+                return;
+              }
+            }
+          }
+        } catch (e) {
+          console.error("Poll error:", e);
+        }
+        setTimeout(poll, 2000);
+      };
+
+      setTimeout(poll, 1000);
+    } catch (err: any) {
       console.error(err);
-      alert("Fehler beim Scout-Durchlauf. Bitte prüfe die Verbindung.");
-    } finally {
       setLoading(false);
+      setScoutError(err.message || "Fehler beim Starten.");
     }
   }
 
   async function handleImportSingle(lead: LeadItem) {
     setImporting(true);
     try {
-      const res = await fetch("/api/leads", {
+      const res = await fetch("/api/scout/night-run/import", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          companyName: lead.companyName,
-          address: lead.address,
-          city: "Wien",
-          phone: lead.phone,
-          website: lead.website,
-          industry: lead.industry,
-          googleMapsUrl: lead.googleMapsUrl,
-          acquisitionType: "WALK_IN",
-          status: "NEW",
-          priority: "HIGH",
-          isFocus: true,
-          notes: `[Scout 4.0 Walk-In]\nBeste Besuchszeit: ${lead.bestVisitTime?.recommendedWindow}\nHebel: ${lead.opportunityReasons?.join(", ")}`,
+          leads: [lead],
         }),
       });
       if (res.ok) {
         setImportedCompanyNames((prev) => new Set([...prev, lead.companyName]));
+        setToastMessage(`✓ ${lead.companyName} als Walk-In Lead importiert`);
+        setTimeout(() => setToastMessage(null), 3000);
       }
     } catch (err) {
       console.error(err);
@@ -193,32 +288,26 @@ export function ScoutV4Beta() {
   }
 
   async function handleImportAllHot() {
-    if (hotLeads.length === 0) return;
+    const unimported = hotLeads.filter((l) => !importedCompanyNames.has(l.companyName));
+    if (unimported.length === 0) return;
     setImporting(true);
     try {
-      for (const lead of hotLeads) {
-        if (importedCompanyNames.has(lead.companyName)) continue;
-        await fetch("/api/leads", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            companyName: lead.companyName,
-            address: lead.address,
-            city: "Wien",
-            phone: lead.phone,
-            website: lead.website,
-            industry: lead.industry,
-            googleMapsUrl: lead.googleMapsUrl,
-            acquisitionType: "WALK_IN",
-            status: "NEW",
-            priority: "HIGH",
-            isFocus: true,
-            notes: `[Scout 4.0 Walk-In]\nBeste Besuchszeit: ${lead.bestVisitTime?.recommendedWindow}\nHebel: ${lead.opportunityReasons?.join(", ")}`,
-          }),
+      const res = await fetch("/api/scout/night-run/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          leads: unimported,
+        }),
+      });
+      if (res.ok) {
+        setImportedCompanyNames((prev) => {
+          const next = new Set(prev);
+          for (const l of unimported) next.add(l.companyName);
+          return next;
         });
-        setImportedCompanyNames((prev) => new Set([...prev, lead.companyName]));
+        setToastMessage(`✓ ${unimported.length} Hot Leads erfolgreich im 2-Wochen-Fokus angelegt!`);
+        setTimeout(() => setToastMessage(null), 4000);
       }
-      alert(`${hotLeads.length} Hot Leads wurden erfolgreich als Walk-Ins im 2-Wochen-Fokus angelegt!`);
     } catch (err) {
       console.error(err);
     } finally {
@@ -228,7 +317,7 @@ export function ScoutV4Beta() {
 
   // Filterung für den gesamten Pool
   const filteredPool = useMemo(() => {
-    return hotLeads.filter((l) => {
+    return poolLeads.filter((l) => {
       const q = poolSearch.toLowerCase();
       const matchQuery =
         !q ||
@@ -242,7 +331,7 @@ export function ScoutV4Beta() {
 
       return matchQuery && matchWeb;
     });
-  }, [hotLeads, poolSearch, poolFilterWebsite]);
+  }, [poolLeads, poolSearch, poolFilterWebsite]);
 
   const paginatedPool = useMemo(() => {
     const start = (page - 1) * PAGE_SIZE;
@@ -371,10 +460,54 @@ export function ScoutV4Beta() {
             style={{ background: "var(--accent)", color: "var(--bg)" }}
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Flame className="w-4 h-4" />}
-            <span>{loading ? "Scout & Trichter läuft…" : "Scout & Trichter jetzt starten"}</span>
+            <span>{loading ? "Scout läuft im Hintergrund…" : "Scout & Trichter jetzt starten"}</span>
           </button>
         </div>
       </div>
+
+      {/* Live Server-Background Progress Banner */}
+      {loading && (
+        <div
+          className="rounded-xl border p-4 space-y-3 animate-fade-in shadow-sm"
+          style={{ background: "rgba(59, 130, 246, 0.06)", borderColor: "rgba(59, 130, 246, 0.3)" }}
+        >
+          <div className="flex items-center justify-between text-xs">
+            <div className="flex items-center gap-2 font-bold text-blue-400">
+              <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
+              <span>{scoutStep}</span>
+            </div>
+            <span className="font-mono font-bold text-blue-300">{scoutProgress}%</span>
+          </div>
+
+          <div className="w-full bg-blue-950/40 border border-blue-500/20 h-2.5 rounded-full overflow-hidden p-0.5">
+            <div
+              className="bg-gradient-to-r from-blue-500 to-amber-400 h-full rounded-full transition-all duration-500 ease-out"
+              style={{ width: `${Math.max(5, scoutProgress)}%` }}
+            />
+          </div>
+
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between text-[11px] text-[var(--text-3)] gap-1">
+            <span>Server-Hintergrund aktiv: Du kannst den Tab wechseln oder andere CRM-Funktionen nutzen – der Scout bricht nicht ab.</span>
+            <span className="text-amber-300/90 font-medium shrink-0">0€ LLM-Kosten (Reine Skripte & Heuristiken)</span>
+          </div>
+        </div>
+      )}
+
+      {/* Fehler-Meldung */}
+      {scoutError && (
+        <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-300 flex items-center gap-2.5 animate-fade-in">
+          <ShieldAlert className="w-4 h-4 shrink-0 text-red-400" />
+          <span>{scoutError}</span>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-2.5 rounded-xl border bg-[var(--surface)] text-[var(--text)] border-emerald-500/40 shadow-xl animate-fade-in text-xs font-semibold">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
 
       {/* Trichter-Visualisierung */}
       {funnelStats && (
@@ -436,7 +569,7 @@ export function ScoutV4Beta() {
       )}
 
       {/* Ergebnis-Bereich mit Umschalter */}
-      {hotLeads.length > 0 && (
+      {(hotLeads.length > 0 || poolLeads.length > 0) && (
         <div className="space-y-4">
           {/* Umschalter: Hot Walk-In Fokus vs. Gesamter Wien-Pool */}
           <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-3" style={{ borderColor: "var(--border)" }}>
@@ -467,7 +600,7 @@ export function ScoutV4Beta() {
                 }`}
               >
                 <Layers className="w-3.5 h-3.5 text-blue-400" />
-                <span>Gesamter Wien-Pool ({hotLeads.length})</span>
+                <span>Gesamter Wien-Pool ({poolLeads.length})</span>
               </button>
             </div>
 

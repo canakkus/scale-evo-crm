@@ -11,19 +11,66 @@ export async function POST(request: Request) {
 
     const body = await request.json().catch(() => ({}));
     const resultIds = Array.isArray(body.resultIds) ? body.resultIds : [];
+    const directLeads = Array.isArray(body.leads) ? body.leads : [];
 
-    if (resultIds.length === 0) {
-      return NextResponse.json({ error: "Keine Ergebnis-IDs übergeben." }, { status: 400 });
+    if (resultIds.length === 0 && directLeads.length === 0) {
+      return NextResponse.json({ error: "Keine Datensätze zum Importieren übergeben." }, { status: 400 });
     }
 
+    let importedCount = 0;
+
+    // 1. Direct Leads Import (z. B. aus Lead Scout 4.0 Client-State)
+    if (directLeads.length > 0) {
+      for (const lead of directLeads) {
+        if (!lead.companyName) continue;
+
+        const bestSlot = lead.bestVisitTime?.recommendedWindow;
+        const reasons = Array.isArray(lead.opportunityReasons) ? lead.opportunityReasons.join(", ") : "";
+
+        const notes = [
+          `[Scout 4.0 Walk-In]`,
+          bestSlot ? `Beste Besuchszeit: ${bestSlot}` : null,
+          reasons ? `Hebel: ${reasons}` : null,
+        ]
+          .filter(Boolean)
+          .join("\n");
+
+        await prisma.lead.create({
+          data: {
+            companyName: lead.companyName,
+            address: lead.address,
+            city: lead.city || "Wien",
+            phone: lead.phone,
+            website: lead.website,
+            industry: lead.industry || "Gastronomie",
+            googleMapsUrl: lead.googleMapsUrl,
+            googleRating: lead.googleRating,
+            reviewCount: lead.reviewCount,
+            source: "Night Scout 4.0",
+            acquisitionType: "WALK_IN",
+            status: "NEW",
+            priority: "HIGH",
+            isFocus: true,
+            notes,
+            createdById: user.id,
+          },
+        });
+        importedCount++;
+      }
+
+      return NextResponse.json({
+        success: true,
+        importedCount,
+      });
+    }
+
+    // 2. ScoutResult IDs Import
     const scoutResults = await prisma.scoutResult.findMany({
       where: {
         id: { in: resultIds },
         leadId: null, // nur noch nicht importierte
       },
     });
-
-    let importedCount = 0;
 
     for (const res of scoutResults) {
       const raw = (res.rawData as any) || {};
