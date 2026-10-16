@@ -6,23 +6,36 @@ export type PopularTimeSlot = {
   confidence: "high" | "medium";
 };
 
+export type PlacesOpeningHoursInput = {
+  periods?: Array<{
+    open?: { day?: number; hour?: number; minute?: number };
+    close?: { day?: number; hour?: number; minute?: number };
+  }>;
+  weekdayDescriptions?: string[];
+} | null;
+
 const DAY_NAMES = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
+
+function formatTime(hour: number, minute: number = 0): string {
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
 
 /**
  * Ermittelt das optimale Walk-In-Besuchsfenster und Stoßzeiten
- * basierend auf Branche, Wochentag und betriebswirtschaftlichen Abläufen.
+ * basierend auf echten Google-Öffnungszeiten (falls vorhanden), Branche, Wochentag
+ * und betriebswirtschaftlichen Abläufen.
  */
 export function calculateBestVisitSlot(
   industry: string | null | undefined,
   types: string[] = [],
-  dayIndex: number = new Date().getDay()
+  dayIndex: number = new Date().getDay(),
+  openingHours?: PlacesOpeningHoursInput
 ): PopularTimeSlot {
   const currentDay = DAY_NAMES[dayIndex] || "Heute";
   const ind = (industry || "").toLowerCase();
   const typesStr = types.join(" ").toLowerCase();
 
-  // 1. Gastronomie / Restaurants / Pizzerien / Cafés
-  if (
+  const isGastro =
     ind.includes("restaurant") ||
     ind.includes("pizz") ||
     ind.includes("gastro") ||
@@ -30,8 +43,78 @@ export function calculateBestVisitSlot(
     ind.includes("bar") ||
     ind.includes("imbiss") ||
     typesStr.includes("restaurant") ||
-    typesStr.includes("cafe")
-  ) {
+    typesStr.includes("cafe") ||
+    typesStr.includes("bar");
+
+  const isBeauty =
+    ind.includes("barber") ||
+    ind.includes("friseur") ||
+    ind.includes("hair") ||
+    ind.includes("beauty") ||
+    ind.includes("nagel") ||
+    ind.includes("kosmetik") ||
+    ind.includes("spa") ||
+    ind.includes("massage") ||
+    typesStr.includes("hair_care") ||
+    typesStr.includes("beauty_salon");
+
+  // 0. Echte Google-Öffnungszeiten auswerten, falls vorhanden
+  if (openingHours?.periods && openingHours.periods.length > 0) {
+    const todayPeriods = openingHours.periods.filter((p) => p.open?.day === dayIndex);
+
+    // Heute komplett geschlossen (Ruhetag laut Google Places)
+    if (todayPeriods.length === 0) {
+      // Nächsten offenen Werktag suchen
+      let nextOpenDayIdx = (dayIndex + 1) % 7;
+      let nextOpenPeriod = openingHours.periods.find((p) => p.open?.day === nextOpenDayIdx);
+      for (let offset = 1; offset <= 7; offset++) {
+        const candidateDay = (dayIndex + offset) % 7;
+        const found = openingHours.periods.find((p) => p.open?.day === candidateDay);
+        if (found) {
+          nextOpenDayIdx = candidateDay;
+          nextOpenPeriod = found;
+          break;
+        }
+      }
+      const nextDayName = DAY_NAMES[nextOpenDayIdx] || "Nächster Werktag";
+      const openHour = nextOpenPeriod?.open?.hour ?? (isGastro ? 14 : 10);
+
+      if (isGastro && openHour >= 16) {
+        return {
+          dayName: nextDayName,
+          recommendedWindow: `${nextDayName} ${formatTime(openHour)} – ${formatTime(openHour + 1, 30)} Uhr (Heute Ruhetag)`,
+          avoidWindow: `${currentDay} ganztägig geschlossen & ab ${formatTime(openHour + 2)} Uhr Abendgeschäft`,
+          reason: `Laut Google heute geschlossen. Reiner Abendbetrieb – am besten direkt zur Öffnung um ${formatTime(openHour)} Uhr vor dem Gästeansturm vorbeigehen.`,
+          confidence: "high",
+        };
+      }
+
+      return {
+        dayName: nextDayName,
+        recommendedWindow: isGastro
+          ? `${nextDayName} 14:30 – 16:15 Uhr (Heute Ruhetag)`
+          : `${nextDayName} 10:00 – 11:30 Uhr (Heute Ruhetag)`,
+        avoidWindow: `${currentDay} ganztägig geschlossen (laut Google Öffnungszeiten)`,
+        reason: `Betrieb hat heute (${currentDay}) laut Google Ruhetag. Besuch auf ${nextDayName} legen.`,
+        confidence: "high",
+      };
+    }
+
+    // Heute geöffnet: Prüfen, ob reiner Abendbetrieb (öffnet erst ab 16:00 Uhr)
+    const earliestOpenHour = Math.min(...todayPeriods.map((p) => p.open?.hour ?? 9));
+    if (earliestOpenHour >= 16) {
+      return {
+        dayName: currentDay,
+        recommendedWindow: `${currentDay} ${formatTime(earliestOpenHour)} – ${formatTime(earliestOpenHour + 1, 15)} Uhr`,
+        avoidWindow: `Vor ${formatTime(earliestOpenHour)} Uhr (geschlossen) & ab ${formatTime(earliestOpenHour + 2)} Uhr (Abend-Stoßzeit)`,
+        reason: `Abendlokal (öffnet erst um ${formatTime(earliestOpenHour)} Uhr). Direkt beim Aufsperren hat die Leitung noch Ruhe für ein kurzes Gespräch.`,
+        confidence: "high",
+      };
+    }
+  }
+
+  // 1. Gastronomie / Restaurants / Pizzerien / Cafés
+  if (isGastro) {
     if (dayIndex === 0 || dayIndex === 6) {
       // Wochenende: Samstag/Sonntag sehr ungünstig für Kaltakquise
       return {
@@ -53,18 +136,7 @@ export function calculateBestVisitSlot(
   }
 
   // 2. Beauty / Friseur / Barber / Nagelstudio / Kosmetik
-  if (
-    ind.includes("barber") ||
-    ind.includes("friseur") ||
-    ind.includes("hair") ||
-    ind.includes("beauty") ||
-    ind.includes("nagel") ||
-    ind.includes("kosmetik") ||
-    ind.includes("spa") ||
-    ind.includes("massage") ||
-    typesStr.includes("hair_care") ||
-    typesStr.includes("beauty_salon")
-  ) {
+  if (isBeauty) {
     if (dayIndex === 1) {
       // Montag haben viele Friseure/Barber Ruhetag
       return {
@@ -105,3 +177,4 @@ export function calculateBestVisitSlot(
     confidence: "high",
   };
 }
+

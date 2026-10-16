@@ -63,7 +63,41 @@ export function getNightScoutState(): NightScoutState {
 const PLACES_SEARCH_URL = "https://places.googleapis.com/v1/places:searchText";
 const PLACES_FIELD_MASK =
   "places.displayName,places.formattedAddress,places.internationalPhoneNumber,places.websiteUri," +
-  "places.rating,places.userRatingCount,places.googleMapsUri,places.types,places.primaryTypeDisplayName,places.location";
+  "places.rating,places.userRatingCount,places.googleMapsUri,places.types,places.primaryTypeDisplayName," +
+  "places.location,places.businessStatus,places.regularOpeningHours";
+
+const SOCIAL_ONLY_HOSTS = [
+  "instagram.com",
+  "facebook.com",
+  "linktr.ee",
+  "beacons.ai",
+  "msha.ke",
+  "taplink.cc",
+  "campsite.bio",
+];
+
+function parseSocialReplacement(rawUrl: string | null): {
+  isSocialOnly: boolean;
+  instagramHandle: string | null;
+} {
+  if (!rawUrl) return { isSocialOnly: false, instagramHandle: null };
+  try {
+    const url = new URL(rawUrl.startsWith("http") ? rawUrl : `https://${rawUrl}`);
+    const host = url.hostname.replace(/^www\./, "").toLowerCase();
+    const isSocialOnly = SOCIAL_ONLY_HOSTS.some((h) => host === h || host.endsWith(`.${h}`));
+    let instagramHandle: string | null = null;
+
+    if (host.includes("instagram.com")) {
+      const firstSegment = url.pathname.split("/").filter(Boolean)[0];
+      if (firstSegment && !["p", "reel", "explore", "stories", "share"].includes(firstSegment.toLowerCase())) {
+        instagramHandle = `@${firstSegment}`;
+      }
+    }
+    return { isSocialOnly, instagramHandle };
+  } catch {
+    return { isSocialOnly: false, instagramHandle: null };
+  }
+}
 
 async function fetchPlacesForQuery(query: string, maxResults: number = 20) {
   const apiKey = process.env.GOOGLE_PLACES_API_KEY;
@@ -96,8 +130,8 @@ async function fetchPlacesForQuery(query: string, maxResults: number = 20) {
 }
 
 /**
- * Schneller, asynchroner Website-Check mit hartem 3.5s Timeout.
- * Erkennt fehlende Viewports, altes Copyright und Baukasten-Header ohne Blockaden.
+ * Schneller, asynchroner Website-Check mit hartem 3.5s Timeout (inkl. Body-Stream).
+ * Erkennt fehlende Viewports, fehlendes HTTPS, altes Copyright und Legacy-Baukästen ohne HSTS/WP False-Positives.
  */
 async function fastWebsiteAudit(rawUrl: string): Promise<{
   reachable: boolean;
@@ -106,10 +140,12 @@ async function fastWebsiteAudit(rawUrl: string): Promise<{
   isOldCopyright: boolean;
   isOldCms: boolean;
   issueCount: number;
+  detectedIgHandle: string | null;
 }> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 3500);
+
   try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 3500);
     const targetUrl = rawUrl.startsWith("http") ? rawUrl : `https://${rawUrl}`;
 
     const res = await fetch(targetUrl, {
@@ -123,38 +159,78 @@ async function fastWebsiteAudit(rawUrl: string): Promise<{
       redirect: "follow",
     }).catch(() => null);
 
-    clearTimeout(timer);
-    if (!res) {
-      return { reachable: false, hasMobileIssue: true, hasSslIssue: true, isOldCopyright: false, isOldCms: false, issueCount: 2 };
+    if (!res || !res.ok) {
+      return {
+        reachable: false,
+        hasMobileIssue: false,
+        hasSslIssue: false,
+        isOldCopyright: false,
+        isOldCms: false,
+        issueCount: 1,
+        detectedIgHandle: null,
+      };
     }
 
     const html = (await res.text().catch(() => "")).slice(0, 50000); // Erste 50KB reichen völlig
-    const headers = Object.fromEntries(res.headers.entries());
+    const lowerHtml = html.toLowerCase();
 
-    const hasMobileIssue = !html.includes("viewport") || !html.includes("width=device-width");
-    const hasSslIssue = !targetUrl.startsWith("https://") || !headers["strict-transport-security"];
+    // Echte HTTPS-Prüfung auf der finalen URL nach Redirects (ohne HSTS-Zwang)
+    const finalUrl = res.url || targetUrl;
+    const hasSslIssue = !finalUrl.toLowerCase().startsWith("https://");
 
-    const copyrightMatch = html.match(/©|copyright|all rights reserved/i);
-    let isOldCopyright = false;
-    if (copyrightMatch && copyrightMatch.index !== undefined) {
-      const surrounding = html.slice(Math.max(0, copyrightMatch.index - 50), copyrightMatch.index + 50);
-      if (surrounding.match(/20(1[0-9]|2[0-1])/)) {
-        isOldCopyright = true;
-      }
-    }
+    // Case-insensitiver Viewport-Check; leere SPA-Shells ohne <body>-Inhalt neutral werten
+    const isSpaShell =
+      html.length < 3500 &&
+      (lowerHtml.includes('id="root"') || lowerHtml.includes('id="__next"') || lowerHtml.includes('id="app"'));
+    const hasMobileIssue =
+      !isSpaShell && (!lowerHtml.includes("viewport") || !lowerHtml.includes("width=device-width"));
 
+    // Copyright-Check (2010 bis 2022 als veraltet werten)
+    const copyrightRegex = /(?:©|&copy;|copyright|all rights reserved)[^<]{0,50}\b(201\d|202[0-2])\b/i;
+    const isOldCopyright = copyrightRegex.test(html);
+
+    // Echte Legacy-/Billig-Baukasten-Signale statt pauschalem WordPress/PHP
     const isOldCms =
-      html.includes("/wp-content/") ||
-      html.includes("joomla") ||
-      html.includes("typo3") ||
-      Boolean(headers["x-powered-by"]?.toLowerCase().includes("php"));
+      lowerHtml.includes("jimdo") ||
+      lowerHtml.includes("ionos") ||
+      lowerHtml.includes("1und1") ||
+      lowerHtml.includes("strato") ||
+      lowerHtml.includes("joomla") ||
+      lowerHtml.includes("typo3") ||
+      lowerHtml.includes("wp-content/themes/twenty1") ||
+      lowerHtml.includes("generator\" content=\"microsoft frontpage");
+
+    // Optional: Instagram-Link direkt auf der bestehenden Website erkennen
+    const igMatch = html.match(/https?:\/\/(?:www\.)?instagram\.com\/([a-zA-Z0-9._]+)/i);
+    const detectedIgHandle =
+      igMatch && !["p", "reel", "explore", "stories", "share"].includes(igMatch[1].toLowerCase())
+        ? `@${igMatch[1]}`
+        : null;
 
     const issueCount =
       (hasMobileIssue ? 1 : 0) + (hasSslIssue ? 1 : 0) + (isOldCopyright ? 1 : 0) + (isOldCms ? 1 : 0);
 
-    return { reachable: true, hasMobileIssue, hasSslIssue, isOldCopyright, isOldCms, issueCount };
+    return {
+      reachable: true,
+      hasMobileIssue,
+      hasSslIssue,
+      isOldCopyright,
+      isOldCms,
+      issueCount,
+      detectedIgHandle,
+    };
   } catch {
-    return { reachable: false, hasMobileIssue: true, hasSslIssue: true, isOldCopyright: false, isOldCms: false, issueCount: 2 };
+    return {
+      reachable: false,
+      hasMobileIssue: false,
+      hasSslIssue: false,
+      isOldCopyright: false,
+      isOldCms: false,
+      issueCount: 1,
+      detectedIgHandle: null,
+    };
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -210,12 +286,15 @@ export async function startNightScoutPipeline(
       });
 
       const previousResults = await prisma.scoutResult.findMany({
+        where: { session: { createdById: userId } },
+        orderBy: { createdAt: "desc" },
         select: { companyName: true, website: true, phone: true },
         take: 2000,
       });
 
       const knownWebsites = new Set<string>();
       const knownPhones = new Set<string>();
+      const deduplicationPool: DuplicateCandidate[] = [...(existingLeads as DuplicateCandidate[])];
 
       for (const l of existingLeads) {
         if (l.website) {
@@ -281,7 +360,7 @@ export async function startNightScoutPipeline(
 
         totalRawFound += rawCandidates.length;
 
-        // Stage 1: Duplikate filtern
+        // Stage 1: Duplikate, geschlossene Betriebe & Großketten filtern
         if (actualRuns > 1) {
           globalNightScoutState.step = `Run ${runNum}/${actualRuns}: Prüfe Duplikate & bestehende Leads...`;
         } else {
@@ -298,6 +377,16 @@ export async function startNightScoutPipeline(
 
           if (!name) continue;
 
+          // Dauerhaft oder vorübergehend geschlossene Betriebe sofort überspringen
+          if (place.businessStatus && place.businessStatus !== "OPERATIONAL") {
+            continue;
+          }
+
+          // Großketten & Touristen-Institutionen (>2.500 Reviews) überspringen (kein Inhaber beim Walk-In greifbar)
+          if ((place.userRatingCount || 0) > 2500) {
+            continue;
+          }
+
           const normWeb = website ? normalizeUrl(website) : null;
           const cleanPhone = phone ? phone.replace(/[^0-9]/g, "") : null;
 
@@ -312,7 +401,7 @@ export async function startNightScoutPipeline(
 
           const dupCheck = findDuplicates(
             { companyName: name, website: normWeb, phone, address },
-            existingLeads as DuplicateCandidate[]
+            deduplicationPool
           );
           if (dupCheck.some((d) => d.confidence === "high" || d.score >= 0.85)) {
             droppedDuplicates++;
@@ -321,6 +410,18 @@ export async function startNightScoutPipeline(
 
           if (normWeb) knownWebsites.add(normWeb);
           if (cleanPhone) knownPhones.add(cleanPhone);
+          deduplicationPool.push({
+            id: `run-${runIdx}-${eligibleCandidates.length}`,
+            companyName: name,
+            website: normWeb,
+            phone,
+            address,
+            city: "Wien",
+            treatwellUrl: null,
+            email: null,
+            instagram: null,
+            googleMapsUrl: place.googleMapsUri || null,
+          });
 
           eligibleCandidates.push(place);
         }
@@ -346,48 +447,95 @@ export async function startNightScoutPipeline(
               const reviewCount = place.userRatingCount || null;
               const googleMapsUrl = place.googleMapsUri || null;
               const types: string[] = place.types || [];
+              const openingHours = place.regularOpeningHours || null;
 
-              let walkInScore = 40;
+              let walkInScore = 25;
               const reasons: string[] = [];
               let websiteStatus: "missing" | "outdated" | "unsecure" | "ok" = "ok";
               let isModern = false;
+              let isInactiveDeadProfile = false;
+
+              // 1. Social-Only / Linktree vorab abfangen (verhindert unnötigen HTML-Audit gegen Login-Walls)
+              const socialCheck = parseSocialReplacement(website);
+              let hasInstagram = Boolean(socialCheck.instagramHandle);
+              let instagramHandle: string | null = socialCheck.instagramHandle;
 
               if (!website) {
-                walkInScore += 35;
+                walkInScore += 45;
                 websiteStatus = "missing";
                 reasons.push("Keine Website vorhanden (Exzellenter Walk-In Hebel)");
+              } else if (socialCheck.isSocialOnly) {
+                walkInScore += 40;
+                websiteStatus = "missing";
+                hasInstagram = true;
+                reasons.push("Nutzt nur Instagram/Linktree als Website-Ersatz");
               } else {
                 const audit = await fastWebsiteAudit(website);
-                if (audit.hasMobileIssue || audit.hasSslIssue || audit.isOldCopyright || audit.isOldCms || audit.issueCount >= 2) {
-                  walkInScore += 25;
-                  websiteStatus = audit.isOldCopyright ? "outdated" : "unsecure";
-                  if (audit.hasMobileIssue) reasons.push("Website nicht mobile-optimiert");
-                  if (audit.isOldCopyright) reasons.push("Veraltetes Website-Copyright");
-                  if (audit.hasSslIssue) reasons.push("Sicherheits- / SSL-Probleme");
-                  if (audit.isOldCms) reasons.push("Altes CMS / Baukasten");
-                } else if (audit.issueCount === 0 && (googleRating || 0) < 4.2) {
+                if (audit.detectedIgHandle) {
+                  hasInstagram = true;
+                  instagramHandle = audit.detectedIgHandle;
+                }
+
+                if (!audit.reachable) {
+                  walkInScore += 35;
+                  websiteStatus = "unsecure";
+                  reasons.push("Website nicht erreichbar / Fehler oder Timeout (>3.5s)");
+                } else if (audit.issueCount === 0) {
+                  // Fehlerfreie, moderne Website unabhängig vom Google-Rating markieren
                   isModern = true;
-                  reasons.push("Moderne Website vorhanden");
+                  websiteStatus = "ok";
+                  reasons.push("Moderne Website ohne technische Mängel");
+                } else {
+                  if (audit.hasSslIssue) {
+                    walkInScore += 20;
+                    websiteStatus = "unsecure";
+                    reasons.push("Kein HTTPS / Unsichere Verbindung");
+                  }
+                  if (audit.hasMobileIssue) {
+                    walkInScore += 20;
+                    if (websiteStatus === "ok") websiteStatus = "outdated";
+                    reasons.push("Website nicht für Smartphones optimiert (Viewport fehlt)");
+                  }
+                  if (audit.isOldCopyright) {
+                    walkInScore += 15;
+                    if (websiteStatus === "ok") websiteStatus = "outdated";
+                    reasons.push("Veraltetes Website-Copyright");
+                  }
+                  if (audit.isOldCms) {
+                    walkInScore += 10;
+                    if (websiteStatus === "ok") websiteStatus = "outdated";
+                    reasons.push("Veralteter Baukasten / Legacy-CMS erkannt");
+                  }
+                  if (hasInstagram) {
+                    walkInScore += 5;
+                    reasons.push(`Auf Instagram präsent (${instagramHandle}), aber Website veraltet`);
+                  }
                 }
               }
 
-              // Social & Linktree Check
-              let hasInstagram = false;
-              let instagramHandle: string | null = null;
-              if (website && (website.includes("instagram.com") || website.includes("linktr.ee"))) {
-                hasInstagram = true;
-                walkInScore += 30;
-                reasons.push("Nutzt Linktree/Instagram als Website-Ersatz");
-              } else if (googleRating && googleRating >= 4.0 && reviewCount && reviewCount >= 15) {
-                walkInScore += 15;
-                reasons.push(`${reviewCount} Google-Bewertungen (${googleRating}★)`);
+              // 2. Unabhängiger Kaufkraft- & Traktions-Check (nicht mehr durch else-if blockiert)
+              if (googleRating && reviewCount) {
+                if (googleRating >= 4.2 && reviewCount >= 50) {
+                  walkInScore += 20;
+                  reasons.push(`Starke Kundenfrequenz: ${reviewCount} Google-Bewertungen (${googleRating}★)`);
+                } else if (googleRating >= 4.0 && reviewCount >= 15) {
+                  walkInScore += 15;
+                  reasons.push(`${reviewCount} Google-Bewertungen (${googleRating}★)`);
+                } else if (reviewCount < 5 && !hasInstagram && !phone) {
+                  isInactiveDeadProfile = true;
+                  walkInScore -= 20;
+                }
+              } else if (!reviewCount && !hasInstagram && !phone) {
+                isInactiveDeadProfile = true;
+                walkInScore -= 20;
               }
 
-              // Popular Times Walk-In Zeitfenster
-              const bestVisitTime = calculateBestVisitSlot(category, types);
+              // 3. Popular Times Walk-In Zeitfenster inkl. echter Google-Öffnungszeiten
+              const bestVisitTime = calculateBestVisitSlot(category, types, new Date().getDay(), openingHours);
 
               return {
                 isModern,
+                isInactiveDeadProfile,
                 item: {
                   companyName: name,
                   address,
@@ -400,7 +548,7 @@ export async function startNightScoutPipeline(
                   reviewCount,
                   hasInstagram,
                   instagramHandle,
-                  walkInScore: Math.min(100, walkInScore),
+                  walkInScore: Math.max(0, Math.min(100, walkInScore)),
                   opportunityReasons: reasons,
                   bestVisitTime,
                   websiteStatus,
@@ -414,6 +562,8 @@ export async function startNightScoutPipeline(
               allScoutedLeads.push(res.item);
               if (res.isModern) {
                 droppedModernWebsites++;
+              } else if (res.isInactiveDeadProfile) {
+                droppedInactiveSocial++;
               } else {
                 filteredCandidates.push(res.item);
               }
@@ -462,12 +612,14 @@ export async function startNightScoutPipeline(
               googleRating: item.googleRating,
               reviewCount: item.reviewCount,
               industry: item.industry,
+              instagramHandle: item.instagramHandle,
               rawData: {
                 walkInScore: item.walkInScore,
                 opportunityReasons: item.opportunityReasons,
                 bestVisitTime: item.bestVisitTime,
                 websiteStatus: item.websiteStatus,
                 hasInstagram: item.hasInstagram,
+                instagramHandle: item.instagramHandle,
               },
             })),
           },
