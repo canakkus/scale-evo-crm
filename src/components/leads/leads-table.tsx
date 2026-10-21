@@ -162,11 +162,12 @@ export function LeadsTable() {
       )
     );
     try {
-      await fetch(`/api/leads/${leadId}`, {
+      const res = await fetch(`/api/leads/${leadId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
       });
+      if (!res.ok) throw new Error("Fehler beim Status-Update");
     } catch (err) {
       console.error(err);
       fetchLeads();
@@ -177,11 +178,12 @@ export function LeadsTable() {
     e.stopPropagation();
     setLeads((prev) => prev.map((l) => (l.id === leadId ? { ...l, acquisitionType: newType } : l)));
     try {
-      await fetch(`/api/leads/${leadId}`, {
+      const res = await fetch(`/api/leads/${leadId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ acquisitionType: newType }),
       });
+      if (!res.ok) throw new Error("Fehler beim Akquise-Update");
     } catch (err) {
       console.error(err);
       fetchLeads();
@@ -962,7 +964,7 @@ export function LeadsTable() {
                             priorityRatedByName={lead.priorityRatedByName || lead.priorityRatedBy?.displayName || lead.priorityRatedBy?.email}
                             priorityRatedAt={lead.priorityRatedAt}
                             variant="table"
-                            onUpdate={(newPrio, newSource) => {
+                            onUpdate={(newPrio, newSource, serverLead) => {
                               setLeads((prev) =>
                                 prev.map((l) =>
                                   l.id === lead.id
@@ -970,8 +972,8 @@ export function LeadsTable() {
                                         ...l,
                                         priority: newPrio,
                                         prioritySource: newSource,
-                                        priorityRatedByName: newSource === "USER" ? (l.priorityRatedByName || "Du") : null,
-                                        priorityRatedAt: newSource === "USER" ? new Date().toISOString() : null,
+                                        priorityRatedByName: serverLead?.priorityRatedByName || (newSource === "USER" ? (l.priorityRatedByName || "Du") : null),
+                                        priorityRatedAt: serverLead?.priorityRatedAt || (newSource === "USER" ? new Date().toISOString() : null),
                                       }
                                     : l
                                 )

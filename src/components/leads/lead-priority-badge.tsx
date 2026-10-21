@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { UserCheck, Sparkles, ChevronDown, RotateCcw, Loader2 } from "lucide-react";
 import type { Priority, PrioritySource } from "@prisma/client";
 import { PRIORITY_LABELS } from "@/lib/constants";
@@ -13,7 +13,7 @@ export type LeadPriorityBadgeProps = {
   priorityRatedByName?: string | null;
   priorityRatedAt?: string | Date | null;
   variant?: "table" | "detail";
-  onUpdate?: (newPriority: Priority, newSource: PrioritySource) => void;
+  onUpdate?: (newPriority: Priority, newSource: PrioritySource, serverLead?: any) => void;
 };
 
 const PRIORITY_THEMES: Record<Priority, { bg: string; tx: string; border: string }> = {
@@ -48,11 +48,13 @@ export function LeadPriorityBadge({
   const [isOpen, setIsOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
 
-  // Sync state if props change
-  if (initialPriority !== currentPriority && !isUpdating) {
-    setCurrentPriority(initialPriority);
-    setCurrentSource(initialSource);
-  }
+  // Sync state cleanly when props change
+  useEffect(() => {
+    if (!isUpdating) {
+      if (initialPriority) setCurrentPriority(initialPriority);
+      if (initialSource) setCurrentSource(initialSource);
+    }
+  }, [initialPriority, initialSource, isUpdating]);
 
   const isUserRated = currentSource === "USER";
   const theme = PRIORITY_THEMES[currentPriority] || PRIORITY_THEMES.MEDIUM;
@@ -82,7 +84,13 @@ export function LeadPriorityBadge({
       });
 
       if (!res.ok) throw new Error("Fehler beim Aktualisieren der Priorität");
-      onUpdate?.(newPriority, "USER" as PrioritySource);
+      const payload = await res.json().catch(() => null);
+      const serverLead = payload?.lead;
+      if (serverLead) {
+        setCurrentPriority(serverLead.priority);
+        setCurrentSource(serverLead.prioritySource);
+      }
+      onUpdate?.(newPriority, "USER" as PrioritySource, serverLead);
     } catch (err) {
       console.error(err);
       setCurrentPriority(prevPriority);
@@ -103,14 +111,14 @@ export function LeadPriorityBadge({
         body: JSON.stringify({ resetPriorityToAuto: true }),
       });
 
-      if (res.ok) {
-        const payload = await res.json().catch(() => null);
-        const updatedPrio = payload?.lead?.priority || "MEDIUM";
-        const updatedSource = payload?.lead?.prioritySource || "SYSTEM";
-        setCurrentPriority(updatedPrio);
-        setCurrentSource(updatedSource);
-        onUpdate?.(updatedPrio, updatedSource);
-      }
+      if (!res.ok) throw new Error("Fehler beim Reset");
+      const payload = await res.json().catch(() => null);
+      const serverLead = payload?.lead;
+      const updatedPrio = serverLead?.priority || "MEDIUM";
+      const updatedSource = serverLead?.prioritySource || "SYSTEM";
+      setCurrentPriority(updatedPrio);
+      setCurrentSource(updatedSource);
+      onUpdate?.(updatedPrio, updatedSource, serverLead);
     } catch (err) {
       console.error(err);
     } finally {

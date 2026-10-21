@@ -578,13 +578,13 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
               priorityRatedByName={lead.priorityRatedByName || lead.priorityRatedBy?.displayName || lead.priorityRatedBy?.email}
               priorityRatedAt={lead.priorityRatedAt}
               variant="detail"
-              onUpdate={(newPrio, newSource) => {
+              onUpdate={(newPrio, newSource, serverLead) => {
                 setLead((prev: any) => ({
                   ...prev,
                   priority: newPrio,
                   prioritySource: newSource,
-                  priorityRatedByName: newSource === "USER" ? (prev.priorityRatedByName || "Du") : null,
-                  priorityRatedAt: newSource === "USER" ? new Date().toISOString() : null,
+                  priorityRatedByName: serverLead?.priorityRatedByName || (newSource === "USER" ? (prev.priorityRatedByName || "Du") : null),
+                  priorityRatedAt: serverLead?.priorityRatedAt || (newSource === "USER" ? new Date().toISOString() : null),
                 }));
                 onUpdate();
               }}
