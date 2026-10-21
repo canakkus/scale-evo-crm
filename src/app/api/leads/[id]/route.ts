@@ -81,6 +81,7 @@ export async function GET(
       include: {
         createdBy: { select: { id: true, displayName: true, email: true } },
         assignedTo: { select: { id: true, displayName: true, email: true } },
+        priorityRatedBy: { select: { id: true, displayName: true, email: true } },
         interactions: {
           orderBy: { createdAt: "desc" },
           include: { createdBy: { select: { displayName: true } } },
@@ -251,7 +252,23 @@ export async function PATCH(
           ? false
           : (data.isFocus !== undefined ? Boolean(data.isFocus) : existingLead.isFocus),
         status: data.status !== undefined ? data.status : existingLead.status,
-        priority: data.priority !== undefined ? data.priority : existingLead.priority,
+        ...(data.resetPriorityToAuto
+          ? {
+              priority: existingLead.score >= 70 ? "HIGH" : existingLead.score >= 40 ? "MEDIUM" : "LOW",
+              prioritySource: "SYSTEM",
+              priorityRatedAt: null,
+              priorityRatedById: null,
+              priorityRatedByName: null,
+            }
+          : data.priority !== undefined
+          ? {
+              priority: data.priority,
+              prioritySource: "USER",
+              priorityRatedAt: new Date(),
+              priorityRatedById: user.id,
+              priorityRatedByName: (user.user_metadata?.displayName as string) || (user.email ? user.email.split("@")[0] : "User"),
+            }
+          : {}),
         score: data.score !== undefined ? parseInt(data.score, 10) : existingLead.score,
         lastContactAt: data.lastContactAt !== undefined ? (data.lastContactAt ? new Date(data.lastContactAt) : null) : existingLead.lastContactAt,
         nextFollowUpAt: data.nextFollowUpAt !== undefined ? (data.nextFollowUpAt ? new Date(data.nextFollowUpAt) : null) : existingLead.nextFollowUpAt,
@@ -263,6 +280,7 @@ export async function PATCH(
       include: {
         createdBy: { select: { id: true, displayName: true, email: true } },
         assignedTo: { select: { id: true, displayName: true, email: true } },
+        priorityRatedBy: { select: { id: true, displayName: true, email: true } },
       },
     });
 

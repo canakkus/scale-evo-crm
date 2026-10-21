@@ -26,7 +26,8 @@ import {
   Ban,
   ShieldAlert,
 } from "lucide-react";
-import { StatusBadge, PriorityDot } from "@/components/ui/status-badge";
+import { StatusBadge, PriorityDot, STATUS_STYLES } from "@/components/ui/status-badge";
+import { LeadPriorityBadge } from "@/components/leads/lead-priority-badge";
 import { LeadFormModal } from "@/components/leads/lead-form-modal";
 import { LeadDetailModal } from "@/components/leads/lead-detail-modal";
 import { STATUS_LABELS, INDUSTRIES } from "@/lib/constants";
@@ -140,6 +141,31 @@ export function LeadsTable() {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "NOT_RELEVANT" }),
+      });
+    } catch (err) {
+      console.error(err);
+      fetchLeads();
+    }
+  }
+
+  async function handleQuickChangeStatus(leadId: string, newStatus: LeadStatus, e: React.MouseEvent | React.ChangeEvent) {
+    e.stopPropagation();
+    setLeads((prev) =>
+      prev.map((l) =>
+        l.id === leadId
+          ? {
+              ...l,
+              status: newStatus,
+              isFocus: newStatus === "NOT_RELEVANT" ? false : l.isFocus,
+            }
+          : l
+      )
+    );
+    try {
+      await fetch(`/api/leads/${leadId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
       });
     } catch (err) {
       console.error(err);
@@ -882,15 +908,35 @@ export function LeadsTable() {
                         </div>
                       </td>
 
-                      {/* Typ & Status */}
+                      {/* Typ, Status & Priorität */}
                       <td className="px-5 py-4 align-top" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex flex-col gap-2 items-start">
-                          <StatusBadge status={lead.status} />
+                        <div className="flex flex-col gap-1.5 items-start">
+                          {/* Status Tag als Dropdown */}
+                          <div className="relative">
+                            <select
+                              value={lead.status}
+                              onChange={(e) => handleQuickChangeStatus(lead.id, e.target.value as LeadStatus, e)}
+                              className="text-xs font-semibold px-2 py-0.5 rounded-md border outline-none cursor-pointer transition-all hover:opacity-90 tracking-wide"
+                              style={{
+                                background: STATUS_STYLES[lead.status as LeadStatus]?.bg || "var(--status-new-bg)",
+                                color: STATUS_STYLES[lead.status as LeadStatus]?.tx || "var(--status-new-tx)",
+                                borderColor: "rgba(255, 255, 255, 0.12)",
+                              }}
+                            >
+                              {Object.entries(STATUS_LABELS).map(([k, lbl]) => (
+                                <option key={k} value={k} className="bg-[var(--surface)] text-[var(--text)]">
+                                  {lbl}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          {/* Akquise-Kanal Dropdown */}
                           <div className="relative">
                             <select
                               value={lead.acquisitionType || "CALL"}
                               onChange={(e) => handleQuickChangeAcquisition(lead.id, e.target.value, e)}
-                              className="text-xs font-semibold px-2 py-1 rounded-md border outline-none cursor-pointer transition-all hover:opacity-90"
+                              className="text-xs font-semibold px-2 py-0.5 rounded-md border outline-none cursor-pointer transition-all hover:opacity-90"
                               style={
                                 lead.acquisitionType === "DM"
                                   ? { background: "var(--channel-dm-bg)", color: "var(--channel-dm-tx)", borderColor: "rgba(236,72,153,0.3)" }
@@ -907,6 +953,31 @@ export function LeadsTable() {
                               <option value="EMAIL" className="bg-[var(--surface)] text-[var(--text)]">E-Mail</option>
                             </select>
                           </div>
+
+                          {/* Priorität & Rating Dropdown Tag */}
+                          <LeadPriorityBadge
+                            leadId={lead.id}
+                            priority={lead.priority}
+                            prioritySource={lead.prioritySource}
+                            priorityRatedByName={lead.priorityRatedByName || lead.priorityRatedBy?.displayName || lead.priorityRatedBy?.email}
+                            priorityRatedAt={lead.priorityRatedAt}
+                            variant="table"
+                            onUpdate={(newPrio, newSource) => {
+                              setLeads((prev) =>
+                                prev.map((l) =>
+                                  l.id === lead.id
+                                    ? {
+                                        ...l,
+                                        priority: newPrio,
+                                        prioritySource: newSource,
+                                        priorityRatedByName: newSource === "USER" ? (l.priorityRatedByName || "Du") : null,
+                                        priorityRatedAt: newSource === "USER" ? new Date().toISOString() : null,
+                                      }
+                                    : l
+                                )
+                              );
+                            }}
+                          />
                         </div>
                       </td>
 

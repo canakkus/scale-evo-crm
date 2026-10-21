@@ -155,6 +155,7 @@ export async function GET(request: Request) {
         include: {
           createdBy: { select: { id: true, displayName: true, email: true } },
           assignedTo: { select: { id: true, displayName: true, email: true } },
+          priorityRatedBy: { select: { id: true, displayName: true, email: true } },
           _count: { select: { interactions: true, audits: true, tasks: true } },
         },
       }),
@@ -233,6 +234,10 @@ export async function POST(request: Request) {
         isFocus: (data.status === "NOT_RELEVANT") ? false : (data.isFocus === true),
         status: data.status || "NEW",
         priority: data.priority || "MEDIUM",
+        prioritySource: data.priority ? "USER" : "SYSTEM",
+        priorityRatedAt: data.priority ? new Date() : null,
+        priorityRatedById: data.priority ? dbUser.id : null,
+        priorityRatedByName: data.priority ? (dbUser.displayName || dbUser.email) : null,
         auditStatus: data.website ? "pending" : "idle",
         score: data.score != null ? parseInt(data.score, 10) : 0,
         ...(coords

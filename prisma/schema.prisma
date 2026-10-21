@@ -69,6 +69,12 @@ enum Priority {
   HIGH
 }
 
+enum PrioritySource {
+  SYSTEM
+  AI
+  USER
+}
+
 enum WebPresence {
   WEBSITE
   TREATWELL_ONLY
@@ -157,6 +163,10 @@ model Lead {
   nextFollowUpAt         DateTime?
   status                 LeadStatus              @default(NEW)
   priority               Priority                @default(MEDIUM)
+  prioritySource         PrioritySource          @default(SYSTEM)
+  priorityRatedAt        DateTime?
+  priorityRatedById      String?                 @db.Uuid
+  priorityRatedByName    String?
   score                  Int                     @default(0)
   scoreReasons           Json?
   opportunityTags        Json?
@@ -203,8 +213,9 @@ model Lead {
   createdById            String                  @db.Uuid
   assignedToId           String?                 @db.Uuid
 
-  createdBy    User           @relation("LeadCreator", fields: [createdById], references: [id], onDelete: Restrict)
-  assignedTo   User?          @relation("LeadAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  createdBy       User           @relation("LeadCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  assignedTo      User?          @relation("LeadAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  priorityRatedBy User?          @relation("LeadPriorityRater", fields: [priorityRatedById], references: [id], onDelete: SetNull)
   interactions Interaction[]
   audits       WebsiteAudit[]
   tasks        Task[]
@@ -241,8 +252,9 @@ model User {
   createdAt              DateTime           @default(now())
   updatedAt              DateTime           @updatedAt
 
-  createdLeads   Lead[]             @relation("LeadCreator")
-  assignedLeads  Lead[]             @relation("LeadAssignee")
+  createdLeads       Lead[]             @relation("LeadCreator")
+  assignedLeads      Lead[]             @relation("LeadAssignee")
+  priorityRatedLeads Lead[]             @relation("LeadPriorityRater")
   journalEntries WorkJournalEntry[]
   journalTodos   JournalTodo[]
   interactions   Interaction[]

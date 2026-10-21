@@ -37,6 +37,7 @@ import {
   AlarmClock,
 } from "lucide-react";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { LeadPriorityBadge } from "@/components/leads/lead-priority-badge";
 import { OutreachLeadPanel } from "@/components/outreach/outreach-lead-panel";
 import { CustomAudioPlayer } from "@/components/ui/custom-audio-player";
 import { LeadAttachments } from "./lead-attachments";
@@ -568,6 +569,26 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                 ))}
               </select>
             </div>
+
+            {/* Priorität & Rating */}
+            <LeadPriorityBadge
+              leadId={lead.id}
+              priority={lead.priority}
+              prioritySource={lead.prioritySource}
+              priorityRatedByName={lead.priorityRatedByName || lead.priorityRatedBy?.displayName || lead.priorityRatedBy?.email}
+              priorityRatedAt={lead.priorityRatedAt}
+              variant="detail"
+              onUpdate={(newPrio, newSource) => {
+                setLead((prev: any) => ({
+                  ...prev,
+                  priority: newPrio,
+                  prioritySource: newSource,
+                  priorityRatedByName: newSource === "USER" ? (prev.priorityRatedByName || "Du") : null,
+                  priorityRatedAt: newSource === "USER" ? new Date().toISOString() : null,
+                }));
+                onUpdate();
+              }}
+            />
 
             {/* Akquise-Weg Switcher */}
             <div>
