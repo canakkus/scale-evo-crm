@@ -89,12 +89,24 @@ export async function POST(request: Request) {
         ? body.priority
         : "HIGH") as Priority;
 
-      const statusValue: LeadStatus = (["NEW", "CONTACTED", "INTERESTED", "QUALIFIED"].includes(body.status)
+      const statusValue: LeadStatus = (["NEW", "RESEARCHED", "CONTACTED", "INTERESTED"].includes(body.status)
         ? body.status
         : "NEW") as LeadStatus;
 
+      // Hunter stage: raw, unfiltered leads. Guy later qualifies/rejects them via /api/agent/leads.
+      const isRaw = String(body.stage || "").toUpperCase() === "RAW";
+
       const followUpDate = body.nextFollowUpAt ? new Date(body.nextFollowUpAt) : null;
       const isValidFollowUp = followUpDate && !isNaN(followUpDate.getTime());
+
+      if (existing && isRaw) {
+        // Raw duplicates are skipped, never enrich/overwrite existing leads.
+        return NextResponse.json({
+          success: true,
+          duplicate: true,
+          lead: { id: existing.id, companyName: existing.companyName, status: existing.status },
+        });
+      }
 
       if (existing) {
         // Update existing lead with enrichment notes & follow-up
@@ -125,14 +137,14 @@ export async function POST(request: Request) {
             email,
             contactPerson: body.contactPerson || null,
             notes: body.notes || "Qualifiziert durch Ultra Agent.",
-            source: body.source || "Ultra Agent (Grok)",
+            source: body.source || (isRaw ? "Hunter (Grok)" : "Ultra Agent (Grok)"),
             status: statusValue,
             priority: priorityValue,
             prioritySource: "SYSTEM",
-            score: typeof body.score === "number" ? body.score : 75,
+            score: typeof body.score === "number" ? body.score : isRaw ? 0 : 75,
             opportunityTags: Array.isArray(body.opportunityTags) ? body.opportunityTags : undefined,
-            enrichmentStatus: "completed",
-            auditStatus: website ? "pending" : "idle",
+            enrichmentStatus: isRaw ? "raw" : "completed",
+            auditStatus: website && !isRaw ? "pending" : "idle",
             createdById: user.id,
             assignedToId: user.id,
             ...(isValidFollowUp ? { nextFollowUpAt: followUpDate } : {}),
@@ -141,7 +153,7 @@ export async function POST(request: Request) {
       }
 
       // Sync follow-up to Apple Calendar & Reminders if scheduled
-      if (isValidFollowUp && followUpDate) {
+      if (isValidFollowUp && followUpDate && !isRaw) {
         try {
           appleSyncResult = await pushToAppleEcosystem({
             userEmail: user.email || FALLBACK_USER_EMAIL,
