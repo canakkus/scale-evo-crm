@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { AlertTriangle, Check, Copy, Phone, Sparkles, AtSign } from "lucide-react";
+import { AlertTriangle, Check, Copy, Phone, Sparkles, AtSign, Flame } from "lucide-react";
 import { CHAR_COLORS, charState, speakingSeconds } from "@/lib/score-visuals";
 import { normalizeInstagramHandle } from "@/lib/utils";
+import { OutreachCopilot } from "./outreach-copilot";
 
 type Channel = "INSTAGRAM_DM" | "PHONE";
 type Tone = "CASUAL_VIENNESE" | "PROFESSIONAL_DU" | "FORMAL_SIE";
@@ -23,13 +24,16 @@ export function OutreachLeadPanel({
   leadId,
   companyName,
   instagram,
+  website,
   onSent,
 }: {
   leadId: string;
   companyName: string;
   instagram: string | null;
+  website?: string | null;
   onSent?: () => void;
 }) {
+  const [panelMode, setPanelMode] = useState<"copilot" | "variants">("copilot");
   const [channel, setChannel] = useState<Channel>(instagram ? "INSTAGRAM_DM" : "PHONE");
   const [tone, setTone] = useState<Tone>("CASUAL_VIENNESE");
   const [variants, setVariants] = useState<Variant[]>([]);
@@ -90,8 +94,51 @@ export function OutreachLeadPanel({
   }
 
   return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
+    <div className="space-y-4">
+      {/* Mode Switcher: Groq Copilot vs. 3 Schnell-Varianten */}
+      <div className="flex items-center justify-between border-b pb-3" style={{ borderColor: "var(--border)" }}>
+        <div className="flex items-center gap-1.5 p-1 rounded-xl border" style={{ borderColor: "var(--border)", background: "var(--surface-2)" }}>
+          <button
+            type="button"
+            onClick={() => setPanelMode("copilot")}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
+            style={{
+              background: panelMode === "copilot" ? "var(--surface)" : "transparent",
+              color: panelMode === "copilot" ? "#f97316" : "var(--text-3)",
+              boxShadow: panelMode === "copilot" ? "var(--shadow-sm)" : "none",
+            }}
+          >
+            <span>⚡ Groq Kaltakquise Copilot</span>
+            <span className="text-[10px] px-1 rounded font-mono font-bold bg-orange-500/15 text-orange-500">Über uns Feed</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setPanelMode("variants")}
+            className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
+            style={{
+              background: panelMode === "variants" ? "var(--surface)" : "transparent",
+              color: panelMode === "variants" ? "var(--text)" : "var(--text-3)",
+              boxShadow: panelMode === "variants" ? "var(--shadow-sm)" : "none",
+            }}
+          >
+            3 Schnell-Varianten
+          </button>
+        </div>
+      </div>
+
+      {panelMode === "copilot" ? (
+        <div className="h-[520px]">
+          <OutreachCopilot
+            leadId={leadId}
+            companyName={companyName}
+            website={website}
+            channel={channel}
+            tone={tone}
+          />
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
         <div className="inline-flex rounded-xl border p-1" style={{ borderColor: "var(--border)" }}>
           {(["INSTAGRAM_DM", "PHONE"] as Channel[]).map((key) => (
             <button
@@ -218,6 +265,8 @@ export function OutreachLeadPanel({
           </button>
         </div>
       ) : null}
+        </div>
+      )}
     </div>
   );
 }

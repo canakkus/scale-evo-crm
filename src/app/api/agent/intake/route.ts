@@ -70,13 +70,15 @@ export async function POST(request: Request) {
     if (body.companyName && typeof body.companyName === "string" && body.companyName.trim()) {
       const companyName = body.companyName.trim();
       const website = body.website?.trim() || null;
+      const treatwellUrl = body.treatwellUrl?.trim() || null;
       const email = body.email?.trim() || null;
 
-      // Duplicate check: Look for existing lead by website, email, or companyName
+      // Duplicate check: Look for existing lead by website, treatwellUrl, email, or companyName
       const existing = await prisma.lead.findFirst({
         where: {
           OR: [
             ...(website ? [{ website: { equals: website, mode: "insensitive" as const } }] : []),
+            ...(treatwellUrl ? [{ treatwellUrl: { equals: treatwellUrl, mode: "insensitive" as const } }] : []),
             ...(email ? [{ email: { equals: email, mode: "insensitive" as const } }] : []),
             { companyName: { equals: companyName, mode: "insensitive" as const } },
           ],
@@ -117,6 +119,7 @@ export async function POST(request: Request) {
             city: body.city || "Wien",
             address: body.address || null,
             website,
+            treatwellUrl,
             instagram: body.instagram || null,
             phone: body.phone || null,
             email,

@@ -9,6 +9,7 @@ import { ProfileSourceLine, type ProfileMeta } from "@/components/ui/profile-sou
 import { CHAR_COLORS, TAG_LABELS, charState, speakingSeconds } from "@/lib/score-visuals";
 import { normalizeInstagramHandle } from "@/lib/utils";
 import { WarmupRail } from "./warmup-rail";
+import { OutreachCopilot } from "./outreach-copilot";
 import type { WarmupState } from "@/lib/outreach-shared";
 
 type QueueLead = {
@@ -80,6 +81,7 @@ export default function OutreachPageComponent() {
   const [focusMode, setFocusMode] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [warmupBusy, setWarmupBusy] = useState(false);
+  const [outreachMode, setOutreachMode] = useState<"variants" | "copilot">("variants");
 
   const focusIndex = Math.max(0, leads.findIndex((lead) => lead.id === activeId));
 
@@ -476,8 +478,51 @@ export default function OutreachPageComponent() {
                 </div>
               </div>
 
-              {/* Aufhänger */}
-              {anchors.length > 0 && (
+              {/* Modus: 3 Schnell-Varianten vs. Groq Copilot */}
+              <div className="mb-4 flex items-center justify-between border-b pb-3" style={{ borderColor: "var(--border)" }}>
+                <div className="flex items-center gap-1.5 p-1 rounded-xl border" style={{ borderColor: "var(--border)", background: "var(--surface-2)" }}>
+                  <button
+                    type="button"
+                    onClick={() => setOutreachMode("copilot")}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
+                    style={{
+                      background: outreachMode === "copilot" ? "var(--surface)" : "transparent",
+                      color: outreachMode === "copilot" ? "#f97316" : "var(--text-3)",
+                      boxShadow: outreachMode === "copilot" ? "var(--shadow-sm)" : "none",
+                    }}
+                  >
+                    <span>⚡ Groq Kaltakquise Copilot</span>
+                    <span className="text-[10px] px-1 rounded font-mono font-bold bg-orange-500/15 text-orange-500">Über uns Feed</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setOutreachMode("variants")}
+                    className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
+                    style={{
+                      background: outreachMode === "variants" ? "var(--surface)" : "transparent",
+                      color: outreachMode === "variants" ? "var(--text)" : "var(--text-3)",
+                      boxShadow: outreachMode === "variants" ? "var(--shadow-sm)" : "none",
+                    }}
+                  >
+                    3 Schnell-Varianten
+                  </button>
+                </div>
+              </div>
+
+              {outreachMode === "copilot" ? (
+                <div className="h-[560px] mb-4">
+                  <OutreachCopilot
+                    leadId={active.id}
+                    companyName={active.companyName}
+                    website={active.website}
+                    channel={channel}
+                    tone={tone}
+                  />
+                </div>
+              ) : (
+                <>
+                  {/* Aufhänger */}
+                  {anchors.length > 0 && (
                 <div className="mb-3 flex items-center gap-2 rounded-lg px-3 py-2" style={{ background: "var(--surface-2)" }}>
                   <Pin className="h-3.5 w-3.5 shrink-0" style={{ color: "var(--accent)" }} />
                   <span className="text-xs" style={{ color: "var(--text-2)" }}>Aufhänger:</span>
@@ -589,9 +634,12 @@ export default function OutreachPageComponent() {
                   <Check className="h-4 w-4" /> {receipt}
                 </div>
               )}
+                </>
+              )}
             </div>
 
             {/* ---- Sticky Footer / Bestätigungs-Balken ---- */}
+            {outreachMode === "variants" && (
             <div ref={confirmRef} className="shrink-0 border-t" style={{ borderColor: "var(--border)" }}>
               {confirmOpen ? (
                 <div
@@ -646,6 +694,7 @@ export default function OutreachPageComponent() {
                 </div>
               )}
             </div>
+            )}
           </>
         )}
       </section>

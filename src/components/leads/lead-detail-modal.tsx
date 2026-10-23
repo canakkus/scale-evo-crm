@@ -1422,6 +1422,7 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                   leadId={lead.id}
                   companyName={lead.companyName}
                   instagram={lead.instagram ?? null}
+                  website={lead.website ?? null}
                   onSent={onUpdate}
                 />
               ) : activeTab === "timeline" ? (
