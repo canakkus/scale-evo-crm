@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import type { LeadStatus } from "@prisma/client";
+import { pushToAppleEcosystem } from "@/services/apple-bridge";
+import type { LeadStatus, Priority, InteractionType, TaskCategory } from "@prisma/client";
+
+const FALLBACK_USER_EMAIL = "canakkus378@gmail.com";
 
 function isAuthorized(request: Request): boolean {
   const configured = process.env.AGENT_API_SECRET || "ultra_scaleevo_auth_99f2a71b";
@@ -15,85 +18,336 @@ const unauthorized = () =>
   NextResponse.json({ error: "Unauthorized. Invalid agent secret." }, { status: 401 });
 
 /**
- * GET /api/agent/leads?stage=raw&limit=50
- * Guy fetches raw leads from Hunter. stage=raw (default) | all-counts via ?counts=1 (for Ultra).
+ * GET /api/agent/leads
+ * 
+ * Modes:
+ * 1. Counts (Ultra Manager): ?counts=1
+ * 2. Coach Queue (Cold Calling): ?for=coach&limit=10
+ *    -> Qualified leads with phone number, HIGH/URGENT priority, status TO_CONTACT or overdue FOLLOW_UP
+ * 3. Guy Queue (Raw Intake Triage): ?stage=raw&limit=20 (Default if stage=raw or no params)
+ * 4. General Filter: ?status=...&priority=...&hasPhone=true&limit=...
  */
 export async function GET(request: Request) {
   if (!isAuthorized(request)) return unauthorized();
   const { searchParams } = new URL(request.url);
 
+  // 1. Ultra Counts Mode
   if (searchParams.get("counts")) {
-    const [raw, researched, rejected] = await Promise.all([
+    const [raw, researched, toContact, followUp, rejected] = await Promise.all([
       prisma.lead.count({ where: { enrichmentStatus: "raw" } }),
-      prisma.lead.count({ where: { source: { contains: "Hunter" }, status: "RESEARCHED" } }),
-      prisma.lead.count({ where: { source: { contains: "Hunter" }, status: "NOT_RELEVANT" } }),
+      prisma.lead.count({ where: { status: "RESEARCHED" } }),
+      prisma.lead.count({ where: { status: "TO_CONTACT" } }),
+      prisma.lead.count({ where: { status: "FOLLOW_UP" } }),
+      prisma.lead.count({ where: { status: "NOT_RELEVANT" } }),
     ]);
-    return NextResponse.json({ raw, qualified: researched, rejected });
+    return NextResponse.json({
+      raw,
+      qualified: researched + toContact + followUp,
+      toContact,
+      followUp,
+      rejected,
+    });
   }
 
-  const limit = Math.min(Math.max(Number(searchParams.get("limit")) || 50, 1), 200);
+  const limit = Math.min(Math.max(Number(searchParams.get("limit")) || 20, 1), 100);
+
+  // 2. Coach Mode (Cold Calling Queue)
+  if (searchParams.get("for") === "coach") {
+    const now = new Date();
+    const leads = await prisma.lead.findMany({
+      where: {
+        phone: { not: null },
+        priority: "HIGH",
+        OR: [
+          { status: "TO_CONTACT" },
+          { status: "RESEARCHED" },
+          {
+            status: "FOLLOW_UP",
+            nextFollowUpAt: { lte: now },
+          },
+        ],
+      },
+      orderBy: [
+        { priority: "desc" },
+        { nextFollowUpAt: "asc" },
+        { createdAt: "desc" },
+      ],
+      take: limit,
+      select: {
+        id: true,
+        companyName: true,
+        industry: true,
+        city: true,
+        website: true,
+        phone: true,
+        contactPerson: true,
+        notes: true,
+        status: true,
+        priority: true,
+        score: true,
+        opportunityTags: true,
+        nextFollowUpAt: true,
+        createdAt: true,
+      },
+    });
+
+    return NextResponse.json({
+      queue: "coach",
+      count: leads.length,
+      leads: leads.map((l) => ({
+        id: l.id,
+        companyName: l.companyName,
+        phone: l.phone,
+        contactPerson: l.contactPerson,
+        city: l.city,
+        website: l.website,
+        industry: l.industry,
+        status: l.status,
+        priority: l.priority,
+        score: l.score,
+        opportunityTags: l.opportunityTags,
+        nextFollowUpAt: l.nextFollowUpAt,
+        notes: l.notes,
+      })),
+    });
+  }
+
+  // 3. Stage RAW (Guy Mode) or Default
+  const stage = searchParams.get("stage")?.toLowerCase();
+  const statusParam = searchParams.get("status")?.toUpperCase() as LeadStatus | undefined;
+  const priorityParam = searchParams.get("priority")?.toUpperCase() as Priority | undefined;
+  const hasPhone = searchParams.get("hasPhone") === "true";
+
+  const whereClause: any = {};
+
+  if (stage === "raw" || (!stage && !statusParam)) {
+    whereClause.enrichmentStatus = "raw";
+  } else if (stage === "qualified") {
+    whereClause.enrichmentStatus = { in: ["completed", "idle"] };
+    whereClause.status = { not: "NOT_RELEVANT" };
+  }
+
+  if (statusParam) whereClause.status = statusParam;
+  if (priorityParam) whereClause.priority = priorityParam;
+  if (hasPhone) whereClause.phone = { not: null };
+
   const leads = await prisma.lead.findMany({
-    where: { enrichmentStatus: "raw" },
+    where: whereClause,
     orderBy: { createdAt: "asc" },
     take: limit,
     select: {
-      id: true, companyName: true, industry: true, city: true, address: true,
-      website: true, treatwellUrl: true, instagram: true, phone: true, email: true,
-      contactPerson: true, notes: true, source: true, createdAt: true,
+      id: true,
+      companyName: true,
+      industry: true,
+      city: true,
+      address: true,
+      website: true,
+      treatwellUrl: true,
+      instagram: true,
+      phone: true,
+      email: true,
+      contactPerson: true,
+      notes: true,
+      source: true,
+      status: true,
+      priority: true,
+      score: true,
+      opportunityTags: true,
+      nextFollowUpAt: true,
+      createdAt: true,
     },
   });
+
   return NextResponse.json({ count: leads.length, leads });
 }
 
 /**
  * PATCH /api/agent/leads
- * Guy qualifies or rejects a raw lead.
- * { id, decision: "QUALIFY" | "REJECT", score?, priority?, notes?, opportunityTags?,
- *   website?, email?, phone?, instagram?, contactPerson?, nextFollowUpAt? }
+ * 
+ * Supports:
+ * A) Guy Triage: decision = "QUALIFY" | "REJECT"
+ * B) Coach Call Result:
+ *    - callOutcome: "APPOINTMENT" | "NO_ANSWER" | "CALL_BACK" | "NOT_INTERESTED" | "LOST"
+ *    - appointmentAt: ISO Date string (if APPOINTMENT)
+ *    - followUpAt: ISO Date string (if NO_ANSWER / CALL_BACK)
+ *    - notes: summary of conversation
  */
 export async function PATCH(request: Request) {
   if (!isAuthorized(request)) return unauthorized();
+
   try {
     const body = await request.json();
-    if (!body.id || !["QUALIFY", "REJECT"].includes(body.decision)) {
-      return NextResponse.json({ error: "id and decision (QUALIFY|REJECT) required" }, { status: 400 });
-    }
-    const existing = await prisma.lead.findUnique({ where: { id: body.id } });
-    if (!existing) return NextResponse.json({ error: "Lead not found" }, { status: 404 });
-
-    const note = body.notes
-      ? `${existing.notes ? existing.notes + "\n\n" : ""}[Guy ${new Date().toLocaleDateString("de-AT")}]: ${body.notes}`
-      : existing.notes;
-
-    if (body.decision === "REJECT") {
-      const lead = await prisma.lead.update({
-        where: { id: body.id },
-        data: { status: "NOT_RELEVANT" as LeadStatus, enrichmentStatus: "rejected", notes: note },
-      });
-      return NextResponse.json({ success: true, id: lead.id, status: lead.status });
+    if (!body.id) {
+      return NextResponse.json({ error: "Missing required field: id" }, { status: 400 });
     }
 
-    const followUp = body.nextFollowUpAt ? new Date(body.nextFollowUpAt) : null;
-    const lead = await prisma.lead.update({
+    const lead = await prisma.lead.findUnique({
       where: { id: body.id },
-      data: {
-        status: "RESEARCHED" as LeadStatus,
-        enrichmentStatus: "completed",
-        auditStatus: (body.website || existing.website) ? "pending" : "idle",
-        notes: note,
-        ...(typeof body.score === "number" ? { score: body.score } : {}),
-        ...(["LOW", "MEDIUM", "HIGH", "URGENT"].includes(body.priority) ? { priority: body.priority } : {}),
-        ...(Array.isArray(body.opportunityTags) ? { opportunityTags: body.opportunityTags } : {}),
-        ...(body.website ? { website: body.website } : {}),
-        ...(body.email ? { email: body.email } : {}),
-        ...(body.phone ? { phone: body.phone } : {}),
-        ...(body.instagram ? { instagram: body.instagram } : {}),
-        ...(body.contactPerson ? { contactPerson: body.contactPerson } : {}),
-        ...(followUp && !isNaN(followUp.getTime()) ? { nextFollowUpAt: followUp } : {}),
-      },
+      include: { assignedTo: true },
     });
-    return NextResponse.json({ success: true, id: lead.id, status: lead.status });
+
+    if (!lead) {
+      return NextResponse.json({ error: "Lead not found" }, { status: 404 });
+    }
+
+    // Resolve user for assignments & Apple sync
+    const targetUser = lead.assignedTo || await prisma.user.findFirst({
+      where: { email: { contains: "canakkus378", mode: "insensitive" } },
+    });
+
+    const now = new Date();
+    const dateStamp = now.toLocaleDateString("de-AT");
+
+    // ==========================================
+    // Flow 1: Coach Call Result Logging
+    // ==========================================
+    if (body.callOutcome) {
+      const outcome = String(body.callOutcome).toUpperCase();
+      let newStatus: LeadStatus = lead.status;
+      let nextFollowUp: Date | null = null;
+      let createdTask = null;
+      let appleSyncResult = null;
+
+      const callNote = body.notes
+        ? `\n\n[Coach Call ${dateStamp}]: ${body.notes}`
+        : `\n\n[Coach Call ${dateStamp}]: Outcome ${outcome}`;
+
+      if (outcome === "APPOINTMENT") {
+        newStatus = "APPOINTMENT";
+        if (body.appointmentAt) {
+          const appDate = new Date(body.appointmentAt);
+          if (!isNaN(appDate.getTime())) {
+            nextFollowUp = appDate;
+
+            // Create Task & sync to Apple Calendar & Reminders
+            if (targetUser) {
+              createdTask = await prisma.task.create({
+                data: {
+                  title: `Termin: ${lead.companyName} (${lead.contactPerson || "Inhaber"})`,
+                  description: body.notes || "Telefonisch vereinbarter Termin durch Coach Agent.",
+                  category: "MEETING" as TaskCategory,
+                  priority: "HIGH",
+                  aiGenerated: true,
+                  userId: targetUser.id,
+                  leadId: lead.id,
+                  dueAt: appDate,
+                },
+              });
+
+              try {
+                appleSyncResult = await pushToAppleEcosystem({
+                  userEmail: targetUser.email || FALLBACK_USER_EMAIL,
+                  title: `Call/Meeting: ${lead.companyName}`,
+                  notes: `Ansprechpartner: ${lead.contactPerson || "N/A"}\nTel: ${lead.phone || "N/A"}\nNotizen: ${body.notes || ""}`,
+                  dueDate: appDate,
+                  leadId: lead.id,
+                  leadCompany: lead.companyName,
+                  leadPhone: lead.phone,
+                  leadAddress: [lead.address, lead.city].filter(Boolean).join(", "),
+                  durationMinutes: 30,
+                });
+              } catch (appleErr) {
+                console.error("[Coach] Apple sync error:", appleErr);
+              }
+            }
+          }
+        }
+      } else if (outcome === "NO_ANSWER" || outcome === "CALL_BACK" || outcome === "FOLLOW_UP") {
+        newStatus = "FOLLOW_UP";
+        if (body.followUpAt) {
+          const fuDate = new Date(body.followUpAt);
+          if (!isNaN(fuDate.getTime())) nextFollowUp = fuDate;
+        } else {
+          // Default: 2 business days later
+          nextFollowUp = new Date(now.getTime() + 48 * 60 * 60 * 1000);
+        }
+      } else if (outcome === "NOT_INTERESTED" || outcome === "LOST") {
+        newStatus = "NOT_RELEVANT";
+      }
+
+      // Record interaction log
+      if (targetUser) {
+        await prisma.interaction.create({
+          data: {
+            leadId: lead.id,
+            createdById: targetUser.id,
+            type: "COLD_CALL" as InteractionType,
+            note: `[Call ${outcome}]: ${body.notes || "N/A"}`,
+          },
+        });
+      }
+
+      const updatedLead = await prisma.lead.update({
+        where: { id: lead.id },
+        data: {
+          status: newStatus,
+          notes: (lead.notes || "") + callNote,
+          nextFollowUpAt: nextFollowUp,
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        action: "call_logged",
+        lead: {
+          id: updatedLead.id,
+          companyName: updatedLead.companyName,
+          status: updatedLead.status,
+          nextFollowUpAt: updatedLead.nextFollowUpAt,
+        },
+        task: createdTask ? { id: createdTask.id, dueAt: createdTask.dueAt } : null,
+        appleSync: appleSyncResult,
+      });
+    }
+
+    // ==========================================
+    // Flow 2: Guy Triage (QUALIFY / REJECT)
+    // ==========================================
+    if (body.decision) {
+      const decision = String(body.decision).toUpperCase();
+      const triageNote = body.notes
+        ? `${lead.notes ? lead.notes + "\n\n" : ""}[Guy ${dateStamp}]: ${body.notes}`
+        : lead.notes;
+
+      if (decision === "REJECT") {
+        const rejectedLead = await prisma.lead.update({
+          where: { id: lead.id },
+          data: {
+            status: "NOT_RELEVANT",
+            enrichmentStatus: "rejected",
+            notes: triageNote,
+          },
+        });
+        return NextResponse.json({ success: true, id: rejectedLead.id, status: rejectedLead.status });
+      }
+
+      // QUALIFY
+      const followUp = body.nextFollowUpAt ? new Date(body.nextFollowUpAt) : null;
+      const qualifiedLead = await prisma.lead.update({
+        where: { id: lead.id },
+        data: {
+          status: "TO_CONTACT", // Qualified leads are immediately ready for Coach
+          enrichmentStatus: "completed",
+          auditStatus: (body.website || lead.website) ? "pending" : "idle",
+          notes: triageNote,
+          ...(typeof body.score === "number" ? { score: body.score } : {}),
+          ...(["LOW", "MEDIUM", "HIGH"].includes(body.priority) ? { priority: body.priority } : {}),
+          ...(Array.isArray(body.opportunityTags) ? { opportunityTags: body.opportunityTags } : {}),
+          ...(body.website ? { website: body.website } : {}),
+          ...(body.email ? { email: body.email } : {}),
+          ...(body.phone ? { phone: body.phone } : {}),
+          ...(body.instagram ? { instagram: body.instagram } : {}),
+          ...(body.contactPerson ? { contactPerson: body.contactPerson } : {}),
+          ...(followUp && !isNaN(followUp.getTime()) ? { nextFollowUpAt: followUp } : {}),
+        },
+      });
+
+      return NextResponse.json({ success: true, id: qualifiedLead.id, status: qualifiedLead.status });
+    }
+
+    return NextResponse.json({ error: "Missing action: provide either callOutcome or decision" }, { status: 400 });
   } catch (error: any) {
+    console.error("[Agent Leads Patch Error]:", error);
     return NextResponse.json({ error: "Failed to update lead", details: error?.message }, { status: 500 });
   }
 }
