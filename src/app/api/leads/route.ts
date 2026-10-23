@@ -30,6 +30,8 @@ export async function GET(request: Request) {
     const createdByIdParam = searchParams.get("createdById")?.trim();
     const assignedToIdParam = searchParams.get("assignedToId")?.trim();
     const webPresence = searchParams.get("webPresence") as WebPresence | null;
+    const enrichmentStatusParam = searchParams.get("enrichmentStatus");
+    const sourceParam = searchParams.get("source");
     const industryParam = searchParams.get("industry")?.trim();
     const updatedDate = searchParams.get("updatedDate")?.trim(); // e.g. "today", "yesterday", "thisWeek", or "2026-08-27"
     const sortBy = searchParams.get("sortBy")?.trim() || "updatedAt";
@@ -63,6 +65,19 @@ export async function GET(request: Request) {
       where.status = { notIn: ["NOT_RELEVANT", "LOST"] };
     }
     if (webPresence) where.webPresence = webPresence;
+    if (enrichmentStatusParam) where.enrichmentStatus = enrichmentStatusParam;
+    if (sourceParam) {
+      if (sourceParam === "bot") {
+        where.source = { contains: "Hunter" };
+      } else if (sourceParam === "manual") {
+        where.OR = [
+          { source: null },
+          { NOT: { source: { contains: "Hunter" } } },
+        ];
+      } else {
+        where.source = { contains: sourceParam };
+      }
+    }
 
     if (updatedDate) {
       const now = new Date();

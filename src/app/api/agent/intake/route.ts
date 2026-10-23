@@ -85,16 +85,17 @@ export async function POST(request: Request) {
         },
       });
 
-      const priorityValue: Priority = (["LOW", "MEDIUM", "HIGH", "URGENT"].includes(body.priority)
+      // Hunter stage: raw, unfiltered leads. Guy later qualifies/rejects them via /api/agent/leads.
+      const isRaw = String(body.stage || "").toUpperCase() === "RAW";
+
+      // Raw leads default to LOW priority so they never pollute high-priority queues before Guy grades them.
+      const priorityValue: Priority = (["LOW", "MEDIUM", "HIGH"].includes(body.priority)
         ? body.priority
-        : "HIGH") as Priority;
+        : isRaw ? "LOW" : "HIGH") as Priority;
 
       const statusValue: LeadStatus = (["NEW", "RESEARCHED", "CONTACTED", "INTERESTED"].includes(body.status)
         ? body.status
         : "NEW") as LeadStatus;
-
-      // Hunter stage: raw, unfiltered leads. Guy later qualifies/rejects them via /api/agent/leads.
-      const isRaw = String(body.stage || "").toUpperCase() === "RAW";
 
       const followUpDate = body.nextFollowUpAt ? new Date(body.nextFollowUpAt) : null;
       const isValidFollowUp = followUpDate && !isNaN(followUpDate.getTime());
@@ -123,6 +124,18 @@ export async function POST(request: Request) {
           },
         });
       } else {
+        // Construct prefix if huntQuery / huntCity or campaign provided
+        let leadNotes = body.notes || "";
+        const queryPart = body.huntQuery || body.query;
+        const cityPart = body.huntCity || body.city || "";
+        if (isRaw && (queryPart || cityPart)) {
+          const dateStr = new Date().toLocaleDateString("de-AT");
+          const prefix = `[Hunter: ${[queryPart, cityPart].filter(Boolean).join(" / ")} · ${dateStr}]`;
+          leadNotes = leadNotes ? `${prefix} ${leadNotes}` : prefix;
+        } else if (!leadNotes) {
+          leadNotes = isRaw ? "Rohlead via Hunter Agent." : "Qualifiziert durch Ultra Agent.";
+        }
+
         // Create brand new Lead
         lead = await prisma.lead.create({
           data: {
@@ -136,7 +149,7 @@ export async function POST(request: Request) {
             phone: body.phone || null,
             email,
             contactPerson: body.contactPerson || null,
-            notes: body.notes || "Qualifiziert durch Ultra Agent.",
+            notes: leadNotes,
             source: body.source || (isRaw ? "Hunter (Grok)" : "Ultra Agent (Grok)"),
             status: statusValue,
             priority: priorityValue,

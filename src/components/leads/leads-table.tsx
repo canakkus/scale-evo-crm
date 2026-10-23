@@ -47,6 +47,7 @@ export function LeadsTable() {
   const [acquisitionFilter, setAcquisitionFilter] = useState<string>("");
   const [isFocusFilter, setIsFocusFilter] = useState(false);
   const [relevantOnlyFilter, setRelevantOnlyFilter] = useState(false);
+  const [sourceFilter, setSourceFilter] = useState<"" | "bot_raw" | "bot" | "manual">("");
   const [industryFilters, setIndustryFilters] = useState<string[]>([]);
   const [availableIndustries, setAvailableIndustries] = useState<string[]>([]);
   const [isIndustryDropdownOpen, setIsIndustryDropdownOpen] = useState(false);
@@ -89,6 +90,13 @@ export function LeadsTable() {
       if (acquisitionFilter) params.set("acquisitionType", acquisitionFilter);
       if (isFocusFilter) params.set("isFocus", "true");
       if (relevantOnlyFilter) params.set("relevantOnly", "true");
+      if (sourceFilter === "bot_raw") {
+        params.set("enrichmentStatus", "raw");
+      } else if (sourceFilter === "bot") {
+        params.set("source", "bot");
+      } else if (sourceFilter === "manual") {
+        params.set("source", "manual");
+      }
       if (industryFilters.length > 0) params.set("industry", industryFilters.join(","));
       if (updatedDateFilter) {
         if (updatedDateFilter === "custom") {
@@ -113,7 +121,7 @@ export function LeadsTable() {
     } finally {
       setLoading(false);
     }
-  }, [debouncedSearch, statusFilter, acquisitionFilter, isFocusFilter, relevantOnlyFilter, industryFilters, updatedDateFilter, customDate, page]);
+  }, [debouncedSearch, statusFilter, acquisitionFilter, isFocusFilter, relevantOnlyFilter, sourceFilter, industryFilters, updatedDateFilter, customDate, page]);
 
   async function handleToggleFocus(leadId: string, currentVal: boolean, currentStatus?: string) {
     if (currentStatus === "NOT_RELEVANT" && !currentVal) {
@@ -468,6 +476,63 @@ export function LeadsTable() {
               <Flame className={`w-3.5 h-3.5 ${relevantOnlyFilter ? "text-emerald-400" : ""}`} />
               <span>Nur Relevante</span>
             </button>
+
+            {/* Bot Filter Segmented Buttons */}
+            <div
+              className="inline-flex p-0.5 rounded-xl border max-w-full overflow-x-auto shrink-0 shadow-inner"
+              style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  setSourceFilter((prev) => (prev === "bot_raw" ? "" : "bot_raw"));
+                  setPage(1);
+                }}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
+                  sourceFilter === "bot_raw"
+                    ? "bg-amber-500 text-black shadow-sm font-bold"
+                    : "opacity-75 hover:opacity-100 text-[var(--text-2)]"
+                }`}
+                title="Zeigt nur unqualifizierte Rohleads von Hunter"
+              >
+                <span>⚡</span>
+                <span>Nur RAW ({leads.filter((l) => l.enrichmentStatus === "raw").length > 0 ? "aktiv" : "Bot"})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setSourceFilter((prev) => (prev === "bot" ? "" : "bot"));
+                  setPage(1);
+                }}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
+                  sourceFilter === "bot"
+                    ? "bg-purple-500 text-white shadow-sm font-bold"
+                    : "opacity-75 hover:opacity-100 text-[var(--text-2)]"
+                }`}
+                title="Alle Leads aus der Grok Bot Pipeline (Hunter/Guy)"
+              >
+                <span>🤖</span>
+                <span>Bot-Pipeline</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setSourceFilter((prev) => (prev === "manual" ? "" : "manual"));
+                  setPage(1);
+                }}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
+                  sourceFilter === "manual"
+                    ? "bg-blue-500 text-white shadow-sm font-bold"
+                    : "opacity-75 hover:opacity-100 text-[var(--text-2)]"
+                }`}
+                title="Nur manuell oder via Scout erfasste Leads"
+              >
+                <span>👤</span>
+                <span>Eigene</span>
+              </button>
+            </div>
 
             {/* Refresh Button */}
             <button
@@ -867,6 +932,16 @@ export function LeadsTable() {
                             <Star className={`w-4 h-4 ${lead.isFocus ? "fill-amber-400 text-amber-400" : ""}`} />
                           </button>
                           <span>{lead.companyName}</span>
+                          {lead.enrichmentStatus === "raw" && (
+                            <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30 tracking-wider animate-pulse">
+                              ⚡ RAW
+                            </span>
+                          )}
+                          {lead.source?.includes("Hunter") && (
+                            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-300 border border-purple-500/25">
+                              🤖 Grok
+                            </span>
+                          )}
                           {lead.isFocus && (
                             <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
                               2-Wochen-Fokus

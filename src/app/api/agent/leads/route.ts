@@ -33,19 +33,35 @@ export async function GET(request: Request) {
 
   // 1. Ultra Counts Mode
   if (searchParams.get("counts")) {
-    const [raw, researched, toContact, followUp, rejected] = await Promise.all([
+    const newAppointmentsSince = searchParams.get("newAppointmentsSince");
+    const appointmentSinceDate = newAppointmentsSince ? new Date(newAppointmentsSince) : null;
+
+    const [raw, researched, toContact, followUp, appointments, rejected, newAppointments] = await Promise.all([
       prisma.lead.count({ where: { enrichmentStatus: "raw" } }),
-      prisma.lead.count({ where: { status: "RESEARCHED" } }),
-      prisma.lead.count({ where: { status: "TO_CONTACT" } }),
-      prisma.lead.count({ where: { status: "FOLLOW_UP" } }),
-      prisma.lead.count({ where: { status: "NOT_RELEVANT" } }),
+      // Only count leads sourced by the agent pipeline (Hunter/Guy) for qualified
+      prisma.lead.count({ where: { source: { contains: "Hunter" }, status: "RESEARCHED" } }),
+      prisma.lead.count({ where: { source: { contains: "Hunter" }, status: "TO_CONTACT" } }),
+      prisma.lead.count({ where: { source: { contains: "Hunter" }, status: "FOLLOW_UP" } }),
+      prisma.lead.count({ where: { status: "APPOINTMENT" } }),
+      prisma.lead.count({ where: { source: { contains: "Hunter" }, status: "NOT_RELEVANT" } }),
+      appointmentSinceDate && !isNaN(appointmentSinceDate.getTime())
+        ? prisma.lead.count({
+            where: {
+              status: "APPOINTMENT",
+              updatedAt: { gte: appointmentSinceDate },
+            },
+          })
+        : null,
     ]);
+
     return NextResponse.json({
       raw,
       qualified: researched + toContact + followUp,
       toContact,
       followUp,
+      appointments,
       rejected,
+      ...(newAppointments !== null ? { newAppointmentsSince: newAppointments } : {}),
     });
   }
 
@@ -305,9 +321,16 @@ export async function PATCH(request: Request) {
     // ==========================================
     if (body.decision) {
       const decision = String(body.decision).toUpperCase();
-      const triageNote = body.notes
-        ? `${lead.notes ? lead.notes + "\n\n" : ""}[Guy ${dateStamp}]: ${body.notes}`
-        : lead.notes;
+
+      // Rule: Kein Urteil ohne Notiz!
+      if (!body.notes || typeof body.notes !== "string" || !body.notes.trim()) {
+        return NextResponse.json(
+          { error: "Validation failed: notes is required for decision QUALIFY or REJECT." },
+          { status: 400 }
+        );
+      }
+
+      const triageNote = `${lead.notes ? lead.notes + "\n\n" : ""}[Guy ${dateStamp}]: ${body.notes.trim()}`;
 
       if (decision === "REJECT") {
         const rejectedLead = await prisma.lead.update({
@@ -321,28 +344,39 @@ export async function PATCH(request: Request) {
         return NextResponse.json({ success: true, id: rejectedLead.id, status: rejectedLead.status });
       }
 
-      // QUALIFY
-      const followUp = body.nextFollowUpAt ? new Date(body.nextFollowUpAt) : null;
-      const qualifiedLead = await prisma.lead.update({
-        where: { id: lead.id },
-        data: {
-          status: "TO_CONTACT", // Qualified leads are immediately ready for Coach
-          enrichmentStatus: "completed",
-          auditStatus: (body.website || lead.website) ? "pending" : "idle",
-          notes: triageNote,
-          ...(typeof body.score === "number" ? { score: body.score } : {}),
-          ...(["LOW", "MEDIUM", "HIGH"].includes(body.priority) ? { priority: body.priority } : {}),
-          ...(Array.isArray(body.opportunityTags) ? { opportunityTags: body.opportunityTags } : {}),
-          ...(body.website ? { website: body.website } : {}),
-          ...(body.email ? { email: body.email } : {}),
-          ...(body.phone ? { phone: body.phone } : {}),
-          ...(body.instagram ? { instagram: body.instagram } : {}),
-          ...(body.contactPerson ? { contactPerson: body.contactPerson } : {}),
-          ...(followUp && !isNaN(followUp.getTime()) ? { nextFollowUpAt: followUp } : {}),
-        },
-      });
+      if (decision === "QUALIFY") {
+        // Rule: score & opportunityTags are required when qualifying
+        if (typeof body.score !== "number" || !Array.isArray(body.opportunityTags) || body.opportunityTags.length === 0) {
+          return NextResponse.json(
+            { error: "Validation failed: QUALIFY requires score (number) and opportunityTags (array with at least 1 tag)." },
+            { status: 400 }
+          );
+        }
 
-      return NextResponse.json({ success: true, id: qualifiedLead.id, status: qualifiedLead.status });
+        const followUp = body.nextFollowUpAt ? new Date(body.nextFollowUpAt) : null;
+        const qualifiedLead = await prisma.lead.update({
+          where: { id: lead.id },
+          data: {
+            status: "TO_CONTACT", // Qualified leads are immediately ready for Coach
+            enrichmentStatus: "completed",
+            auditStatus: (body.website || lead.website) ? "pending" : "idle",
+            notes: triageNote,
+            score: body.score,
+            priority: (["LOW", "MEDIUM", "HIGH"].includes(body.priority) ? body.priority : "HIGH") as Priority,
+            opportunityTags: body.opportunityTags,
+            ...(body.website ? { website: body.website } : {}),
+            ...(body.email ? { email: body.email } : {}),
+            ...(body.phone ? { phone: body.phone } : {}),
+            ...(body.instagram ? { instagram: body.instagram } : {}),
+            ...(body.contactPerson ? { contactPerson: body.contactPerson } : {}),
+            ...(followUp && !isNaN(followUp.getTime()) ? { nextFollowUpAt: followUp } : {}),
+          },
+        });
+
+        return NextResponse.json({ success: true, id: qualifiedLead.id, status: qualifiedLead.status });
+      }
+
+      return NextResponse.json({ error: "Invalid decision: must be QUALIFY or REJECT" }, { status: 400 });
     }
 
     return NextResponse.json({ error: "Missing action: provide either callOutcome or decision" }, { status: 400 });
