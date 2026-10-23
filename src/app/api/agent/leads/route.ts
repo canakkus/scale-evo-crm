@@ -58,9 +58,9 @@ export async function GET(request: Request) {
       where: {
         phone: { not: null },
         priority: "HIGH",
+        status: { in: ["TO_CONTACT", "FOLLOW_UP"] },
         OR: [
           { status: "TO_CONTACT" },
-          { status: "RESEARCHED" },
           {
             status: "FOLLOW_UP",
             nextFollowUpAt: { lte: now },
