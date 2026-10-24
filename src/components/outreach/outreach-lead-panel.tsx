@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AlertTriangle, Check, Copy, Phone, Sparkles, AtSign, Flame, CheckCircle2 } from "lucide-react";
 import { CHAR_COLORS, charState, speakingSeconds } from "@/lib/score-visuals";
 import { normalizeInstagramHandle } from "@/lib/utils";
@@ -25,6 +25,7 @@ export function OutreachLeadPanel({
   companyName,
   instagram,
   website,
+  initialScriptText,
   onSent,
   onScriptSelected,
 }: {
@@ -32,20 +33,43 @@ export function OutreachLeadPanel({
   companyName: string;
   instagram: string | null;
   website?: string | null;
+  initialScriptText?: string | null;
   onSent?: () => void;
   onScriptSelected?: (scriptText: string, notes?: string) => void;
 }) {
-  const [panelMode, setPanelMode] = useState<"copilot" | "variants">("copilot");
+  const [panelMode, setPanelMode] = useState<"copilot" | "variants">(initialScriptText ? "variants" : "copilot");
   const [channel, setChannel] = useState<Channel>(instagram ? "INSTAGRAM_DM" : "PHONE");
   const [tone, setTone] = useState<Tone>("CASUAL_VIENNESE");
-  const [variants, setVariants] = useState<Variant[]>([]);
+  const [variants, setVariants] = useState<Variant[]>(
+    initialScriptText
+      ? [{ index: 0, body: initialScriptText, charCount: initialScriptText.length, draftId: null }]
+      : []
+  );
   const [selected, setSelected] = useState(0);
-  const [edited, setEdited] = useState<Record<number, string>>({});
+  const [edited, setEdited] = useState<Record<number, string>>(
+    initialScriptText ? { 0: initialScriptText } : {}
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [receipt, setReceipt] = useState<string | null>(null);
   const [scriptNotice, setScriptNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (initialScriptText) {
+      setVariants([
+        {
+          index: 0,
+          body: initialScriptText,
+          charCount: initialScriptText.length,
+          draftId: null,
+        },
+      ]);
+      setEdited({ 0: initialScriptText });
+      setSelected(0);
+      setPanelMode("variants");
+    }
+  }, [initialScriptText]);
 
   const handle = normalizeInstagramHandle(instagram);
   const charLimit = channel === "PHONE" ? 300 : 400;

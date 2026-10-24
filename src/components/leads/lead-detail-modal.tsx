@@ -50,6 +50,19 @@ type LeadDetailModalProps = {
   onUpdate: () => void;
 };
 
+function extractPitchFromNotes(notes: string): string | null {
+  if (!notes) return null;
+  const matchPitchHebel = notes.match(/🎯\s*PITCH\s*&\s*HEBEL[^\n]*:\s*\n+["„]?([\s\S]*?)["“]?(?=\n\n|\n[🔥•#]|$)/i);
+  if (matchPitchHebel && matchPitchHebel[1]?.trim()) {
+    return matchPitchHebel[1].trim().replace(/^["„]|["“]$/g, "");
+  }
+  const matchScript = notes.match(/📞\s*Ausgewähltes Kaltakquise-Skript[^\n]*:\s*\n+([\s\S]+?)(?=\n\n---|\n\n📞|$)/i);
+  if (matchScript && matchScript[1]?.trim()) {
+    return matchScript[1].trim();
+  }
+  return null;
+}
+
 export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalProps) {
   const [lead, setLead] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -57,6 +70,8 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
   const [notesText, setNotesText] = useState("");
   const [savingNotes, setSavingNotes] = useState(false);
   const [checkingMenu, setCheckingMenu] = useState(false);
+  const [preloadedOutreachText, setPreloadedOutreachText] = useState<string | null>(null);
+  const [copiedPitch, setCopiedPitch] = useState(false);
 
   // Tab State: "timeline" or "gemini"
   const [activeTab, setActiveTab] = useState<"timeline" | "gemini" | "outreach">("timeline");
@@ -1269,6 +1284,7 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                   companyName={lead.companyName}
                   instagram={lead.instagram ?? null}
                   website={lead.website ?? null}
+                  initialScriptText={preloadedOutreachText}
                   onScriptSelected={(scriptText, updatedNotes) => {
                     if (updatedNotes) {
                       setNotesText(updatedNotes);
@@ -1310,17 +1326,126 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                       <label className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--text-2)" }}>
                         Notizen & Besonderheiten
                       </label>
-                      <button
-                        onClick={handleSaveNotes}
-                        disabled={savingNotes}
-                        className="text-xs font-semibold px-3 py-1.5 rounded transition-colors hover:bg-[var(--surface-3)]"
-                        style={{ background: "var(--surface-2)", color: "var(--accent)" }}
-                      >
-                        {savingNotes ? "Speichert…" : "Notiz Speichern"}
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const pitch = extractPitchFromNotes(notesText);
+                            if (pitch) setPreloadedOutreachText(pitch);
+                            setActiveTab("outreach");
+                          }}
+                          className="text-xs font-semibold px-2.5 py-1.5 rounded transition-colors border hover:bg-[var(--surface-3)] flex items-center gap-1.5 text-orange-400"
+                          style={{ borderColor: "rgba(249, 115, 22, 0.35)", background: "var(--surface-2)" }}
+                          title="Zum Outreach-Copilot springen"
+                        >
+                          <Send className="w-3 h-3" />
+                          <span>Zum Outreach</span>
+                        </button>
+                        <button
+                          onClick={handleSaveNotes}
+                          disabled={savingNotes}
+                          className="text-xs font-semibold px-3 py-1.5 rounded transition-colors hover:bg-[var(--surface-3)]"
+                          style={{ background: "var(--surface-2)", color: "var(--accent)" }}
+                        >
+                          {savingNotes ? "Speichert…" : "Notiz Speichern"}
+                        </button>
+                      </div>
                     </div>
+
+                    {/* Anklickbare Pitch- & Hebel-Karte */}
+                    {(() => {
+                      const detectedPitch = extractPitchFromNotes(notesText);
+                      if (!detectedPitch) return null;
+                      return (
+                        <div
+                          className="rounded-xl border p-3.5 space-y-2.5 transition-all shadow-sm animate-fade-in"
+                          style={{
+                            background: "linear-gradient(180deg, var(--surface-2) 0%, var(--surface) 100%)",
+                            borderColor: "rgba(249, 115, 22, 0.4)",
+                          }}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5 text-xs font-bold text-orange-400">
+                              <Sparkles className="w-3.5 h-3.5" />
+                              <span>Kaltakquise-Pitch (Erkannt)</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(detectedPitch);
+                                  setCopiedPitch(true);
+                                  setTimeout(() => setCopiedPitch(false), 2000);
+                                }}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold border transition-all hover:bg-[var(--surface-3)]"
+                                style={{
+                                  borderColor: "var(--border)",
+                                  background: "var(--surface)",
+                                  color: "var(--text)",
+                                }}
+                                title="Pitch kopieren"
+                              >
+                                {copiedPitch ? (
+                                  <>
+                                    <Check className="w-3.5 h-3.5 text-emerald-400" />
+                                    <span className="text-emerald-400 font-bold">Kopiert!</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Copy className="w-3.5 h-3.5 text-orange-400" />
+                                    <span>Kopieren</span>
+                                  </>
+                                )}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setPreloadedOutreachText(detectedPitch);
+                                  setActiveTab("outreach");
+                                }}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold text-white transition-all hover:opacity-90 shadow-sm"
+                                style={{ background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)" }}
+                                title="Pitch direkt im Outreach-Editor laden"
+                              >
+                                <Send className="w-3 h-3" />
+                                <span>In Outreach öffnen</span>
+                              </button>
+                            </div>
+                          </div>
+
+                          <div
+                            onClick={() => {
+                              navigator.clipboard.writeText(detectedPitch);
+                              setCopiedPitch(true);
+                              setTimeout(() => setCopiedPitch(false), 2000);
+                            }}
+                            className="group relative p-3 rounded-lg border text-xs leading-relaxed cursor-pointer transition-all hover:border-orange-500/60 hover:bg-orange-500/5 select-none"
+                            style={{
+                              background: "var(--surface-3)",
+                              borderColor: "var(--border)",
+                              color: "var(--text)",
+                            }}
+                            title="👉 Klicken zum schnellen Kopieren des gesamten Pitchs"
+                          >
+                            <p className="font-medium text-[var(--text)] italic leading-relaxed">
+                              „{detectedPitch}“
+                            </p>
+                            <div className="mt-2 pt-2 border-t flex items-center justify-between text-[11px] text-[var(--text-3)] group-hover:text-orange-400 transition-colors" style={{ borderColor: "var(--border)" }}>
+                              <span className="flex items-center gap-1">
+                                <Copy className="w-3 h-3" />
+                                Klicken zum Kopieren
+                              </span>
+                              <span className="text-emerald-400 font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
+                                {copiedPitch ? "✓ In Zwischenablage kopiert!" : "1-Klick Copy"}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
                     <textarea
-                      rows={14}
+                      rows={extractPitchFromNotes(notesText) ? 8 : 14}
                       className="w-full rounded-md p-4 text-xs border outline-none resize-none leading-relaxed"
                       style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
                       value={notesText}
