@@ -1,10 +1,21 @@
 import { requireAuth } from "@/lib/auth";
+import { getVisibleTasks, listLeadOptions } from "@/lib/tasks-query";
 import { TasksComponent } from "@/components/tasks/tasks-component";
 
 export const metadata = { title: "Productivity Center | Scale Evo CRM" };
 
 export default async function TasksPage() {
-  await requireAuth();
+  const user = await requireAuth();
+  let initialTasks: Awaited<ReturnType<typeof getVisibleTasks>> | null = null;
+  let leadOptions: Awaited<ReturnType<typeof listLeadOptions>> | null = null;
+  try {
+    [initialTasks, leadOptions] = await Promise.all([
+      getVisibleTasks(user, { status: "OPEN" }),
+      listLeadOptions(user),
+    ]);
+  } catch (err) {
+    console.error("[Tasks] Error fetching data:", err);
+  }
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
@@ -17,7 +28,7 @@ export default async function TasksPage() {
         </p>
       </div>
 
-      <TasksComponent />
+      <TasksComponent initialTasks={initialTasks} leadOptions={leadOptions} />
     </div>
   );
 }

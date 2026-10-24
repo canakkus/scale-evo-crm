@@ -1,14 +1,14 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import type { AcquisitionType, LeadStatus } from "@prisma/client";
 import { STATUS_LABELS } from "@/lib/constants";
 import { calculateDistanceKm } from "@/lib/distance";
 import { coordinateKey } from "@/lib/geo";
 import { useUserLocation } from "@/lib/location-context";
-import { LeadDetailModal } from "@/components/leads/lead-detail-modal";
+import { LeadDetailModal } from "@/components/leads/lazy-modals";
 import { useMediaQuery } from "./use-media-query";
 import { EMPTY_FILTERS, MapControls, NO_INDUSTRY, type ChannelFilter, type MapFilters } from "./map-controls";
 import { MapBottomSheet, MapLeadList, MapSidePanel, type SheetStage } from "./map-side-list";
@@ -62,9 +62,10 @@ function matchesFilters(lead: MapLead, filters: MapFilters, skip: FilterSkip): b
   return true;
 }
 
-export function MapShell() {
-  const [allLeads, setAllLeads] = useState<MapLead[]>([]);
-  const [loading, setLoading] = useState(true);
+export function MapShell({ initialLeads }: { initialLeads?: MapLead[] | null }) {
+  const hasInitial = Array.isArray(initialLeads);
+  const [allLeads, setAllLeads] = useState<MapLead[]>(hasInitial ? initialLeads : []);
+  const [loading, setLoading] = useState(!hasInitial);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const [searchInput, setSearchInput] = useState("");
@@ -106,7 +107,12 @@ export function MapShell() {
     [],
   );
 
+  const skipInitialLoad = useRef(hasInitial);
   useEffect(() => {
+    if (skipInitialLoad.current) {
+      skipInitialLoad.current = false;
+      return;
+    }
     void load();
   }, [load]);
 
@@ -340,11 +346,13 @@ export function MapShell() {
         )}
       </div>
 
-      <LeadDetailModal
-        leadId={detailLeadId}
-        onClose={() => setDetailLeadId(null)}
-        onUpdate={() => void load()}
-      />
+      {detailLeadId && (
+        <LeadDetailModal
+          leadId={detailLeadId}
+          onClose={() => setDetailLeadId(null)}
+          onUpdate={() => void load()}
+        />
+      )}
     </div>
   );
 }

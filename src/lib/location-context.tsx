@@ -31,14 +31,43 @@ const STORAGE_KEY_PROMPT = "scale_evo_location_prompt_seen";
 const STORAGE_KEY_MODE = "scale_evo_location_mode";
 const STORAGE_KEY_LIVE_COORDS = "scale_evo_live_coords";
 
-export function LocationProvider({ children }: { children: React.ReactNode }) {
-  const [mode, setMode] = useState<LocationMode>("default");
-  const [coords, setCoords] = useState<Coordinates>(DEFAULT_VIENNA_COORDS);
-  const [label, setLabel] = useState<string>("Wien Zentrum (Standard)");
-  const [address, setAddress] = useState<string | null>(null);
+type LocationSeed = {
+  baseAddress: string | null;
+  baseLatitude: number | null;
+  baseLongitude: number | null;
+  preferredLocationMode: string | null;
+};
 
-  const [fixedAddress, setFixedAddress] = useState<string | null>(null);
-  const [fixedCoords, setFixedCoords] = useState<Coordinates | null>(null);
+export function LocationProvider({
+  children,
+  initialUser = null,
+}: {
+  children: React.ReactNode;
+  initialUser?: LocationSeed | null;
+}) {
+  const startFixed =
+    Boolean(initialUser?.baseAddress) &&
+    initialUser?.baseLatitude != null &&
+    initialUser?.baseLongitude != null &&
+    initialUser.preferredLocationMode === "fixed";
+  const startCoords: Coordinates | null =
+    startFixed && initialUser?.baseLatitude != null && initialUser.baseLongitude != null
+      ? { lat: initialUser.baseLatitude, lng: initialUser.baseLongitude }
+      : null;
+
+  const [mode, setMode] = useState<LocationMode>(startCoords ? "fixed" : "default");
+  const [coords, setCoords] = useState<Coordinates>(startCoords ?? DEFAULT_VIENNA_COORDS);
+  const [label, setLabel] = useState<string>(
+    startCoords && initialUser?.baseAddress ? initialUser.baseAddress : "Wien Zentrum (Standard)",
+  );
+  const [address, setAddress] = useState<string | null>(startCoords ? initialUser?.baseAddress ?? null : null);
+
+  const [fixedAddress, setFixedAddress] = useState<string | null>(initialUser?.baseAddress ?? null);
+  const [fixedCoords, setFixedCoords] = useState<Coordinates | null>(
+    initialUser?.baseLatitude != null && initialUser.baseLongitude != null
+      ? { lat: initialUser.baseLatitude, lng: initialUser.baseLongitude }
+      : null,
+  );
 
   const [loadingGps, setLoadingGps] = useState<boolean>(false);
   const [gpsError, setGpsError] = useState<string | null>(null);
@@ -49,49 +78,37 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
 
   // 1. Load initial user settings & prompt state
   useEffect(() => {
-    const promptSeen = typeof window !== "undefined" && localStorage.getItem(STORAGE_KEY_PROMPT);
-    if (!promptSeen) {
+    const promptSeen = localStorage.getItem(STORAGE_KEY_PROMPT);
+    if (promptSeen) return;
+    const timer = window.setTimeout(() => {
       setHasPromptedOnLaunch(false);
-      const timer = setTimeout(() => setShowPrompt(true), 1200);
-      return () => clearTimeout(timer);
-    } else {
-      setHasPromptedOnLaunch(true);
-    }
+      setShowPrompt(true);
+    }, 1200);
+    return () => window.clearTimeout(timer);
   }, []);
 
-  // 2. Fetch server settings for fixed base address & preferred mode
-  const fetchSettings = useCallback(async () => {
-    try {
-      const res = await fetch("/api/settings");
-      if (res.ok) {
-        const data = await res.json();
-        const user = data.currentUser;
-        if (user) {
-          if (user.baseAddress && user.baseLatitude && user.baseLongitude) {
-            const fc: Coordinates = { lat: user.baseLatitude, lng: user.baseLongitude };
-            setFixedAddress(user.baseAddress);
-            setFixedCoords(fc);
+  const applySavedLocation = useCallback((user: LocationSeed) => {
+    if (!(user.baseAddress && user.baseLatitude != null && user.baseLongitude != null)) return;
+    const fc: Coordinates = { lat: user.baseLatitude, lng: user.baseLongitude };
+    setFixedAddress(user.baseAddress);
+    setFixedCoords(fc);
 
-            const savedMode = localStorage.getItem(STORAGE_KEY_MODE) as LocationMode | null;
-            const effectiveMode = savedMode || (user.preferredLocationMode as LocationMode) || "fixed";
-
-            if (effectiveMode === "fixed") {
-              setMode("fixed");
-              setCoords(fc);
-              setAddress(user.baseAddress);
-              setLabel(`${user.baseAddress}`);
-            }
-          }
-        }
-      }
-    } catch (err) {
-      console.error("Failed to fetch location settings:", err);
+    const savedMode = localStorage.getItem(STORAGE_KEY_MODE) as LocationMode | null;
+    const effectiveMode = savedMode || (user.preferredLocationMode as LocationMode) || "fixed";
+    if (effectiveMode === "fixed") {
+      setMode("fixed");
+      setCoords(fc);
+      setAddress(user.baseAddress);
+      setLabel(`${user.baseAddress}`);
     }
   }, []);
 
   useEffect(() => {
-    fetchSettings();
-  }, [fetchSettings]);
+    if (!initialUser) return;
+    // localStorage can override the server preference after the first paint.
+    const timer = window.setTimeout(() => applySavedLocation(initialUser), 0);
+    return () => window.clearTimeout(timer);
+  }, [initialUser, applySavedLocation]);
 
   // Request Live Browser GPS
   const requestLiveLocation = useCallback(async (): Promise<boolean> => {

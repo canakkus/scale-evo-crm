@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { getOptionalUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { findAccessibleLead, leadScope } from "@/lib/workspace";
-import type { TaskCategory, TaskStatus, Priority } from "@prisma/client";
+import { findAccessibleLead } from "@/lib/workspace";
+import { getVisibleTasks } from "@/lib/tasks-query";
 
 export async function GET(request: Request) {
   try {
@@ -12,38 +12,13 @@ export async function GET(request: Request) {
     }
 
     const { searchParams } = new URL(request.url);
-    const status = searchParams.get("status") as TaskStatus | null;
-    const category = searchParams.get("category") as TaskCategory | null;
-    const priority = searchParams.get("priority") as Priority | null;
-
-    const where: any = { userId: user.id };
-    if (status) where.status = status;
-    if (category) where.category = category;
-    if (priority) where.priority = priority;
-
-    const tasks = await prisma.task.findMany({
-      where,
-      orderBy: [{ status: "asc" }, { priority: "desc" }, { createdAt: "desc" }],
-      include: {
-        lead: { select: { id: true, companyName: true, phone: true, status: true } },
-      },
+    const tasks = await getVisibleTasks(user, {
+      status: searchParams.get("status"),
+      category: searchParams.get("category"),
+      priority: searchParams.get("priority"),
     });
 
-    // Alt-Datensaetze koennen an Leads haengen, die (nicht mehr) im Arbeitsbereich
-    // liegen — deren Firmenname und Telefonnummer duerfen nicht durchsickern.
-    const visibleLeadIds = new Set(
-      (
-        await prisma.lead.findMany({
-          where: { id: { in: tasks.flatMap((task) => (task.leadId ? [task.leadId] : [])) }, ...(await leadScope(user)) },
-          select: { id: true },
-        })
-      ).map((lead) => lead.id),
-    );
-    const visibleTasks = tasks.map((task) =>
-      task.leadId && !visibleLeadIds.has(task.leadId) ? { ...task, leadId: null, lead: null } : task,
-    );
-
-    return NextResponse.json({ tasks: visibleTasks });
+    return NextResponse.json({ tasks });
   } catch (error) {
     console.error("[GET /api/tasks] Error:", error);
     return NextResponse.json({ error: "Fehler beim Laden der Tasks." }, { status: 500 });

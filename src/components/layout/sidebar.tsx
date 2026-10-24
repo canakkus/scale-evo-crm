@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ComponentType } from "react";
 import {
   LayoutDashboard,
   Users,
@@ -30,10 +30,11 @@ import {
   Layers,
 } from "lucide-react";
 import { cn, initials } from "@/lib/utils";
-import { DEFAULT_NAV_ITEMS, resolveNavConfig, type NavItemConfig } from "@/lib/nav-config";
+import { resolveNavConfig, type NavItemConfig } from "@/lib/nav-config";
 import { ThemeToggle } from "@/components/theme-toggle";
+import type { ShellUser } from "@/lib/shell-user";
 
-const NAV_ICON_MAP: Record<string, any> = {
+const NAV_ICON_MAP: Record<string, ComponentType<{ size?: number; strokeWidth?: number; className?: string }>> = {
   "/": LayoutDashboard,
   "/leads": Users,
   "/pipeline": Kanban,
@@ -50,54 +51,37 @@ const NAV_ICON_MAP: Record<string, any> = {
   "/settings": SettingsIcon,
 };
 
-export function Sidebar() {
+export function Sidebar({ user }: { user: ShellUser }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  // User state & Feature toggles
-  const [currentUser, setCurrentUser] = useState<{ displayName?: string; email?: string } | null>(null);
-  const [navConfig, setNavConfig] = useState<NavItemConfig[]>(DEFAULT_NAV_ITEMS);
-  const [restaurantScoutEnabled, setRestaurantScoutEnabled] = useState(true);
+  const currentUser = user;
+  const [navConfig, setNavConfig] = useState<NavItemConfig[]>(() =>
+    resolveNavConfig(user.sidebarConfig, user.restaurantScoutEnabled),
+  );
 
   // Logout confirmation modal state
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
 
   useEffect(() => {
-    function loadUserSettings() {
-      fetch("/api/settings")
-        .then((res) => res.json())
-        .then((data) => {
-          if (data?.currentUser) {
-            setCurrentUser(data.currentUser);
-            const scoutEnabled = data.currentUser.restaurantScoutEnabled ?? true;
-            setRestaurantScoutEnabled(scoutEnabled);
-
-            const resolved = resolveNavConfig(data.currentUser.sidebarConfig, scoutEnabled);
-            setNavConfig(resolved);
-          }
-        })
-        .catch((err) => console.error("Error loading user settings in sidebar:", err));
-    }
-
-    loadUserSettings();
-
-    // Listen for setting changes from Settings page
-    function handleSettingsUpdate(e: any) {
-      if (e.detail?.restaurantScoutEnabled !== undefined) {
-        setRestaurantScoutEnabled(e.detail.restaurantScoutEnabled);
-      }
-      if (e.detail?.sidebarConfig !== undefined) {
-        setNavConfig(resolveNavConfig(e.detail.sidebarConfig, e.detail.restaurantScoutEnabled ?? true));
-      }
+    function handleSettingsUpdate(e: Event) {
+      const detail = (e as CustomEvent<{ sidebarConfig?: NavItemConfig[] | null; restaurantScoutEnabled?: boolean }>).detail;
+      if (detail?.sidebarConfig === undefined && detail?.restaurantScoutEnabled === undefined) return;
+      setNavConfig(
+        resolveNavConfig(
+          detail?.sidebarConfig !== undefined ? detail.sidebarConfig : user.sidebarConfig,
+          detail?.restaurantScoutEnabled ?? user.restaurantScoutEnabled,
+        ),
+      );
     }
 
     window.addEventListener("user-settings-updated", handleSettingsUpdate);
     return () => {
       window.removeEventListener("user-settings-updated", handleSettingsUpdate);
     };
-  }, []);
+  }, [user]);
 
   async function handleLogout() {
     setLoggingOut(true);
@@ -195,6 +179,7 @@ export function Sidebar() {
               <Link
                 key={href}
                 href={href}
+                prefetch={false}
                 onClick={() => setMobileOpen(false)}
                 title={collapsed ? label : undefined}
                 className={cn(
@@ -265,6 +250,7 @@ export function Sidebar() {
         >
           <Link
             href="/settings"
+            prefetch={false}
             title={currentUser ? `Eingeloggt als ${currentUser.displayName || currentUser.email}` : "Benutzer"}
             className="flex items-center gap-2.5 min-w-0 flex-1 hover:opacity-80 transition-opacity"
           >

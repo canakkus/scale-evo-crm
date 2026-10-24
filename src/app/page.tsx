@@ -1,65 +1,12 @@
 import { requireAuth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { leadScope as workspaceLeadScope } from "@/lib/workspace";
+import { loadDashboard } from "@/lib/dashboard-data";
 import { DashboardComponent } from "@/components/dashboard/dashboard-component";
 
 export const metadata = { title: "Dashboard | Scale Evo CRM" };
 
 async function getDashboardData(user: { id: string; email?: string | null }) {
-  const userId = user.id;
   try {
-    const leadScope = await workspaceLeadScope(user);
-
-    const [
-      totalLeads,
-      contactedLeads,
-      openFollowUps,
-      wonLeads,
-      totalCalls,
-      openTasks,
-      recentLeads,
-      upcomingFollowUps,
-    ] = await Promise.all([
-      prisma.lead.count({ where: leadScope }),
-      prisma.lead.count({
-        where: {
-          ...leadScope,
-          status: { in: ["CONTACTED", "REPLIED", "INTERESTED", "APPOINTMENT", "OFFER_SENT"] },
-        },
-      }),
-      prisma.lead.count({ where: { ...leadScope, status: "FOLLOW_UP" } }),
-      prisma.lead.count({ where: { ...leadScope, status: "WON" } }),
-      prisma.callRecording.count({ where: { createdById: userId } }),
-      prisma.task.count({ where: { userId, status: "OPEN" } }),
-      prisma.lead.findMany({
-        where: leadScope,
-        take: 5,
-        orderBy: { createdAt: "desc" },
-        select: { id: true, companyName: true, industry: true, city: true, status: true, score: true, createdAt: true },
-      }),
-      prisma.lead.findMany({
-        where: { ...leadScope, status: "FOLLOW_UP" },
-        take: 5,
-        orderBy: { nextFollowUpAt: "asc" },
-        select: { id: true, companyName: true, phone: true, nextFollowUpAt: true, city: true },
-      }),
-    ]);
-
-    return {
-      metrics: {
-        totalLeads,
-        contactedLeads,
-        openFollowUps,
-        wonLeads,
-        totalCalls,
-        openTasks,
-      },
-      recentLeads: recentLeads.map((l) => ({ ...l, createdAt: l.createdAt.toISOString() })),
-      upcomingFollowUps: upcomingFollowUps.map((f) => ({
-        ...f,
-        nextFollowUpAt: f.nextFollowUpAt ? f.nextFollowUpAt.toISOString() : null,
-      })),
-    };
+    return await loadDashboard(user);
   } catch (err) {
     console.error("[Dashboard] Error fetching data:", err);
     return null;

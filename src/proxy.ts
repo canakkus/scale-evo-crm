@@ -28,8 +28,12 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  // If not authenticated via custom session, check Supabase auth
-  if (!isAuthenticated) {
+  // If not authenticated via custom session, check Supabase auth.
+  // Only when a Supabase cookie exists — otherwise getUser() is a wasted round trip.
+  const hasSupabaseCookie = request.cookies
+    .getAll()
+    .some((cookie) => cookie.name.startsWith("sb-") && cookie.value);
+  if (!isAuthenticated && hasSupabaseCookie) {
     try {
       const supabase = createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,

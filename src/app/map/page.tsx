@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { requireAuth } from "@/lib/auth";
+import { listMapLeads } from "@/lib/map-leads";
 import { MapShell } from "@/components/map/map-shell";
 
 export const metadata: Metadata = {
@@ -15,6 +16,12 @@ export const metadata: Metadata = {
  * `flex h-screen overflow-hidden` mit `main flex-1 overflow-y-auto`.
  */
 export default async function MapPage() {
-  await requireAuth();
-  return <MapShell />;
+  const user = await requireAuth();
+  let initialLeads = null;
+  try {
+    initialLeads = await listMapLeads(user);
+  } catch (err) {
+    console.error("[Map] Error fetching data:", err);
+  }
+  return <MapShell initialLeads={initialLeads} />;
 }

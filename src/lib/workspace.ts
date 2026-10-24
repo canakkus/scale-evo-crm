@@ -1,3 +1,4 @@
+import { cache } from "react";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
@@ -57,21 +58,25 @@ export function sharedPartnerEmails(email: string | null | undefined): string[] 
  * Alle User-IDs, deren Leads dieser Account sehen darf — immer inklusive
  * der eigenen. Ohne Gruppe genau `[user.id]`, also kein DB-Aufruf.
  */
-export async function workspaceUserIds(user: SessionUser): Promise<string[]> {
-  const partners = sharedPartnerEmails(user.email);
-  if (partners.length === 0) return [user.id];
+const loadWorkspaceUserIds = cache(async (userId: string, email: string): Promise<string[]> => {
+  const partners = sharedPartnerEmails(email);
+  if (partners.length === 0) return [userId];
 
   // Die Gruppe gibt es nur, wenn ID und E-Mail der Session zum selben
   // DB-Account gehoeren. Sonst reichte ein Cookie mit fremder E-Mail und
   // beliebiger ID, um in die Gruppe zu kommen.
-  const self = await prisma.user.findUnique({ where: { id: user.id }, select: { email: true } });
-  if (self?.email?.trim().toLowerCase() !== user.email?.trim().toLowerCase()) return [user.id];
+  const self = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
+  if (self?.email?.trim().toLowerCase() !== email.trim().toLowerCase()) return [userId];
 
   const rows = await prisma.user.findMany({
     where: { email: { in: partners, mode: "insensitive" } },
     select: { id: true },
   });
-  return [user.id, ...rows.map((row) => row.id).filter((id) => id !== user.id)];
+  return [userId, ...rows.map((row) => row.id).filter((id) => id !== userId)];
+});
+
+export async function workspaceUserIds(user: SessionUser): Promise<string[]> {
+  return loadWorkspaceUserIds(user.id, user.email ?? "");
 }
 
 /** Prisma-Filter "Lead gehoert zu einem dieser Accounts". */

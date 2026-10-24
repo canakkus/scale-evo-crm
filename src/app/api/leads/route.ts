@@ -1,17 +1,9 @@
 import { NextResponse, after } from "next/server";
-import { enqueueLeadAudit } from "@/services/audit/run-lead-audit";
 import { getOptionalUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import type { LeadStatus, Priority, WebPresence } from "@prisma/client";
-import { INDUSTRIES } from "@/lib/constants";
 import { parseCoordinates } from "@/lib/geo";
-import { pushToAppleEcosystem, isAppleSyncUser } from "@/services/apple-bridge";
-import { leadScope } from "@/lib/workspace";
 import { notifyLeadCreated } from "@/lib/discord";
-
-// In-memory cache for distinct industries to avoid redundant database scans on every keystroke/request
-let cachedIndustries: { list: string[]; timestamp: number } | null = null;
-const CACHE_TTL_MS = 60 * 1000; // 1 minute
+import { listLeads } from "@/lib/leads-list";
 
 export async function GET(request: Request) {
   try {
@@ -21,172 +13,29 @@ export async function GET(request: Request) {
     }
 
     const { searchParams } = new URL(request.url);
-    const search = searchParams.get("search")?.trim();
-    const status = searchParams.get("status") as LeadStatus | null;
-    const acquisitionType = searchParams.get("acquisitionType") as any | null;
-    const priority = searchParams.get("priority") as Priority | null;
-    const isFocusParam = searchParams.get("isFocus");
-    const relevantOnly = searchParams.get("relevantOnly") === "true";
-    const createdByIdParam = searchParams.get("createdById")?.trim();
-    const assignedToIdParam = searchParams.get("assignedToId")?.trim();
-    const webPresence = searchParams.get("webPresence") as WebPresence | null;
-    const enrichmentStatusParam = searchParams.get("enrichmentStatus");
-    const sourceParam = searchParams.get("source");
-    const industryParam = searchParams.get("industry")?.trim();
-    const updatedDate = searchParams.get("updatedDate")?.trim(); // e.g. "today", "yesterday", "thisWeek", or "2026-08-27"
-    const sortBy = searchParams.get("sortBy")?.trim() || "updatedAt";
-    const sortOrder = (searchParams.get("sortOrder")?.toLowerCase() === "asc" ? "asc" : "desc") as "asc" | "desc";
-    const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
-    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") || "25", 10)));
-
-    const scope = await leadScope(user);
-    const andClauses: any[] = [scope];
-
-    if (search) {
-      andClauses.push({
-        OR: [
-          { companyName: { contains: search, mode: "insensitive" } },
-          { city: { contains: search, mode: "insensitive" } },
-          { contactPerson: { contains: search, mode: "insensitive" } },
-          { phone: { contains: search, mode: "insensitive" } },
-        ],
-      });
-    }
-
-    const where: Record<string, any> = { AND: andClauses };
-
-    if (createdByIdParam) where.createdById = createdByIdParam;
-    if (assignedToIdParam) where.assignedToId = assignedToIdParam;
-    if (status) where.status = status;
-    if (acquisitionType) where.acquisitionType = acquisitionType;
-    if (priority) where.priority = priority;
-    if (isFocusParam === "true") where.isFocus = true;
-    if (relevantOnly) {
-      where.status = { notIn: ["NOT_RELEVANT", "LOST"] };
-    }
-    if (webPresence) where.webPresence = webPresence;
-    if (enrichmentStatusParam) where.enrichmentStatus = enrichmentStatusParam;
-    if (sourceParam) {
-      if (sourceParam === "bot") {
-        where.source = { contains: "Hunter" };
-      } else if (sourceParam === "manual") {
-        where.OR = [
-          { source: null },
-          { NOT: { source: { contains: "Hunter" } } },
-        ];
-      } else {
-        where.source = { contains: sourceParam };
-      }
-    }
-
-    if (updatedDate) {
-      const now = new Date();
-      const startOfDay = (d: Date) => {
-        const copy = new Date(d);
-        copy.setHours(0, 0, 0, 0);
-        return copy;
-      };
-      const endOfDay = (d: Date) => {
-        const copy = new Date(d);
-        copy.setHours(23, 59, 59, 999);
-        return copy;
-      };
-
-      if (updatedDate === "today") {
-        where.updatedAt = {
-          gte: startOfDay(now),
-        };
-      } else if (updatedDate === "yesterday") {
-        const yesterday = new Date(now);
-        yesterday.setDate(now.getDate() - 1);
-        where.updatedAt = {
-          gte: startOfDay(yesterday),
-          lte: endOfDay(yesterday),
-        };
-      } else if (updatedDate === "thisWeek") {
-        const monday = new Date(now);
-        const day = monday.getDay();
-        const diff = monday.getDate() - day + (day === 0 ? -6 : 1);
-        monday.setDate(diff);
-        where.updatedAt = {
-          gte: startOfDay(monday),
-        };
-      } else {
-        const parsedDate = new Date(updatedDate);
-        if (!isNaN(parsedDate.getTime())) {
-          where.updatedAt = {
-            gte: startOfDay(parsedDate),
-            lte: endOfDay(parsedDate),
-          };
-        }
-      }
-    }
-
-    if (industryParam) {
-      const industries = industryParam.split(",").map(i => i.trim()).filter(Boolean);
-      if (industries.length > 0) {
-        const hasNull = industries.some(i => i.toLowerCase() === "null" || i.toLowerCase() === "keine angabe" || i === "—");
-        if (hasNull) {
-          where.OR = [
-            { industry: { in: industries } },
-            { industry: null },
-            { industry: "" }
-          ];
-        } else {
-          where.industry = { in: industries };
-        }
-      }
-    }
-
-    const validSortFields = ["createdAt", "updatedAt", "score", "companyName", "status", "lastContactAt", "auditSeverity"];
-    const sortField = validSortFields.includes(sortBy) ? sortBy : "updatedAt";
-
-    // Distinct industries cached to avoid DB bottleneck on every keystroke
-    const now = Date.now();
-    let allIndustries: string[];
-
-    if (cachedIndustries && now - cachedIndustries.timestamp < CACHE_TTL_MS) {
-      allIndustries = cachedIndustries.list;
-    } else {
-      const distinctIndustries = await prisma.lead.findMany({
-        where: {
-          industry: { not: null },
-          ...scope,
-        },
-        distinct: ["industry"],
-        select: { industry: true },
-      });
-      const dbIndustries = distinctIndustries.map((d) => d.industry).filter(Boolean) as string[];
-      allIndustries = Array.from(new Set([...INDUSTRIES, ...dbIndustries])).sort();
-      cachedIndustries = { list: allIndustries, timestamp: now };
-    }
-
-    const [leads, total] = await Promise.all([
-      prisma.lead.findMany({
-        where,
-        orderBy: { [sortField]: sortOrder },
-        skip: (page - 1) * limit,
-        take: limit,
-        include: {
-          createdBy: { select: { id: true, displayName: true, email: true } },
-          assignedTo: { select: { id: true, displayName: true, email: true } },
-          priorityRatedBy: { select: { id: true, displayName: true, email: true } },
-          _count: { select: { interactions: true, audits: true, tasks: true } },
-        },
-      }),
-      prisma.lead.count({ where }),
-    ]);
-
-    return NextResponse.json({
-      leads,
-      allIndustries,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-      },
+    const page = parseInt(searchParams.get("page") || "1", 10);
+    const limit = parseInt(searchParams.get("limit") || "25", 10);
+    const data = await listLeads(user, {
+      search: searchParams.get("search"),
+      status: searchParams.get("status"),
+      acquisitionType: searchParams.get("acquisitionType"),
+      priority: searchParams.get("priority"),
+      isFocus: searchParams.get("isFocus"),
+      relevantOnly: searchParams.get("relevantOnly") === "true",
+      createdById: searchParams.get("createdById"),
+      assignedToId: searchParams.get("assignedToId"),
+      webPresence: searchParams.get("webPresence"),
+      enrichmentStatus: searchParams.get("enrichmentStatus"),
+      source: searchParams.get("source"),
+      industry: searchParams.get("industry"),
+      updatedDate: searchParams.get("updatedDate"),
+      sortBy: searchParams.get("sortBy"),
+      sortOrder: searchParams.get("sortOrder"),
+      page: Number.isNaN(page) ? 1 : page,
+      limit: Number.isNaN(limit) ? 25 : limit,
     });
+
+    return NextResponse.json(data);
   } catch (error) {
     console.error("[GET /api/leads] Error:", error);
     return NextResponse.json({ error: "Fehler beim Laden der Leads." }, { status: 500 });
@@ -270,22 +119,25 @@ export async function POST(request: Request) {
       },
     });
 
-    if (data.nextFollowUpAt && isAppleSyncUser(user.email)) {
+    if (data.nextFollowUpAt) {
       const followUpDate = new Date(data.nextFollowUpAt);
       if (!isNaN(followUpDate.getTime())) {
-        pushToAppleEcosystem({
-          userEmail: user.email,
-          title: `Follow-up: ${lead.companyName}`,
-          notes: `Neuer Lead angelegt. Status: ${lead.status}`,
-          dueDate: followUpDate,
-          leadId: lead.id,
-          leadCompany: lead.companyName,
-          leadPhone: lead.phone,
-          leadAddress: [lead.address, lead.city].filter(Boolean).join(", "),
-          durationMinutes: 10,
-        }).catch((err) => {
-          console.error("[POST /api/leads] Apple sync error:", err);
-        });
+        const { pushToAppleEcosystem, isAppleSyncUser } = await import("@/services/apple-bridge");
+        if (isAppleSyncUser(user.email)) {
+          pushToAppleEcosystem({
+            userEmail: user.email,
+            title: `Follow-up: ${lead.companyName}`,
+            notes: `Neuer Lead angelegt. Status: ${lead.status}`,
+            dueDate: followUpDate,
+            leadId: lead.id,
+            leadCompany: lead.companyName,
+            leadPhone: lead.phone,
+            leadAddress: [lead.address, lead.city].filter(Boolean).join(", "),
+            durationMinutes: 10,
+          }).catch((err) => {
+            console.error("[POST /api/leads] Apple sync error:", err);
+          });
+        }
       }
     }
 
@@ -301,7 +153,10 @@ export async function POST(request: Request) {
 
     // Erst-Audit im Hintergrund: laeuft nach der Response, serialisiert mit Cooldown.
     if (lead.website) {
-      after(() => enqueueLeadAudit(lead.id));
+      after(async () => {
+        const { enqueueLeadAudit } = await import("@/services/audit/run-lead-audit");
+        return enqueueLeadAudit(lead.id);
+      });
     }
 
     return NextResponse.json({ lead }, { status: 201 });
