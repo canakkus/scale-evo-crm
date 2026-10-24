@@ -1269,7 +1269,38 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                   companyName={lead.companyName}
                   instagram={lead.instagram ?? null}
                   website={lead.website ?? null}
-                  onSent={onUpdate}
+                  onScriptSelected={(scriptText, updatedNotes) => {
+                    if (updatedNotes) {
+                      setNotesText(updatedNotes);
+                      setLead((prev: any) => (prev ? { ...prev, notes: updatedNotes } : prev));
+                    }
+                    // Fetch full lead data including interactions timeline
+                    fetch(`/api/leads/${lead.id}`)
+                      .then((r) => r.json())
+                      .then((d) => {
+                        if (d.lead) {
+                          setLead(d.lead);
+                          setNotesText(d.lead.notes || "");
+                        }
+                      })
+                      .catch(console.error);
+                    onUpdate();
+                  }}
+                  onSent={async () => {
+                    onUpdate();
+                    try {
+                      const res = await fetch(`/api/leads/${lead.id}`);
+                      if (res.ok) {
+                        const data = await res.json();
+                        if (data.lead) {
+                          setLead(data.lead);
+                          setNotesText(data.lead.notes || "");
+                        }
+                      }
+                    } catch (e) {
+                      console.error(e);
+                    }
+                  }}
                 />
               ) : activeTab === "timeline" ? (
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 items-start">

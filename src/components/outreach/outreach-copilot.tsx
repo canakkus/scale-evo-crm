@@ -30,7 +30,7 @@ type OutreachCopilotProps = {
   website?: string | null;
   channel?: "PHONE" | "WALK_IN" | "INSTAGRAM_DM";
   tone?: "CASUAL_VIENNESE" | "PROFESSIONAL_DU" | "FORMAL_SIE";
-  onSelectScript?: (scriptText: string, draftId?: string) => void;
+  onSelectScript?: (scriptText: string, draftId?: string, notes?: string) => void;
 };
 
 const SUGGESTIONS = [
@@ -142,7 +142,7 @@ export function OutreachCopilot({
       const data = await res.json();
       if (res.ok && data.ok) {
         setSelectedScriptIdx(idx);
-        onSelectScript?.(text, data.draftId);
+        onSelectScript?.(text, data.draftId, data.notes);
       } else {
         setSelectError(data.error || "Skript konnte nicht gespeichert werden.");
       }

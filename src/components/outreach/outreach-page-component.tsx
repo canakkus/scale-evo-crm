@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  AlertTriangle, AtSign, Check, Copy, ExternalLink, Phone, Pin, Radar, Sparkles,
+  AlertTriangle, AtSign, Check, Copy, ExternalLink, Phone, Pin, Radar, Sparkles, CheckCircle2,
 } from "lucide-react";
 import { ScoreMeter, type ScoreReason } from "@/components/ui/score-meter";
 import { ProfileSourceLine, type ProfileMeta } from "@/components/ui/profile-source-line";
@@ -82,6 +82,7 @@ export default function OutreachPageComponent() {
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [warmupBusy, setWarmupBusy] = useState(false);
   const [outreachMode, setOutreachMode] = useState<"variants" | "copilot">("variants");
+  const [scriptNotice, setScriptNotice] = useState<string | null>(null);
 
   const focusIndex = Math.max(0, leads.findIndex((lead) => lead.id === activeId));
 
@@ -529,11 +530,34 @@ export default function OutreachPageComponent() {
                       setEdited({ 0: scriptText });
                       setExpanded(0);
                       setOutreachMode("variants");
+                      setScriptNotice("Skript in Notizen & Timeline gespeichert und in Variante A geladen!");
                     }}
                   />
                 </div>
               ) : (
                 <>
+                  {scriptNotice && (
+                    <div
+                      className="mb-3 flex items-center justify-between gap-2 rounded-xl p-3 text-xs font-semibold animate-fade-in"
+                      style={{
+                        background: "rgba(16, 185, 129, 0.12)",
+                        color: "#10b981",
+                        border: "1px solid rgba(16, 185, 129, 0.25)",
+                      }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 shrink-0" />
+                        <span>{scriptNotice}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setScriptNotice(null)}
+                        className="text-emerald-400 hover:text-emerald-200 text-xs px-1"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  )}
                   {/* Aufhänger */}
                   {anchors.length > 0 && (
                 <div className="mb-3 flex items-center gap-2 rounded-lg px-3 py-2" style={{ background: "var(--surface-2)" }}>

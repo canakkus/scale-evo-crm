@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { AlertTriangle, Check, Copy, Phone, Sparkles, AtSign, Flame } from "lucide-react";
+import { AlertTriangle, Check, Copy, Phone, Sparkles, AtSign, Flame, CheckCircle2 } from "lucide-react";
 import { CHAR_COLORS, charState, speakingSeconds } from "@/lib/score-visuals";
 import { normalizeInstagramHandle } from "@/lib/utils";
 import { OutreachCopilot } from "./outreach-copilot";
@@ -26,12 +26,14 @@ export function OutreachLeadPanel({
   instagram,
   website,
   onSent,
+  onScriptSelected,
 }: {
   leadId: string;
   companyName: string;
   instagram: string | null;
   website?: string | null;
   onSent?: () => void;
+  onScriptSelected?: (scriptText: string, notes?: string) => void;
 }) {
   const [panelMode, setPanelMode] = useState<"copilot" | "variants">("copilot");
   const [channel, setChannel] = useState<Channel>(instagram ? "INSTAGRAM_DM" : "PHONE");
@@ -43,6 +45,7 @@ export function OutreachLeadPanel({
   const [error, setError] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [receipt, setReceipt] = useState<string | null>(null);
+  const [scriptNotice, setScriptNotice] = useState<string | null>(null);
 
   const handle = normalizeInstagramHandle(instagram);
   const charLimit = channel === "PHONE" ? 300 : 400;
@@ -134,7 +137,7 @@ export function OutreachLeadPanel({
             website={website}
             channel={channel}
             tone={tone}
-            onSelectScript={(scriptText, draftId) => {
+            onSelectScript={(scriptText, draftId, notes) => {
               setVariants([
                 {
                   index: 0,
@@ -146,12 +149,36 @@ export function OutreachLeadPanel({
               setEdited({ 0: scriptText });
               setSelected(0);
               setPanelMode("variants");
+              setScriptNotice("Skript in Notizen & Timeline gespeichert und in Variante A geladen!");
+              onScriptSelected?.(scriptText, notes);
               onSent?.();
             }}
           />
         </div>
       ) : (
         <div className="space-y-3">
+          {scriptNotice && (
+            <div
+              className="flex items-center justify-between gap-2 rounded-xl p-3 text-xs font-semibold animate-fade-in"
+              style={{
+                background: "rgba(16, 185, 129, 0.12)",
+                color: "#10b981",
+                border: "1px solid rgba(16, 185, 129, 0.25)",
+              }}
+            >
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
+                <span>{scriptNotice}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setScriptNotice(null)}
+                className="text-emerald-400 hover:text-emerald-200 text-xs px-1"
+              >
+                ✕
+              </button>
+            </div>
+          )}
           <div className="flex flex-wrap items-center gap-2">
         <div className="inline-flex rounded-xl border p-1" style={{ borderColor: "var(--border)" }}>
           {(["INSTAGRAM_DM", "PHONE"] as Channel[]).map((key) => (
