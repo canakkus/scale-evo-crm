@@ -46,16 +46,30 @@ class GroqKeyManager {
   private loadKeys() {
     const foundKeys: string[] = [];
 
-    // Versuche nummerierte Keys zu laden: GROQ_API_KEY_1, GROQ_API_KEY_2, ...
-    for (let i = 1; i <= 10; i++) {
-      const key = process.env[`GROQ_API_KEY_${i}`];
-      if (key?.trim()) foundKeys.push(key.trim());
+    // 1. Semicolon- oder Komma-getrennte Keys (GROQ_API_KEYS)
+    if (process.env.GROQ_API_KEYS) {
+      const parts = process.env.GROQ_API_KEYS.split(/[;,]/)
+        .map((k) => k.trim())
+        .filter((k) => k.startsWith("gsk_") || k.length > 10);
+      for (const k of parts) {
+        if (!foundKeys.includes(k)) foundKeys.push(k);
+      }
     }
 
-    // Fallback: GROQ_API_KEY (einzelner Key ohne Nummer)
+    // 2. Versuche nummerierte Keys zu laden: GROQ_API_KEY_1, GROQ_API_KEY_2, ...
+    for (let i = 1; i <= 10; i++) {
+      const key = process.env[`GROQ_API_KEY_${i}`];
+      if (key?.trim() && !foundKeys.includes(key.trim())) {
+        foundKeys.push(key.trim());
+      }
+    }
+
+    // 3. Fallback: GROQ_API_KEY (einzelner Key ohne Nummer)
     if (foundKeys.length === 0) {
       const single = process.env.GROQ_API_KEY;
-      if (single?.trim()) foundKeys.push(single.trim());
+      if (single?.trim() && !foundKeys.includes(single.trim())) {
+        foundKeys.push(single.trim());
+      }
     }
 
     if (foundKeys.length === 0) {

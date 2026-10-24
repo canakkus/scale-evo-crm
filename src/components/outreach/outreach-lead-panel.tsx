@@ -155,35 +155,45 @@ export function OutreachLeadPanel({
   }
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col h-full space-y-3">
-      {/* Mode Switcher: Groq Copilot vs. 3 Schnell-Varianten */}
-      <div className="flex items-center justify-between border-b pb-3 shrink-0" style={{ borderColor: "var(--border)" }}>
-        <div className="flex items-center gap-1.5 p-1 rounded-xl border" style={{ borderColor: "var(--border)", background: "var(--surface-2)" }}>
+    <div className="flex-1 min-h-0 flex flex-col h-full gap-2">
+      {/* Sleek Minimal Mode Switcher */}
+      <div className="flex items-center justify-between pb-1 shrink-0">
+        <div className="inline-flex items-center p-0.5 rounded-lg border text-xs" style={{ borderColor: "var(--border)", background: "var(--surface-2)" }}>
           <button
             type="button"
             onClick={() => setPanelMode("copilot")}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
-            style={{
-              background: panelMode === "copilot" ? "var(--surface)" : "transparent",
-              color: panelMode === "copilot" ? "#f97316" : "var(--text-3)",
-              boxShadow: panelMode === "copilot" ? "var(--shadow-sm)" : "none",
-            }}
+            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold transition-all ${
+              panelMode === "copilot"
+                ? "bg-[var(--surface)] text-orange-400 shadow-sm"
+                : "text-[var(--text-3)] hover:text-[var(--text)]"
+            }`}
           >
-            <span>⚡ Groq Kaltakquise Copilot</span>
+            <span>⚡ Copilot-Chat</span>
           </button>
           <button
             type="button"
             onClick={() => setPanelMode("variants")}
-            className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
-            style={{
-              background: panelMode === "variants" ? "var(--surface)" : "transparent",
-              color: panelMode === "variants" ? "var(--text)" : "var(--text-3)",
-              boxShadow: panelMode === "variants" ? "var(--shadow-sm)" : "none",
-            }}
+            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold transition-all ${
+              panelMode === "variants"
+                ? "bg-[var(--surface)] text-[var(--text)] shadow-sm"
+                : "text-[var(--text-3)] hover:text-[var(--text)]"
+            }`}
           >
-            3 Schnell-Varianten / Editor
+            <span>📝 Skript-Editor</span>
           </button>
         </div>
+
+        {website && (
+          <a
+            href={website.startsWith("http") ? website : `https://${website}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-[11px] font-medium text-[var(--text-3)] hover:text-[var(--text)] hover:underline"
+            title="Website in neuem Tab öffnen"
+          >
+            <span>Website ↗</span>
+          </a>
+        )}
       </div>
 
       <div className={panelMode === "copilot" ? "flex-1 min-h-0 flex flex-col" : "hidden"}>

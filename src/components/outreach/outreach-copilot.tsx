@@ -204,66 +204,7 @@ export function OutreachCopilot({
         borderColor: "var(--border)",
       }}
     >
-      {/* Header */}
-      <div
-        className="px-4 py-3 border-b flex items-center justify-between shrink-0"
-        style={{ borderColor: "var(--border)", background: "var(--surface-2)" }}
-      >
-        <div className="flex items-center gap-2">
-          <div
-            className="w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs"
-            style={{ background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)", color: "#fff" }}
-          >
-            ⚡
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold" style={{ color: "var(--text)" }}>
-                Groq Kaltakquise Copilot
-              </span>
-              <span
-                className="text-[10px] px-1.5 py-0.5 rounded-full font-mono font-semibold"
-                style={{ background: "rgba(249, 115, 22, 0.15)", color: "#f97316" }}
-              >
-                Llama 70B · Ultra-Fast
-              </span>
-            </div>
-            <p className="text-[11px]" style={{ color: "var(--text-3)" }}>
-              Smarter Kaltakquise-Dialog & Einwandbehandlung in Echtzeit
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {messages.length > 0 && (
-            <button
-              type="button"
-              onClick={handleClearChat}
-              className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-md hover:bg-[var(--surface-3)] transition-colors text-[var(--text-3)] hover:text-red-400"
-              title="Chat-Verlauf für diesen Lead leeren"
-            >
-              <Trash2 className="w-3 h-3" />
-              <span>Chat leeren</span>
-            </button>
-          )}
-
-          {website && (
-            <a
-              href={website.startsWith("http") ? website : `https://${website}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-md hover:underline"
-              style={{ background: "var(--surface-3)", color: "var(--text-2)" }}
-              title="Website öffnen zum Kopieren der Über-uns-Seite"
-            >
-              <Globe className="w-3.5 h-3.5" />
-              <span>Website ↗</span>
-            </a>
-          )}
-        </div>
-      </div>
-
-      {/* Chat & Script Area */}
+      {/* Chat & Script Area (Full Height, No bulky header) */}
       <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-3.5 my-auto">
@@ -430,27 +371,39 @@ export function OutreachCopilot({
 
       {/* Quick Suggestions & Chat Input */}
       <div
-        className="p-3 border-t space-y-2.5 shrink-0"
+        className="p-3 border-t space-y-2 shrink-0"
         style={{ borderColor: "var(--border)", background: "var(--surface-2)" }}
       >
         {messages.length > 0 && (
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-            {SUGGESTIONS.map((sug, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => void handleGenerateScript(sug)}
-                disabled={loading}
-                className="shrink-0 px-2.5 py-1 rounded-full text-[11px] font-medium border hover:bg-[var(--surface-3)] transition-colors disabled:opacity-40"
-                style={{
-                  background: "var(--surface)",
-                  borderColor: "var(--border)",
-                  color: "var(--text-2)",
-                }}
-              >
-                + {sug}
-              </button>
-            ))}
+          <div className="flex items-center justify-between gap-2 overflow-x-auto pb-0.5 no-scrollbar">
+            <div className="flex items-center gap-1.5 shrink-0">
+              {SUGGESTIONS.map((sug, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => void handleGenerateScript(sug)}
+                  disabled={loading}
+                  className="shrink-0 px-2.5 py-1 rounded-full text-[11px] font-medium border hover:bg-[var(--surface-3)] transition-colors disabled:opacity-40"
+                  style={{
+                    background: "var(--surface)",
+                    borderColor: "var(--border)",
+                    color: "var(--text-2)",
+                  }}
+                >
+                  + {sug}
+                </button>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={handleClearChat}
+              className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-md hover:bg-[var(--surface-3)] transition-colors text-[var(--text-3)] hover:text-red-400 shrink-0 ml-auto"
+              title="Chat-Verlauf für diesen Lead leeren"
+            >
+              <Trash2 className="w-3 h-3" />
+              <span>Chat leeren</span>
+            </button>
           </div>
         )}
 
@@ -467,11 +420,12 @@ export function OutreachCopilot({
             disabled={loading}
             rows={Math.min(4, Math.max(1, inputMessage.split("\n").length))}
             placeholder="Mit Groq sprechen, Wünsche anpassen oder 'Über uns'-Infos hier reinkopieren..."
-            className="flex-1 rounded-xl px-3.5 py-2.5 text-xs outline-none border focus:ring-1 transition-all resize-none max-h-32"
+            className="flex-1 rounded-xl px-3.5 py-2.5 text-xs outline-none border focus:ring-1 transition-all resize-none max-h-32 overflow-y-auto overflow-x-hidden no-scrollbar whitespace-pre-wrap [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
             style={{
               background: "var(--surface)",
               borderColor: "var(--border-2)",
               color: "var(--text)",
+              scrollbarWidth: "none",
             }}
           />
           <button
