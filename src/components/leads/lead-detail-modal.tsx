@@ -30,8 +30,6 @@ import {
   Radio,
   Check,
   Copy,
-  Maximize,
-  Minimize,
   Maximize2,
   Minimize2,
 } from "lucide-react";
@@ -78,7 +76,6 @@ function extractCustomOutreachScript(notes?: string | null, leadDraft?: any): st
 export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalProps) {
   const [lead, setLead] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(true);
   const [notesText, setNotesText] = useState("");
   const [savingNotes, setSavingNotes] = useState(false);
   const [checkingMenu, setCheckingMenu] = useState(false);
@@ -478,20 +475,9 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
     MIXED:    { bg: "var(--status-planned-bg)", tx: "var(--status-planned-tx)", label: "Gemischt" },
   };
 
-  const toggleFullscreen = () => {
-    setIsFullscreen((prev) => !prev);
-    try {
-      if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen?.().catch(() => {});
-      } else {
-        document.exitFullscreen?.().catch(() => {});
-      }
-    } catch {}
-  };
-
   return (
-    <div className={`fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-fade-in ${isFullscreen ? 'p-0' : 'p-4 sm:p-6'}`}>
-      <div className={`w-full flex flex-col shadow-2xl overflow-hidden border ${isFullscreen ? 'h-full rounded-none max-w-none border-none' : 'max-w-6xl max-h-[90vh] rounded-2xl'}`} style={{ background: "var(--bg)", borderColor: "var(--border)" }}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/40 backdrop-blur-sm animate-fade-in">
+      <div className="w-full max-w-6xl max-h-[90vh] flex flex-col rounded-2xl shadow-2xl overflow-hidden border" style={{ background: "var(--bg)", borderColor: "var(--border)" }}>
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b shrink-0" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
           <div className="flex items-center gap-3">
@@ -533,40 +519,15 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
             </h2>
             {lead && <StatusBadge status={lead.status} />}
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={toggleFullscreen}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all hover:bg-[var(--surface-3)]"
-              style={{
-                borderColor: "var(--border)",
-                background: "var(--surface-2)",
-                color: "var(--text)",
-              }}
-              title={isFullscreen ? "Fenster-Modus wiederherstellen" : "Vollbildmodus aktivieren"}
-            >
-              {isFullscreen ? (
-                <>
-                  <Minimize className="w-3.5 h-3.5 text-orange-400" />
-                  <span>Fenster</span>
-                </>
-              ) : (
-                <>
-                  <Maximize className="w-3.5 h-3.5 text-orange-400" />
-                  <span>Vollbild</span>
-                </>
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="p-1.5 rounded-lg transition-colors hover:bg-[var(--surface-3)]"
-              style={{ color: "var(--text-2)" }}
-              title="Schließen (Esc)"
-            >
-              <X className="w-6 h-6" />
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1.5 rounded-lg transition-colors hover:bg-[var(--surface-3)]"
+            style={{ color: "var(--text-2)" }}
+            title="Schließen (Esc)"
+          >
+            <X className="w-6 h-6" />
+          </button>
         </div>
 
       {loading || !lead ? (
