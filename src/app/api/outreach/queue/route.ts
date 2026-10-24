@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getOptionalUser } from "@/lib/auth";
+import { ARCHIVED_STATUSES } from "@/lib/leads-list";
 import { prisma } from "@/lib/prisma";
 import { leadScope } from "@/lib/workspace";
 import { ensureDbUser } from "@/lib/outreach-user";
@@ -20,7 +21,7 @@ export async function GET() {
       where: {
         ...mine,
         instagram: { not: null },
-        status: { notIn: ["WON", "LOST", "NOT_RELEVANT"] },
+        status: { notIn: ["WON", ...ARCHIVED_STATUSES] },
       },
       orderBy: [{ score: "desc" }, { companyName: "asc" }],
       take: 100,

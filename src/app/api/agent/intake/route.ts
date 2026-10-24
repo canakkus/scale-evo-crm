@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { NOT_RELEVANT_PRIORITY_RESET } from "@/lib/leads-list";
 import { pushToAppleEcosystem } from "@/services/apple-bridge";
 import type { Priority, LeadStatus, TaskCategory } from "@prisma/client";
 
@@ -93,15 +94,15 @@ export async function POST(request: Request) {
         ? body.priority
         : isRaw ? "LOW" : "HIGH") as Priority;
 
-      const statusValue: LeadStatus = (["NEW", "RESEARCHED", "CONTACTED", "INTERESTED"].includes(body.status)
+      const statusValue: LeadStatus = (["NEW", "RESEARCHED", "CONTACTED", "INTERESTED", "NOT_RELEVANT"].includes(body.status)
         ? body.status
         : "NEW") as LeadStatus;
 
       const followUpDate = body.nextFollowUpAt ? new Date(body.nextFollowUpAt) : null;
       const isValidFollowUp = followUpDate && !isNaN(followUpDate.getTime());
 
-      if (existing && isRaw) {
-        // Raw duplicates are skipped, never enrich/overwrite existing leads.
+      if (existing && (isRaw || existing.status === "NOT_RELEVANT")) {
+        // Raw duplicates and archived NOT_RELEVANT leads are skipped and never re-prioritized.
         return NextResponse.json({
           success: true,
           duplicate: true,
@@ -110,7 +111,7 @@ export async function POST(request: Request) {
       }
 
       if (existing) {
-        // Update existing lead with enrichment notes & follow-up
+        // Update existing active lead with enrichment notes & follow-up
         lead = await prisma.lead.update({
           where: { id: existing.id },
           data: {
@@ -152,21 +153,25 @@ export async function POST(request: Request) {
             notes: leadNotes,
             source: body.source || (isRaw ? "Hunter (Grok)" : "Ultra Agent (Grok)"),
             status: statusValue,
-            priority: priorityValue,
-            prioritySource: "SYSTEM",
+            ...(statusValue === "NOT_RELEVANT"
+              ? NOT_RELEVANT_PRIORITY_RESET
+              : {
+                  priority: priorityValue,
+                  prioritySource: "SYSTEM",
+                }),
             score: typeof body.score === "number" ? body.score : isRaw ? 0 : 75,
             opportunityTags: Array.isArray(body.opportunityTags) ? body.opportunityTags : undefined,
             enrichmentStatus: isRaw ? "raw" : "completed",
-            auditStatus: website && !isRaw ? "pending" : "idle",
+            auditStatus: website && !isRaw && statusValue !== "NOT_RELEVANT" ? "pending" : "idle",
             createdById: user.id,
             assignedToId: user.id,
-            ...(isValidFollowUp ? { nextFollowUpAt: followUpDate } : {}),
+            ...(isValidFollowUp && statusValue !== "NOT_RELEVANT" ? { nextFollowUpAt: followUpDate } : {}),
           },
         });
       }
 
       // Sync follow-up to Apple Calendar & Reminders if scheduled
-      if (isValidFollowUp && followUpDate && !isRaw) {
+      if (isValidFollowUp && followUpDate && !isRaw && lead.status !== "NOT_RELEVANT") {
         try {
           appleSyncResult = await pushToAppleEcosystem({
             userEmail: user.email || FALLBACK_USER_EMAIL,

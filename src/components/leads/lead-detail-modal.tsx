@@ -250,30 +250,68 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
 
   async function handleStatusChange(newStatus: LeadStatus) {
     if (!lead) return;
+    const prevLead = lead;
+    const prevEditIsFocus = editIsFocus;
+    const isNowNotRelevant = newStatus === "NOT_RELEVANT";
+    const wasNotRelevant = lead.status === "NOT_RELEVANT";
+    const restoredPrio = (lead.score ?? 0) >= 70 ? "HIGH" : (lead.score ?? 0) >= 40 ? "MEDIUM" : "LOW";
+
+    setLead({
+      ...lead,
+      status: newStatus,
+      ...(isNowNotRelevant
+        ? {
+            priority: "LOW",
+            prioritySource: "SYSTEM",
+            priorityRatedAt: null,
+            priorityRatedByName: null,
+            priorityRatedBy: null,
+            isFocus: false,
+          }
+        : wasNotRelevant
+          ? {
+              priority: restoredPrio,
+              prioritySource: "SYSTEM",
+            }
+          : {}),
+    });
+    if (isNowNotRelevant) {
+      setEditIsFocus(false);
+    }
+
     try {
       const res = await fetch(`/api/leads/${lead.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
       });
-      if (res.ok) {
-        const data = await res.json().catch(() => null);
-        setLead({
-          ...lead,
-          status: newStatus,
-          priority: data?.lead?.priority ?? (newStatus === "NOT_RELEVANT" ? "LOW" : lead.priority),
-          prioritySource: data?.lead?.prioritySource ?? (newStatus === "NOT_RELEVANT" ? "SYSTEM" : lead.prioritySource),
-          priorityRatedAt: data?.lead?.priorityRatedAt !== undefined ? data.lead.priorityRatedAt : (newStatus === "NOT_RELEVANT" ? null : lead.priorityRatedAt),
-          priorityRatedByName: data?.lead?.priorityRatedByName !== undefined ? data.lead.priorityRatedByName : (newStatus === "NOT_RELEVANT" ? null : lead.priorityRatedByName),
-          isFocus: data?.lead?.isFocus !== undefined ? data.lead.isFocus : (newStatus === "NOT_RELEVANT" ? false : lead.isFocus),
-        });
-        if (newStatus === "NOT_RELEVANT") {
-          setEditIsFocus(false);
-        }
-        onUpdate();
+      if (!res.ok) throw new Error("Failed to update status");
+      const data = await res.json().catch(() => null);
+      if (data?.lead) {
+        setLead((curr: any) =>
+          curr
+            ? {
+                ...curr,
+                status: data.lead.status ?? newStatus,
+                priority: data.lead.priority ?? curr.priority,
+                prioritySource: data.lead.prioritySource ?? curr.prioritySource,
+                priorityRatedAt:
+                  data.lead.priorityRatedAt !== undefined ? data.lead.priorityRatedAt : curr.priorityRatedAt,
+                priorityRatedByName:
+                  data.lead.priorityRatedByName !== undefined
+                    ? data.lead.priorityRatedByName
+                    : curr.priorityRatedByName,
+                priorityRatedBy: isNowNotRelevant ? null : curr.priorityRatedBy,
+                isFocus: data.lead.isFocus !== undefined ? data.lead.isFocus : curr.isFocus,
+              }
+            : curr
+        );
       }
+      onUpdate();
     } catch (err) {
       console.error(err);
+      setLead(prevLead);
+      setEditIsFocus(prevEditIsFocus);
     }
   }
 
@@ -596,7 +634,9 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                 onChange={(e) => handleStatusChange(e.target.value as LeadStatus)}
               >
                 {Object.entries(STATUS_LABELS).map(([key, label]) => (
-                  <option key={key} value={key}>{label}</option>
+                  <option key={key} value={key}>
+                    {key === "NOT_RELEVANT" ? `${label} (📦 Archiv)` : label}
+                  </option>
                 ))}
               </select>
             </div>
@@ -610,6 +650,7 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
               priorityRatedByName={lead.priorityRatedByName || lead.priorityRatedBy?.displayName || lead.priorityRatedBy?.email}
               priorityRatedAt={lead.priorityRatedAt}
               variant="detail"
+              onArchive={() => handleStatusChange("NOT_RELEVANT")}
               onUpdate={(newPrio, newSource, serverLead) => {
                 setLead((prev: any) => ({
                   ...prev,

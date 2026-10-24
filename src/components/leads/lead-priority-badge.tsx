@@ -15,6 +15,7 @@ export type LeadPriorityBadgeProps = {
   priorityRatedAt?: string | Date | null;
   variant?: "table" | "detail";
   onUpdate?: (newPriority: Priority, newSource: PrioritySource, serverLead?: any) => void;
+  onArchive?: () => void;
 };
 
 const PRIORITY_THEMES: Record<Priority, { bg: string; tx: string; border: string }> = {
@@ -44,6 +45,7 @@ export function LeadPriorityBadge({
   priorityRatedAt,
   variant = "table",
   onUpdate,
+  onArchive,
 }: LeadPriorityBadgeProps) {
   const [currentPriority, setCurrentPriority] = useState<Priority>(initialPriority || "MEDIUM");
   const [currentSource, setCurrentSource] = useState<string>(initialSource);
@@ -167,6 +169,11 @@ export function LeadPriorityBadge({
     }
   }
 
+  function handleArchiveNoPriority() {
+    setIsOpen(false);
+    onArchive?.();
+  }
+
   const tooltipText = isUserRated
     ? `Von ${raterName} gerated: ${label}${priorityRatedAt ? ` (${formatDate(priorityRatedAt)})` : ""}`
     : `Automatische System-Priorität (${label})`;
@@ -182,7 +189,13 @@ export function LeadPriorityBadge({
             <select
               value={currentPriority}
               disabled={isUpdating}
-              onChange={(e) => handleSelect(e.target.value as Priority)}
+              onChange={(e) => {
+                if (e.target.value === "__ARCHIVE__") {
+                  handleArchiveNoPriority();
+                  return;
+                }
+                handleSelect(e.target.value as Priority);
+              }}
               className="rounded-md px-3 py-2 text-xs font-semibold border outline-none cursor-pointer transition-all"
               style={{
                 background: theme.bg,
@@ -199,6 +212,11 @@ export function LeadPriorityBadge({
               <option value="LOW" className="bg-[var(--surface)] text-[var(--text)]">
                 Niedrig (Low)
               </option>
+              {onArchive && (
+                <option value="__ARCHIVE__" className="bg-[var(--surface)] text-[var(--text-3)]">
+                  📦 Keine Priorität (Ins Archiv)
+                </option>
+              )}
             </select>
 
             {isUpdating && <Loader2 className="w-3.5 h-3.5 animate-spin text-[var(--text-3)]" />}
@@ -336,6 +354,20 @@ export function LeadPriorityBadge({
                 >
                   <RotateCcw className="w-3 h-3" />
                   <span>Auf Auto-Prio zurücksetzen</span>
+                </button>
+              </>
+            )}
+
+            {onArchive && (
+              <>
+                <div className="my-1 border-t" style={{ borderColor: "var(--border)" }} />
+                <button
+                  type="button"
+                  onClick={handleArchiveNoPriority}
+                  className="w-full flex items-center gap-1.5 px-2 py-1.5 rounded-md text-left transition-colors hover:bg-amber-500/15 text-amber-400 cursor-pointer"
+                >
+                  <span>📦</span>
+                  <span>Keine Prio (Ins Archiv)</span>
                 </button>
               </>
             )}

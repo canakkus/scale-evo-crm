@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getOptionalUser } from "@/lib/auth";
+import { ARCHIVED_STATUSES } from "@/lib/leads-list";
 import { prisma } from "@/lib/prisma";
 import { leadScope } from "@/lib/workspace";
 import { chatWithAssistant, type CrmContext } from "@/services/groq";
@@ -44,15 +45,16 @@ export async function POST(request: Request) {
       });
     }
 
-    // Build CRM Context Snapshot (scoped to user)
+    // Build CRM Context Snapshot (scoped to user, excluding archived leads)
     const userScope = await leadScope(dbUser);
+    const activeScope = { AND: [userScope, { status: { notIn: ARCHIVED_STATUSES } }] };
 
     const [totalLeads, openFollowUps, openTasks, topLeads, recentInteractions, chatHistory] = await Promise.all([
-      prisma.lead.count({ where: userScope }),
+      prisma.lead.count({ where: activeScope }),
       prisma.lead.count({ where: { ...userScope, status: "FOLLOW_UP" } }),
       prisma.task.count({ where: { status: "OPEN", userId: dbUser.id } }),
       prisma.lead.findMany({
-        where: userScope,
+        where: activeScope,
         take: 5,
         orderBy: { score: "desc" },
         select: { companyName: true, status: true, score: true },

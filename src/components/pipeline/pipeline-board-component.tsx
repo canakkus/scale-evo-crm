@@ -34,6 +34,7 @@ import {
   Search,
   RefreshCw,
   Mail,
+  Archive,
 } from "lucide-react";
 import type { AcquisitionType, LeadStatus } from "@prisma/client";
 
@@ -644,6 +645,17 @@ export function PipelineBoardComponent({ initialLeads }: { initialLeads?: any[] 
                                   {copiedNfcId === lead.id ? <Check className="w-5 h-5 sm:w-4 sm:h-4" /> : <Radio className="w-5 h-5 sm:w-4 sm:h-4" />}
                                 </button>
                               )}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleSetStatus(lead.id, "NOT_RELEVANT");
+                                }}
+                                className="p-2 hover:bg-[var(--surface-3)] rounded-lg text-[var(--text-3)] hover:text-amber-500 transition-colors flex items-center justify-center"
+                                title="Als 'Nicht relevant' ins Archiv verschieben (keine Priorität)"
+                              >
+                                <Archive className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+                              </button>
                               {nextStatus && (
                                 <button
                                   type="button"

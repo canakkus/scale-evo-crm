@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { ARCHIVED_STATUSES, NOT_RELEVANT_PRIORITY_RESET } from "@/lib/leads-list";
 import { pushToAppleEcosystem } from "@/services/apple-bridge";
 import type { LeadStatus, Priority, InteractionType, TaskCategory } from "@prisma/client";
 
@@ -37,7 +38,12 @@ export async function GET(request: Request) {
     const appointmentSinceDate = newAppointmentsSince ? new Date(newAppointmentsSince) : null;
 
     const [raw, researched, toContact, followUp, appointments, rejected, newAppointments] = await Promise.all([
-      prisma.lead.count({ where: { enrichmentStatus: "raw" } }),
+      prisma.lead.count({
+        where: {
+          enrichmentStatus: "raw",
+          status: { notIn: ARCHIVED_STATUSES },
+        },
+      }),
       // Only count leads sourced by the agent pipeline (Hunter/Guy) for qualified
       prisma.lead.count({ where: { source: { contains: "Hunter" }, status: "RESEARCHED" } }),
       prisma.lead.count({ where: { source: { contains: "Hunter" }, status: "TO_CONTACT" } }),
@@ -138,13 +144,19 @@ export async function GET(request: Request) {
 
   if (stage === "raw" || (!stage && !statusParam)) {
     whereClause.enrichmentStatus = "raw";
+    whereClause.status = { notIn: ARCHIVED_STATUSES };
   } else if (stage === "qualified") {
     whereClause.enrichmentStatus = { in: ["completed", "idle"] };
-    whereClause.status = { notIn: ["NOT_RELEVANT", "LOST", "VISITED_NO_INTEREST"] };
+    whereClause.status = { notIn: ARCHIVED_STATUSES };
   }
 
   if (statusParam) whereClause.status = statusParam;
-  if (priorityParam) whereClause.priority = priorityParam;
+  if (priorityParam) {
+    whereClause.priority = priorityParam;
+    if (statusParam !== "NOT_RELEVANT") {
+      whereClause.AND = [...(whereClause.AND || []), { status: { not: "NOT_RELEVANT" } }];
+    }
+  }
   if (hasPhone) whereClause.phone = { not: null };
 
   const leads = await prisma.lead.findMany({

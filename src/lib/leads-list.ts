@@ -72,8 +72,10 @@ async function industriesFor(scope: Awaited<ReturnType<typeof leadScopeFor>>, ca
   return list;
 }
 
-/** Same payload as GET /api/leads, shared with the server-rendered pages. */
-export async function listLeads(user: SessionUser, query: LeadListQuery = {}) {
+export function buildLeadsWhereClause(
+  scope: Record<string, unknown>,
+  query: LeadListQuery = {}
+): Record<string, unknown> {
   const search = query.search?.trim() || "";
   const status = (query.status || null) as LeadStatus | null;
   const isArchived = query.archived === true || query.archived === "true";
@@ -88,13 +90,7 @@ export async function listLeads(user: SessionUser, query: LeadListQuery = {}) {
   const sourceParam = query.source || null;
   const industryParam = query.industry?.trim() || "";
   const updatedDate = query.updatedDate?.trim() || "";
-  const sortBy = query.sortBy?.trim() || "updatedAt";
-  const sortOrder = (query.sortOrder?.toLowerCase() === "asc" ? "asc" : "desc") as "asc" | "desc";
-  const page = Math.max(1, Number.isFinite(query.page) ? Number(query.page) : 1);
-  const limit = Math.min(100, Math.max(1, Number.isFinite(query.limit) ? Number(query.limit) : 25));
 
-  const userIds = await workspaceUserIds(user);
-  const scope = leadScopeFor(userIds);
   const andClauses: Record<string, unknown>[] = [scope];
 
   if (search) {
@@ -135,7 +131,9 @@ export async function listLeads(user: SessionUser, query: LeadListQuery = {}) {
     if (sourceParam === "bot") {
       where.source = { contains: "Hunter" };
     } else if (sourceParam === "manual") {
-      where.OR = [{ source: null }, { NOT: { source: { contains: "Hunter" } } }];
+      andClauses.push({
+        OR: [{ source: null }, { NOT: { source: { contains: "Hunter" } } }],
+      });
     } else {
       where.source = { contains: sourceParam };
     }
@@ -181,12 +179,28 @@ export async function listLeads(user: SessionUser, query: LeadListQuery = {}) {
         (item) => item.toLowerCase() === "null" || item.toLowerCase() === "keine angabe" || item === "—",
       );
       if (hasNull) {
-        where.OR = [{ industry: { in: industries } }, { industry: null }, { industry: "" }];
+        andClauses.push({
+          OR: [{ industry: { in: industries } }, { industry: null }, { industry: "" }],
+        });
       } else {
         where.industry = { in: industries };
       }
     }
   }
+
+  return where;
+}
+
+/** Same payload as GET /api/leads, shared with the server-rendered pages. */
+export async function listLeads(user: SessionUser, query: LeadListQuery = {}) {
+  const sortBy = query.sortBy?.trim() || "updatedAt";
+  const sortOrder = (query.sortOrder?.toLowerCase() === "asc" ? "asc" : "desc") as "asc" | "desc";
+  const page = Math.max(1, Number.isFinite(query.page) ? Number(query.page) : 1);
+  const limit = Math.min(100, Math.max(1, Number.isFinite(query.limit) ? Number(query.limit) : 25));
+
+  const userIds = await workspaceUserIds(user);
+  const scope = leadScopeFor(userIds);
+  const where = buildLeadsWhereClause(scope, query);
 
   const validSortFields = ["createdAt", "updatedAt", "score", "companyName", "status", "lastContactAt", "auditSeverity"];
   const sortField = validSortFields.includes(sortBy) ? sortBy : "updatedAt";

@@ -29,7 +29,7 @@ async function leadsByCreator(user: SessionUser, leadScope: Awaited<ReturnType<t
     }),
     prisma.lead.groupBy({
       by: ["createdById"],
-      where: { AND: [leadScope, { createdById: { in: visibleUserIds } }] },
+      where: { AND: [leadScope, { createdById: { in: visibleUserIds } }, { status: { notIn: ARCHIVED_STATUSES } }] },
       _count: { _all: true },
     }),
     prisma.lead.groupBy({

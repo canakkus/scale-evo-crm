@@ -23,7 +23,6 @@ import {
   Sparkles,
   Mail,
   Flame,
-  Ban,
   ShieldAlert,
   Archive,
   RotateCcw,
@@ -150,49 +149,19 @@ export function LeadsTable({
     }
   }
 
-  async function handleQuickMarkNotRelevant(leadId: string, e: React.MouseEvent) {
-    e.stopPropagation();
-    setSelectedLeadIds((prev) => prev.filter((id) => id !== leadId));
-    if (!archiveFilter) {
-      setLeads((prev) => prev.filter((l) => l.id !== leadId));
-      setTotalLeads((prev) => Math.max(0, prev - 1));
-    } else {
-      setLeads((prev) =>
-        prev.map((l) =>
-          l.id === leadId
-            ? {
-                ...l,
-                status: "NOT_RELEVANT",
-                isFocus: false,
-                priority: "LOW",
-                prioritySource: "SYSTEM",
-                priorityRatedAt: null,
-                priorityRatedByName: null,
-              }
-            : l
-        )
-      );
-    }
-    try {
-      await fetch(`/api/leads/${leadId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "NOT_RELEVANT" }),
-      });
-    } catch (err) {
-      console.error(err);
-      fetchLeads();
-    }
-  }
-
-  async function handleQuickChangeStatus(leadId: string, newStatus: LeadStatus, e: React.MouseEvent | React.ChangeEvent) {
-    e.stopPropagation();
+  async function handleQuickChangeStatus(
+    leadId: string,
+    newStatus: LeadStatus,
+    e?: React.MouseEvent | React.ChangeEvent
+  ) {
+    e?.stopPropagation();
     const isArchivedStatus = ["NOT_RELEVANT", "LOST", "VISITED_NO_INTEREST"].includes(newStatus);
-    if (!archiveFilter && isArchivedStatus) {
-      setLeads((prev) => prev.filter((l) => l.id !== leadId));
-      setTotalLeads((prev) => Math.max(0, prev - 1));
-      setSelectedLeadIds((prev) => prev.filter((id) => id !== leadId));
-    } else if (archiveFilter && !isArchivedStatus) {
+    const shouldRemoveFromView =
+      (!archiveFilter && isArchivedStatus) ||
+      (archiveFilter && !isArchivedStatus) ||
+      Boolean(statusFilter && statusFilter !== newStatus);
+
+    if (shouldRemoveFromView) {
       setLeads((prev) => prev.filter((l) => l.id !== leadId));
       setTotalLeads((prev) => Math.max(0, prev - 1));
       setSelectedLeadIds((prev) => prev.filter((id) => id !== leadId));
@@ -210,6 +179,7 @@ export function LeadsTable({
                       prioritySource: "SYSTEM",
                       priorityRatedAt: null,
                       priorityRatedByName: null,
+                      priorityRatedBy: null,
                     }
                   : {}),
               }
@@ -225,13 +195,17 @@ export function LeadsTable({
       });
       if (!res.ok) throw new Error("Fehler beim Status-Update");
       const payload = await res.json().catch(() => null);
-      if (payload?.lead) {
+      if (payload?.lead && !shouldRemoveFromView) {
         setLeads((prev) => prev.map((l) => (l.id === leadId ? { ...l, ...payload.lead } : l)));
       }
     } catch (err) {
       console.error(err);
       fetchLeads();
     }
+  }
+
+  async function handleQuickMarkNotRelevant(leadId: string, e?: React.MouseEvent) {
+    return handleQuickChangeStatus(leadId, "NOT_RELEVANT", e);
   }
 
   async function handleBulkArchiveSelected(action: "archive" | "unarchive") {
@@ -745,6 +719,8 @@ export function LeadsTable({
                 setStatusFilter(nextStatus);
                 if (["NOT_RELEVANT", "LOST", "VISITED_NO_INTEREST"].includes(nextStatus)) {
                   setArchiveFilter(true);
+                } else if (nextStatus) {
+                  setArchiveFilter(false);
                 }
                 setSelectedLeadIds([]);
                 setPage(1);
@@ -754,7 +730,9 @@ export function LeadsTable({
             >
               <option value="">Alle Status</option>
               {Object.entries(STATUS_LABELS).map(([key, label]) => (
-                <option key={key} value={key}>{label}</option>
+                <option key={key} value={key}>
+                  {key === "NOT_RELEVANT" ? `${label} (📦 Archiv)` : label}
+                </option>
               ))}
             </select>
 
@@ -930,16 +908,30 @@ export function LeadsTable({
                 <span>Ins Archiv verschieben ({selectedLeadIds.length})</span>
               </button>
             ) : (
-              <button
-                type="button"
-                onClick={() => handleBulkArchiveSelected("unarchive")}
-                disabled={bulkArchiving}
-                className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold border transition-all hover:bg-emerald-500/25 active:scale-95 disabled:opacity-50 border-emerald-500/40 bg-emerald-500/15 text-emerald-300 cursor-pointer"
-                title="Ausgewählte Leads aus dem Archiv wiederherstellen"
-              >
-                <RotateCcw className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Wiederherstellen ({selectedLeadIds.length})</span>
-              </button>
+              <>
+                {leads.some((l) => selectedLeadIds.includes(l.id) && l.status !== "NOT_RELEVANT") && (
+                  <button
+                    type="button"
+                    onClick={() => handleBulkArchiveSelected("archive")}
+                    disabled={bulkArchiving}
+                    className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold border transition-all hover:bg-amber-500/25 active:scale-95 disabled:opacity-50 border-amber-500/40 bg-amber-500/15 text-amber-300 cursor-pointer"
+                    title="Ausgewählte Leads als 'Nicht relevant' markieren (entfernt Priorität)"
+                  >
+                    <Archive className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Als &bdquo;Nicht relevant&ldquo; (keine Prio)</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => handleBulkArchiveSelected("unarchive")}
+                  disabled={bulkArchiving}
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold border transition-all hover:bg-emerald-500/25 active:scale-95 disabled:opacity-50 border-emerald-500/40 bg-emerald-500/15 text-emerald-300 cursor-pointer"
+                  title="Ausgewählte Leads aus dem Archiv wiederherstellen"
+                >
+                  <RotateCcw className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Wiederherstellen ({selectedLeadIds.length})</span>
+                </button>
+              </>
             )}
             <button
               type="button"
@@ -1123,7 +1115,7 @@ export function LeadsTable({
                             >
                               {Object.entries(STATUS_LABELS).map(([k, lbl]) => (
                                 <option key={k} value={k} className="bg-[var(--surface)] text-[var(--text)]">
-                                  {lbl}
+                                  {k === "NOT_RELEVANT" ? `${lbl} (📦 Archiv)` : lbl}
                                 </option>
                               ))}
                             </select>
@@ -1161,6 +1153,7 @@ export function LeadsTable({
                             priorityRatedByName={lead.priorityRatedByName || lead.priorityRatedBy?.displayName || lead.priorityRatedBy?.email}
                             priorityRatedAt={lead.priorityRatedAt}
                             variant="table"
+                            onArchive={() => handleQuickMarkNotRelevant(lead.id)}
                             onUpdate={(newPrio, newSource, serverLead) => {
                               setLeads((prev) =>
                                 prev.map((l) =>

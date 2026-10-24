@@ -17,6 +17,7 @@
 import Groq from "groq-sdk";
 import { prisma } from "@/lib/prisma";
 import { leadScopeForUserId } from "@/lib/workspace";
+import { ARCHIVED_STATUSES, systemPriorityForScore } from "@/lib/leads-list";
 import { runLeadScout } from "./lead-scout";
 import { runRestaurantScout } from "./restaurant-scout";
 import { withGroqClient } from "@/lib/groq-key-manager";
@@ -244,6 +245,8 @@ export async function executeAssistantTool(name: string, args: any, userId: stri
 
         if (status && status !== "ALL") {
           andClauses.push({ status: status as any });
+        } else if (!status) {
+          andClauses.push({ status: { notIn: ARCHIVED_STATUSES } });
         }
 
         if (olderThanDays && !isNaN(Number(olderThanDays))) {
@@ -425,6 +428,8 @@ export async function executeAssistantTool(name: string, args: any, userId: stri
 
         if (status && status !== "ALL") {
           andClauses.push({ status: status as any });
+        } else if (!status) {
+          andClauses.push({ status: { notIn: ARCHIVED_STATUSES } });
         }
 
         const validSortFields = ["createdAt", "updatedAt", "score", "companyName"];
@@ -454,7 +459,14 @@ export async function executeAssistantTool(name: string, args: any, userId: stri
 
       case "updateLeadStatus": {
         const { leadId, status } = args;
-        if (!(await canAccessLead(leadId))) return notFound;
+        const existing =
+          typeof leadId === "string"
+            ? await prisma.lead.findFirst({
+                where: { id: leadId, ...scope },
+                select: { id: true, status: true, score: true },
+              })
+            : null;
+        if (!existing) return notFound;
         const updated = await prisma.lead.update({
           where: { id: leadId },
           data: {
@@ -468,7 +480,12 @@ export async function executeAssistantTool(name: string, args: any, userId: stri
                   priorityRatedById: null,
                   priorityRatedByName: null,
                 }
-              : {}),
+              : existing.status === "NOT_RELEVANT"
+                ? {
+                    priority: systemPriorityForScore(existing.score),
+                    prioritySource: "SYSTEM",
+                  }
+                : {}),
           },
           select: { id: true, companyName: true, status: true },
         });
