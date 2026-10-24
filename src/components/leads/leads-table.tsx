@@ -36,8 +36,10 @@ import type { LeadStatus } from "@prisma/client";
 
 export function LeadsTable({
   initialData,
+  initialLeadId = null,
 }: {
   initialData?: { leads: any[]; allIndustries?: string[]; pagination?: { totalPages?: number; total?: number } } | null;
+  initialLeadId?: string | null;
 }) {
   const [leads, setLeads] = useState<any[]>(initialData?.leads ?? []);
   const [loading, setLoading] = useState(!initialData);
@@ -75,7 +77,7 @@ export function LeadsTable({
   // Modals
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [formMounted, setFormMounted] = useState(false);
-  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(initialLeadId);
 
   // Debounce search input to avoid laggy keystrokes & excessive API requests
   useEffect(() => {
