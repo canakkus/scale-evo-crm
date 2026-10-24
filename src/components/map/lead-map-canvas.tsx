@@ -4,8 +4,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { maplibreGL } from "@maplibre/maplibre-gl-leaflet";
-import "maplibre-gl/dist/maplibre-gl.css";
 import { DEFAULT_VIENNA_COORDS } from "@/lib/distance";
 import { MapPopupBody, MapTooltipBody } from "./map-overlays";
 import { pinClassName, pinFillColor, pinHtml, pinLabel } from "./pin-icons";
@@ -19,22 +17,18 @@ import type { PinGroup } from "./map-types";
  * lebt in einem Ref und wird einmal erzeugt; wechselnde Daten tauschen nur die
  * Marker im LayerGroup. Ein Remount wuerde Zoom und Position bei jedem Klick auf
  * einen Filter-Chip zuruecksetzen.
+ *
+ * Basemap: Nativer Leaflet Raster-TileLayer (CARTO Voyager / Dark Matter mit
+ * Retina-Support `{r}`). Eliminiert die instabile MapLibre-GL-v5-Bridge und
+ * wechselt automatisch mit dem App-Theme (`html.dark`).
  */
+const CARTO_TILES = {
+  light: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+  dark: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+} as const;
 
-/**
- * Basemap: OpenFreeMap, Stil "dark". Kein API-Key, keine Registrierung, keine
- * Request-Limits, kommerzielle Nutzung ausdruecklich erlaubt (openfreemap.org,
- * geprueft 2026-09-13). CARTO kam dafuer nicht in Frage: `basemaps.cartocdn.com`
- * blendet ohne Key inzwischen "API KEY REQUIRED" ueber jede Kachel ein.
- *
- * OpenFreeMap liefert nur Vektorkacheln — Leaflet rendert die ueber
- * @maplibre/maplibre-gl-leaflet. Das Plugin haengt sich in die tilePane, der
- * Abdunkel-Filter aus globals.css (`.leaflet-tile-pane`) greift also weiter.
- *
- * Kein SLA: der Dienst ist spendenfinanziert und kann ohne Vorwarnung enden.
- * Faellt er aus, bleibt die Karte grau, Pins und Popups funktionieren weiter.
- */
-const MAP_STYLE_URL = "https://tiles.openfreemap.org/styles/dark";
+const CARTO_ATTRIBUTION =
+  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
 
 /** Ungenaue Pins liegen unter den exakten — sie sollen nichts verdecken. */
 const APPROX_PANE = "mapApproxPane";
@@ -110,7 +104,13 @@ export default function LeadMapCanvas({
       closePopupOnClick: false,
     });
 
-    maplibreGL({ style: MAP_STYLE_URL }).addTo(map);
+    const isDark = document.documentElement.classList.contains("dark");
+    const tileLayer = L.tileLayer(isDark ? CARTO_TILES.dark : CARTO_TILES.light, {
+      attribution: CARTO_ATTRIBUTION,
+      subdomains: "abcd",
+      maxZoom: 20,
+    }).addTo(map);
+
     L.control.attribution({ prefix: false, position: "bottomleft" }).addTo(map);
     L.control.zoom({ position: "bottomright" }).addTo(map);
 
@@ -127,6 +127,16 @@ export default function LeadMapCanvas({
     // Klick auf die freie Flaeche schliesst die Auswahl.
     map.on("click", () => handlersRef.current.onSelect(null));
 
+    // Theme-Wechsel (Light <-> Dark) dynamisch auf den TileLayer uebertragen.
+    const themeObserver = new MutationObserver(() => {
+      const darkNow = document.documentElement.classList.contains("dark");
+      tileLayer.setUrl(darkNow ? CARTO_TILES.dark : CARTO_TILES.light);
+    });
+    themeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+
     /**
      * ResizeObserver statt window.resize: Beim Ein-/Ausklappen der Sidebar oder
      * der Seitenliste aendert sich die Fensterbreite NICHT — Leaflet wuerde mit
@@ -141,6 +151,7 @@ export default function LeadMapCanvas({
 
     return () => {
       if (debounce) clearTimeout(debounce);
+      themeObserver.disconnect();
       observer.disconnect();
       map.remove();
       mapRef.current = null;

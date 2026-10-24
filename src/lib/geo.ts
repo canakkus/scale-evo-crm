@@ -48,7 +48,11 @@ export function isGeoPrecision(value: unknown): value is GeoPrecision {
  * lieber ein ehrlich gestrichelter Pin als eine erfundene Hausnummer.
  */
 export function isApproximate(precision: string | null | undefined): boolean {
-  return precision !== "ROOFTOP" && precision !== "RANGE_INTERPOLATED";
+  return (
+    precision !== "ROOFTOP" &&
+    precision !== "RANGE_INTERPOLATED" &&
+    precision !== "GEOMETRIC_CENTER"
+  );
 }
 
 /**

@@ -6,9 +6,7 @@ import {
   ShieldCheck,
   CheckCircle2,
   XCircle,
-  UtensilsCrossed,
   User,
-  Sliders,
   Sparkles,
   ArrowUp,
   ArrowDown,
@@ -22,9 +20,6 @@ import {
   Search,
   Phone,
   Calendar,
-  BookOpen,
-  CheckSquare,
-  Bot,
   BarChart3,
   Settings as SettingsIcon,
   Check,
@@ -45,12 +40,8 @@ const NAV_ICON_MAP: Record<string, any> = {
   "/pipeline": Kanban,
   "/map": MapIcon,
   "/lead-scout": Search,
-  "/restaurant-scout": UtensilsCrossed,
   "/cold-calls": Phone,
   "/follow-ups": Calendar,
-  "/journal": BookOpen,
-  "/tasks": CheckSquare,
-  "/ai": Bot,
   "/analytics": BarChart3,
   "/settings": SettingsIcon,
 };
@@ -58,7 +49,6 @@ const NAV_ICON_MAP: Record<string, any> = {
 export default function SettingsPage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [savingScout, setSavingScout] = useState(false);
   const [savingNav, setSavingNav] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [locationSuccess, setLocationSuccess] = useState(false);
@@ -78,14 +68,14 @@ export default function SettingsPage() {
 
   // Nav Items configuration state
   const [navItems, setNavItems] = useState<NavItemConfig[]>(DEFAULT_NAV_ITEMS);
-  const [restaurantScoutEnabled, setRestaurantScoutEnabled] = useState(true);
+  const [restaurantScoutEnabled, setRestaurantScoutEnabled] = useState(false);
 
   useEffect(() => {
     fetch("/api/settings")
       .then((res) => res.json())
       .then((resData) => {
         setData(resData);
-        const scoutEnabled = resData?.currentUser?.restaurantScoutEnabled ?? true;
+        const scoutEnabled = resData?.currentUser?.restaurantScoutEnabled ?? false;
         setRestaurantScoutEnabled(scoutEnabled);
 
         const resolved = resolveNavConfig(resData?.currentUser?.sidebarConfig, scoutEnabled);
@@ -104,34 +94,6 @@ export default function SettingsPage() {
       await saveFixedLocation(fullAddress, lat, lng);
       setLocationSuccess(true);
       setTimeout(() => setLocationSuccess(false), 3000);
-    }
-  }
-
-  async function handleToggleRestaurantScout(newVal: boolean) {
-    setRestaurantScoutEnabled(newVal);
-    setSavingScout(true);
-    try {
-      const res = await fetch("/api/settings", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ restaurantScoutEnabled: newVal }),
-      });
-      if (res.ok) {
-        // Update nav items scout visibility
-        const updated = navItems.map((item) =>
-          item.href === "/restaurant-scout" ? { ...item, visible: newVal } : item
-        );
-        setNavItems(updated);
-        window.dispatchEvent(
-          new CustomEvent("user-settings-updated", {
-            detail: { restaurantScoutEnabled: newVal, sidebarConfig: updated },
-          })
-        );
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setSavingScout(false);
     }
   }
 
@@ -508,54 +470,6 @@ export default function SettingsPage() {
                 </div>
               );
             })}
-          </div>
-        </div>
-
-        {/* Feature Toggles & Modules Card */}
-        <div
-          className="rounded-xl border p-6 space-y-4 shadow-sm"
-          style={{ background: "var(--surface)", borderColor: "var(--border)" }}
-        >
-          <div className="flex items-center gap-2">
-            <Sliders className="w-4 h-4" style={{ color: "var(--accent)" }} />
-            <h3 className="text-sm font-bold" style={{ color: "var(--text)" }}>
-              Module & Feature-Toggles
-            </h3>
-          </div>
-
-          <div className="divide-y" style={{ borderColor: "var(--border)" }}>
-            {/* Restaurant Scout Toggle */}
-            <div className="py-3 flex items-center justify-between gap-4">
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2">
-                  <UtensilsCrossed size={16} style={{ color: "var(--accent)" }} />
-                  <p className="text-xs font-bold" style={{ color: "var(--text)" }}>
-                    Restaurant Scout & Menü-Radar
-                  </p>
-                </div>
-                <p className="text-[11px] max-w-lg leading-relaxed" style={{ color: "var(--text-3)" }}>
-                  Automatisiertes Scouting von Gastronomiebetrieben via Google Places & Speisekarten-Erkennung per Gemini KI.
-                </p>
-              </div>
-
-              {/* iOS Style Toggle Switch */}
-              <button
-                type="button"
-                role="switch"
-                aria-checked={restaurantScoutEnabled}
-                disabled={savingScout}
-                onClick={() => handleToggleRestaurantScout(!restaurantScoutEnabled)}
-                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden ${
-                  restaurantScoutEnabled ? "bg-[var(--accent)]" : "bg-zinc-700"
-                }`}
-              >
-                <span
-                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
-                    restaurantScoutEnabled ? "translate-x-5 bg-black" : "translate-x-0"
-                  }`}
-                />
-              </button>
-            </div>
           </div>
         </div>
 

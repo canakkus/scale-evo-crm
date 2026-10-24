@@ -180,10 +180,10 @@ export function InstagramActionBar({
           <Chevron />
           <StepButton
             state={running ? "disabled" : step3}
-            label="In Outreach öffnen"
-            shortLabel="Outreach"
+            label="In Leads öffnen"
+            shortLabel="Leads"
             title={enrichCount === 0 ? "Erst als DM-Leads anlegen" : undefined}
-            href="/outreach"
+            href="/leads"
           />
         </div>
       </div>

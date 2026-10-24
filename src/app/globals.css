@@ -187,8 +187,12 @@
   --map-pin-ring:  2px;
   --map-stack-size: 22px;
   --map-panel-w:   var(--outreach-queue-w);
-  --map-tile-filter: saturate(0.75) brightness(0.85) contrast(1.05);
+  --map-tile-filter: none;
   --map-chrome-bg: color-mix(in srgb, var(--bg) 78%, transparent);
+}
+
+.dark {
+  --map-tile-filter: saturate(0.85) brightness(0.95) contrast(1.05);
 }
 
 @theme {

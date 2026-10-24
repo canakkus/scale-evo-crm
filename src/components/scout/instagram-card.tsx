@@ -179,11 +179,11 @@ export function InstagramCard({
           {signals.slice(0, 3)}
           {view.isDmLead && (
             <Link
-              href="/outreach"
+              href="/leads"
               className="inline-flex items-center px-2 text-[11px] font-semibold underline-offset-2 hover:underline"
               style={{ color: "var(--text-2)", minHeight: 44 }}
             >
-              In Outreach öffnen
+              In Leads öffnen
             </Link>
           )}
         </div>

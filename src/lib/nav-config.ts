@@ -13,14 +13,9 @@ export const DEFAULT_NAV_ITEMS: NavItemConfig[] = [
   // verlieren den Tab also nicht, sehen ihn aber am Ende der Liste.
   { href: "/map", label: "Karte", visible: true },
   { href: "/lead-scout", label: "Lead Scout", visible: true },
-  { href: "/restaurant-scout", label: "Restaurant Scout", visible: true },
   { href: "/cold-calls", label: "Cold Calls", visible: true },
-  { href: "/outreach", label: "Outreach", visible: true },
   { href: "/follow-ups", label: "Follow-ups", visible: true },
   { href: "/calendar", label: "Kalender", visible: true },
-  { href: "/journal", label: "Journal", visible: true },
-  { href: "/tasks", label: "Tasks", visible: true },
-  { href: "/ai", label: "KI-Assistent", visible: true },
   { href: "/analytics", label: "Analytics", visible: true },
   { href: "/settings", label: "Einstellungen", visible: true },
 ];

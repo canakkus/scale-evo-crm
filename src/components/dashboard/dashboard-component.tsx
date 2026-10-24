@@ -7,8 +7,7 @@ import {
   PhoneCall,
   CalendarClock,
   Trophy,
-  CheckSquare,
-  Sparkles,
+  MapPin,
   Radar,
   Upload,
   ArrowRight,
@@ -46,13 +45,12 @@ export function DashboardComponent({ initialData }: { initialData?: any }) {
     { label: "Offene Follow-ups", value: metrics.openFollowUps || 0, icon: CalendarClock, href: "/follow-ups", color: "var(--status-planned-tx)" },
     { label: "Gewonnene Kunden", value: metrics.wonLeads || 0, icon: Trophy, href: "/leads?status=WON", color: "var(--status-warm-tx)" },
     { label: "Call-Aufnahmen", value: metrics.totalCalls || 0, icon: Radio, href: "/cold-calls", color: "var(--status-warm-tx)" },
-    { label: "Offene Tasks", value: metrics.openTasks || 0, icon: CheckSquare, href: "/tasks", color: "var(--accent)" },
   ];
 
   return (
     <div className="space-y-12 pb-16">
       {/* Metric Cards Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {cards.map((card, i) => {
           const Icon = card.icon;
           return (
@@ -107,14 +105,14 @@ export function DashboardComponent({ initialData }: { initialData?: any }) {
           </Link>
 
           <Link
-            href="/ai"
+            href="/map"
             className="flex items-center gap-4 p-4 rounded-2xl transition-opacity hover:opacity-80"
             style={{ background: "var(--surface-2)" }}
           >
-            <Sparkles className="w-5 h-5" style={{ color: "var(--status-planned-tx)" }} />
+            <MapPin className="w-5 h-5" style={{ color: "var(--status-planned-tx)" }} />
             <div>
-              <p className="text-sm font-medium" style={{ color: "var(--text)" }}>KI-Assistent Chat</p>
-              <p className="text-[13px]" style={{ color: "var(--text-2)" }}>Strategien & Outreach Text</p>
+              <p className="text-sm font-medium" style={{ color: "var(--text)" }}>Lead-Karte</p>
+              <p className="text-[13px]" style={{ color: "var(--text-2)" }}>Verortete Leads & Walk-Ins</p>
             </div>
           </Link>
         </div>
