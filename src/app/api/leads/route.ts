@@ -21,6 +21,8 @@ export async function GET(request: Request) {
       acquisitionType: searchParams.get("acquisitionType"),
       priority: searchParams.get("priority"),
       isFocus: searchParams.get("isFocus"),
+      archived: searchParams.get("archived") === "true",
+      includeArchived: searchParams.get("includeArchived") === "true",
       relevantOnly: searchParams.get("relevantOnly") === "true",
       createdById: searchParams.get("createdById"),
       assignedToId: searchParams.get("assignedToId"),

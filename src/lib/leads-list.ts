@@ -5,6 +5,8 @@ import { leadScopeFor, workspaceUserIds } from "@/lib/workspace";
 
 type SessionUser = { id: string; email?: string | null };
 
+export const ARCHIVED_STATUSES: LeadStatus[] = ["NOT_RELEVANT", "LOST", "VISITED_NO_INTEREST"];
+
 export type LeadListQuery = {
   search?: string | null;
   status?: string | null;
@@ -12,6 +14,8 @@ export type LeadListQuery = {
   priority?: string | null;
   isFocus?: string | null;
   relevantOnly?: boolean;
+  archived?: boolean | string | null;
+  includeArchived?: boolean | string | null;
   createdById?: string | null;
   assignedToId?: string | null;
   webPresence?: string | null;
@@ -49,6 +53,8 @@ async function industriesFor(scope: Awaited<ReturnType<typeof leadScopeFor>>, ca
 export async function listLeads(user: SessionUser, query: LeadListQuery = {}) {
   const search = query.search?.trim() || "";
   const status = (query.status || null) as LeadStatus | null;
+  const isArchived = query.archived === true || query.archived === "true";
+  const includeArchived = query.includeArchived === true || query.includeArchived === "true";
   const acquisitionType = query.acquisitionType || null;
   const priority = (query.priority || null) as Priority | null;
   const isFocusParam = query.isFocus || null;
@@ -84,13 +90,19 @@ export async function listLeads(user: SessionUser, query: LeadListQuery = {}) {
 
   if (createdByIdParam) where.createdById = createdByIdParam;
   if (assignedToIdParam) where.assignedToId = assignedToIdParam;
-  if (status) where.status = status;
+
+  if (status) {
+    where.status = status;
+  } else if (isArchived) {
+    where.status = { in: ARCHIVED_STATUSES };
+  } else if (!includeArchived) {
+    // Default: hide archived/disqualified leads so only active leads are shown
+    where.status = { notIn: ARCHIVED_STATUSES };
+  }
+
   if (acquisitionType) where.acquisitionType = acquisitionType;
   if (priority) where.priority = priority;
   if (isFocusParam === "true") where.isFocus = true;
-  if (relevantOnly) {
-    where.status = { notIn: ["NOT_RELEVANT", "LOST"] };
-  }
   if (webPresence) where.webPresence = webPresence;
   if (enrichmentStatusParam) where.enrichmentStatus = enrichmentStatusParam;
   if (sourceParam) {

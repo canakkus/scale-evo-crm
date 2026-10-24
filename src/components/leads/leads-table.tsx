@@ -25,6 +25,7 @@ import {
   Flame,
   Ban,
   ShieldAlert,
+  Archive,
 } from "lucide-react";
 import { StatusBadge, PriorityDot, STATUS_STYLES } from "@/components/ui/status-badge";
 import { LeadPriorityBadge } from "@/components/leads/lead-priority-badge";
@@ -51,7 +52,7 @@ export function LeadsTable({
   const [statusFilter, setStatusFilter] = useState("");
   const [acquisitionFilter, setAcquisitionFilter] = useState<string>("");
   const [isFocusFilter, setIsFocusFilter] = useState(false);
-  const [relevantOnlyFilter, setRelevantOnlyFilter] = useState(false);
+  const [archiveFilter, setArchiveFilter] = useState(false);
   const [sourceFilter, setSourceFilter] = useState<"" | "bot_raw" | "bot" | "manual">("");
   const [industryFilters, setIndustryFilters] = useState<string[]>([]);
   const [availableIndustries, setAvailableIndustries] = useState<string[]>(initialData?.allIndustries ?? []);
@@ -95,7 +96,7 @@ export function LeadsTable({
       if (statusFilter) params.set("status", statusFilter);
       if (acquisitionFilter) params.set("acquisitionType", acquisitionFilter);
       if (isFocusFilter) params.set("isFocus", "true");
-      if (relevantOnlyFilter) params.set("relevantOnly", "true");
+      if (archiveFilter) params.set("archived", "true");
       if (sourceFilter === "bot_raw") {
         params.set("enrichmentStatus", "raw");
       } else if (sourceFilter === "bot") {
@@ -127,7 +128,7 @@ export function LeadsTable({
     } finally {
       setLoading(false);
     }
-  }, [debouncedSearch, statusFilter, acquisitionFilter, isFocusFilter, relevantOnlyFilter, sourceFilter, industryFilters, updatedDateFilter, customDate, page]);
+  }, [debouncedSearch, statusFilter, acquisitionFilter, isFocusFilter, archiveFilter, sourceFilter, industryFilters, updatedDateFilter, customDate, page]);
 
   async function handleToggleFocus(leadId: string, currentVal: boolean, currentStatus?: string) {
     if (currentStatus === "NOT_RELEVANT" && !currentVal) {
@@ -149,7 +150,12 @@ export function LeadsTable({
 
   async function handleQuickMarkNotRelevant(leadId: string, e: React.MouseEvent) {
     e.stopPropagation();
-    setLeads((prev) => prev.map((l) => (l.id === leadId ? { ...l, status: "NOT_RELEVANT", isFocus: false } : l)));
+    if (!archiveFilter) {
+      setLeads((prev) => prev.filter((l) => l.id !== leadId));
+      setTotalLeads((prev) => Math.max(0, prev - 1));
+    } else {
+      setLeads((prev) => prev.map((l) => (l.id === leadId ? { ...l, status: "NOT_RELEVANT", isFocus: false } : l)));
+    }
     try {
       await fetch(`/api/leads/${leadId}`, {
         method: "PATCH",
@@ -164,17 +170,26 @@ export function LeadsTable({
 
   async function handleQuickChangeStatus(leadId: string, newStatus: LeadStatus, e: React.MouseEvent | React.ChangeEvent) {
     e.stopPropagation();
-    setLeads((prev) =>
-      prev.map((l) =>
-        l.id === leadId
-          ? {
-              ...l,
-              status: newStatus,
-              isFocus: newStatus === "NOT_RELEVANT" ? false : l.isFocus,
-            }
-          : l
-      )
-    );
+    const isArchivedStatus = ["NOT_RELEVANT", "LOST", "VISITED_NO_INTEREST"].includes(newStatus);
+    if (!archiveFilter && isArchivedStatus) {
+      setLeads((prev) => prev.filter((l) => l.id !== leadId));
+      setTotalLeads((prev) => Math.max(0, prev - 1));
+    } else if (archiveFilter && !isArchivedStatus) {
+      setLeads((prev) => prev.filter((l) => l.id !== leadId));
+      setTotalLeads((prev) => Math.max(0, prev - 1));
+    } else {
+      setLeads((prev) =>
+        prev.map((l) =>
+          l.id === leadId
+            ? {
+                ...l,
+                status: newStatus,
+                isFocus: newStatus === "NOT_RELEVANT" ? false : l.isFocus,
+              }
+            : l
+        )
+      );
+    }
     try {
       const res = await fetch(`/api/leads/${leadId}`, {
         method: "PATCH",
@@ -475,18 +490,18 @@ export function LeadsTable({
             <button
               type="button"
               onClick={() => {
-                setRelevantOnlyFilter((prev) => !prev);
+                setArchiveFilter((prev) => !prev);
                 setPage(1);
               }}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all whitespace-nowrap ${
-                relevantOnlyFilter
-                  ? "shadow-sm border-emerald-500/50 bg-emerald-500/15 text-emerald-300"
+                archiveFilter
+                  ? "shadow-sm border-amber-500/50 bg-amber-500/15 text-amber-300 font-bold"
                   : "border-[var(--border)] bg-[var(--surface)] text-[var(--text-2)] hover:text-[var(--text)]"
               }`}
-              title="Blendet irrelevante und verlorene Leads aus"
+              title={archiveFilter ? "Zurück zu aktiven Leads" : "Zeigt nur archivierte / nicht interessierte Leads"}
             >
-              <Flame className={`w-3.5 h-3.5 ${relevantOnlyFilter ? "text-emerald-400" : ""}`} />
-              <span>Nur Relevante</span>
+              <Archive className={`w-3.5 h-3.5 ${archiveFilter ? "text-amber-400" : ""}`} />
+              <span>{archiveFilter ? "📦 Archiv aktiv" : "📦 Archiv"}</span>
             </button>
 
             {/* Bot Filter Segmented Buttons */}
