@@ -1,5 +1,6 @@
 import type { LeadStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { ARCHIVED_STATUSES } from "@/lib/leads-list";
 import { leadScope as workspaceLeadScope, workspaceUserIds } from "@/lib/workspace";
 
 type SessionUser = { id: string; email?: string | null };
@@ -13,6 +14,7 @@ function iso(value: Date | null | undefined): string | null {
 function countOf(groups: { status: LeadStatus; _count: { _all: number } }[], statuses?: LeadStatus[]) {
   return groups.reduce((sum, group) => {
     if (statuses && !statuses.includes(group.status)) return sum;
+    if (!statuses && ARCHIVED_STATUSES.includes(group.status)) return sum;
     return sum + group._count._all;
   }, 0);
 }
@@ -36,7 +38,7 @@ async function leadsByCreator(user: SessionUser, leadScope: Awaited<ReturnType<t
       _count: { _all: true },
     }),
     prisma.lead.findMany({
-      where: { AND: [leadScope, { createdById: { in: visibleUserIds } }] },
+      where: { AND: [leadScope, { createdById: { in: visibleUserIds } }, { status: { notIn: ARCHIVED_STATUSES } }] },
       orderBy: { createdAt: "desc" },
       select: {
         id: true,
@@ -95,7 +97,7 @@ export async function loadDashboard(user: SessionUser, options?: { includeTeam?:
     prisma.callRecording.count({ where: { createdById: user.id } }),
     prisma.task.count({ where: { userId: user.id, status: "OPEN" } }),
     prisma.lead.findMany({
-      where: leadScope,
+      where: { AND: [leadScope, { status: { notIn: ARCHIVED_STATUSES } }] },
       take: 5,
       orderBy: { createdAt: "desc" },
       select: {

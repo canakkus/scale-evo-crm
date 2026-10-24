@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getOptionalUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { ARCHIVED_STATUSES } from "@/lib/leads-list";
 import { leadScope } from "@/lib/workspace";
 import {
   getBatchAuditState,
@@ -38,7 +39,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const scope = leadScope(user);
+    const scope = await leadScope(user);
 
     let targetLeadIds: string[] = [];
 
@@ -54,10 +55,11 @@ export async function POST(request: Request) {
       });
       targetLeadIds = accessibleLeads.map((l) => l.id);
     } else if (body.all === true) {
-      // All leads accessible to user with a website
+      // All active leads accessible to user with a website (exclude archived)
       const accessibleLeads = await prisma.lead.findMany({
         where: {
           ...scope,
+          status: { notIn: ARCHIVED_STATUSES },
           website: { not: null },
           ...(body.onlyUnaudited ? { auditStatus: { in: ["idle", "skipped", "failed"] } } : {}),
         },

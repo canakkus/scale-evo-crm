@@ -302,7 +302,19 @@ export async function executeAssistantTool(name: string, args: any, userId: stri
 
         await prisma.lead.updateMany({
           where: { id: { in: idsToUpdate } },
-          data: { status: newStatus as any },
+          data: {
+            status: newStatus as any,
+            ...(newStatus === "NOT_RELEVANT"
+              ? {
+                  isFocus: false,
+                  priority: "LOW",
+                  prioritySource: "SYSTEM",
+                  priorityRatedAt: null,
+                  priorityRatedById: null,
+                  priorityRatedByName: null,
+                }
+              : {}),
+          },
         });
 
         return {
@@ -364,7 +376,19 @@ export async function executeAssistantTool(name: string, args: any, userId: stri
         if (!(await canAccessLead(leadId))) return notFound;
         const updated = await prisma.lead.update({
           where: { id: leadId },
-          data: { status: status as any },
+          data: {
+            status: status as any,
+            ...(status === "NOT_RELEVANT"
+              ? {
+                  isFocus: false,
+                  priority: "LOW",
+                  prioritySource: "SYSTEM",
+                  priorityRatedAt: null,
+                  priorityRatedById: null,
+                  priorityRatedByName: null,
+                }
+              : {}),
+          },
           select: { id: true, companyName: true, status: true },
         });
         return { success: true, leadId: updated.id, companyName: updated.companyName, status: updated.status };

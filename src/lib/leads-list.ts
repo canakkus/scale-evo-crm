@@ -1,4 +1,4 @@
-import type { LeadStatus, Priority, WebPresence } from "@prisma/client";
+import type { LeadStatus, Priority, PrioritySource, WebPresence } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { INDUSTRIES } from "@/lib/constants";
 import { leadScopeFor, workspaceUserIds } from "@/lib/workspace";
@@ -6,6 +6,29 @@ import { leadScopeFor, workspaceUserIds } from "@/lib/workspace";
 type SessionUser = { id: string; email?: string | null };
 
 export const ARCHIVED_STATUSES: LeadStatus[] = ["NOT_RELEVANT", "LOST", "VISITED_NO_INTEREST"];
+
+export function isArchivedStatus(status?: LeadStatus | string | null): boolean {
+  return Boolean(status && ARCHIVED_STATUSES.includes(status as LeadStatus));
+}
+
+export function systemPriorityForScore(score?: number | null): Priority {
+  const s = typeof score === "number" && Number.isFinite(score) ? score : 0;
+  return s >= 70 ? "HIGH" : s >= 40 ? "MEDIUM" : "LOW";
+}
+
+/**
+ * Invariant fields whenever a lead is set to NOT_RELEVANT ("Nicht relevant"):
+ * - Focus is removed (isFocus: false)
+ * - Priority rating metadata is cleared and priority is reset (no active priority)
+ */
+export const NOT_RELEVANT_PRIORITY_RESET = {
+  isFocus: false,
+  priority: "LOW" as Priority,
+  prioritySource: "SYSTEM" as PrioritySource,
+  priorityRatedAt: null,
+  priorityRatedById: null,
+  priorityRatedByName: null,
+};
 
 export type LeadListQuery = {
   search?: string | null;
@@ -58,7 +81,6 @@ export async function listLeads(user: SessionUser, query: LeadListQuery = {}) {
   const acquisitionType = query.acquisitionType || null;
   const priority = (query.priority || null) as Priority | null;
   const isFocusParam = query.isFocus || null;
-  const relevantOnly = query.relevantOnly === true;
   const createdByIdParam = query.createdById?.trim() || "";
   const assignedToIdParam = query.assignedToId?.trim() || "";
   const webPresence = (query.webPresence || null) as WebPresence | null;
@@ -101,7 +123,11 @@ export async function listLeads(user: SessionUser, query: LeadListQuery = {}) {
   }
 
   if (acquisitionType) where.acquisitionType = acquisitionType;
-  if (priority) where.priority = priority;
+  if (priority) {
+    where.priority = priority;
+    // NOT_RELEVANT leads have no priority
+    andClauses.push({ status: { not: "NOT_RELEVANT" } });
+  }
   if (isFocusParam === "true") where.isFocus = true;
   if (webPresence) where.webPresence = webPresence;
   if (enrichmentStatusParam) where.enrichmentStatus = enrichmentStatusParam;

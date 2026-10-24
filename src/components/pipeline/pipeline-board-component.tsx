@@ -172,8 +172,14 @@ export function PipelineBoardComponent({ initialLeads }: { initialLeads?: any[] 
   }
 
   async function handleSetStatus(leadId: string, status: LeadStatus) {
-    // Optimistic update
-    setLeads((prev) => prev.map((l) => (l.id === leadId ? { ...l, status, ...(status === "NOT_RELEVANT" ? { isFocus: false } : {}) } : l)));
+    const isArchiving = ["NOT_RELEVANT", "LOST", "VISITED_NO_INTEREST"].includes(status);
+
+    // Optimistic update: archived leads leave the active pipeline board immediately
+    setLeads((prev) =>
+      isArchiving
+        ? prev.filter((l) => l.id !== leadId)
+        : prev.map((l) => (l.id === leadId ? { ...l, status } : l))
+    );
 
     try {
       const res = await fetch(`/api/leads/${leadId}`, {

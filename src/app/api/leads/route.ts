@@ -99,11 +99,19 @@ export async function POST(request: Request) {
         nfcDemoUrl: data.nfcDemoUrl ? String(data.nfcDemoUrl).trim() : null,
         isFocus: (data.status === "NOT_RELEVANT") ? false : (data.isFocus === true),
         status: data.status || "NEW",
-        priority: data.priority || "MEDIUM",
-        prioritySource: (data.prioritySource === "USER" || data.isPriorityManuallySet || (data.priority && data.priority !== "MEDIUM")) ? "USER" : "SYSTEM",
-        priorityRatedAt: (data.prioritySource === "USER" || data.isPriorityManuallySet || (data.priority && data.priority !== "MEDIUM")) ? new Date() : null,
-        priorityRatedById: (data.prioritySource === "USER" || data.isPriorityManuallySet || (data.priority && data.priority !== "MEDIUM")) ? dbUser.id : null,
-        priorityRatedByName: (data.prioritySource === "USER" || data.isPriorityManuallySet || (data.priority && data.priority !== "MEDIUM")) ? (dbUser.displayName || dbUser.email) : null,
+        priority: data.status === "NOT_RELEVANT" ? "LOW" : (data.priority || "MEDIUM"),
+        prioritySource: data.status === "NOT_RELEVANT"
+          ? "SYSTEM"
+          : ((data.prioritySource === "USER" || data.isPriorityManuallySet || (data.priority && data.priority !== "MEDIUM")) ? "USER" : "SYSTEM"),
+        priorityRatedAt: data.status === "NOT_RELEVANT"
+          ? null
+          : ((data.prioritySource === "USER" || data.isPriorityManuallySet || (data.priority && data.priority !== "MEDIUM")) ? new Date() : null),
+        priorityRatedById: data.status === "NOT_RELEVANT"
+          ? null
+          : ((data.prioritySource === "USER" || data.isPriorityManuallySet || (data.priority && data.priority !== "MEDIUM")) ? dbUser.id : null),
+        priorityRatedByName: data.status === "NOT_RELEVANT"
+          ? null
+          : ((data.prioritySource === "USER" || data.isPriorityManuallySet || (data.priority && data.priority !== "MEDIUM")) ? (dbUser.displayName || dbUser.email) : null),
         auditStatus: data.website ? "pending" : "idle",
         score: data.score != null ? parseInt(data.score, 10) : 0,
         ...(coords

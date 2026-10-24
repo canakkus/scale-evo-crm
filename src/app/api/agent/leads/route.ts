@@ -140,7 +140,7 @@ export async function GET(request: Request) {
     whereClause.enrichmentStatus = "raw";
   } else if (stage === "qualified") {
     whereClause.enrichmentStatus = { in: ["completed", "idle"] };
-    whereClause.status = { not: "NOT_RELEVANT" };
+    whereClause.status = { notIn: ["NOT_RELEVANT", "LOST", "VISITED_NO_INTEREST"] };
   }
 
   if (statusParam) whereClause.status = statusParam;
@@ -299,6 +299,16 @@ export async function PATCH(request: Request) {
           status: newStatus,
           notes: (lead.notes || "") + callNote,
           nextFollowUpAt: nextFollowUp,
+          ...(newStatus === "NOT_RELEVANT"
+            ? {
+                isFocus: false,
+                priority: "LOW",
+                prioritySource: "SYSTEM",
+                priorityRatedAt: null,
+                priorityRatedById: null,
+                priorityRatedByName: null,
+              }
+            : {}),
         },
       });
 
@@ -337,6 +347,12 @@ export async function PATCH(request: Request) {
           where: { id: lead.id },
           data: {
             status: "NOT_RELEVANT",
+            isFocus: false,
+            priority: "LOW",
+            prioritySource: "SYSTEM",
+            priorityRatedAt: null,
+            priorityRatedById: null,
+            priorityRatedByName: null,
             enrichmentStatus: "rejected",
             notes: triageNote,
           },

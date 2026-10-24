@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { UserCheck, Sparkles, ChevronDown, RotateCcw, Loader2 } from "lucide-react";
-import type { Priority, PrioritySource } from "@prisma/client";
+import type { LeadStatus, Priority, PrioritySource } from "@prisma/client";
 import { PRIORITY_LABELS } from "@/lib/constants";
 import { formatDate } from "@/lib/utils";
 
 export type LeadPriorityBadgeProps = {
   leadId: string;
   priority: Priority;
+  status?: LeadStatus | string;
   prioritySource?: PrioritySource | string;
   priorityRatedByName?: string | null;
   priorityRatedAt?: string | Date | null;
@@ -37,6 +38,7 @@ const PRIORITY_THEMES: Record<Priority, { bg: string; tx: string; border: string
 export function LeadPriorityBadge({
   leadId,
   priority: initialPriority,
+  status,
   prioritySource: initialSource = "SYSTEM",
   priorityRatedByName,
   priorityRatedAt,
@@ -56,10 +58,49 @@ export function LeadPriorityBadge({
     }
   }, [initialPriority, initialSource, isUpdating]);
 
-  const isUserRated = currentSource === "USER";
+  const isNotRelevant = status === "NOT_RELEVANT";
+  const isUserRated = !isNotRelevant && currentSource === "USER";
   const theme = PRIORITY_THEMES[currentPriority] || PRIORITY_THEMES.MEDIUM;
   const label = PRIORITY_LABELS[currentPriority] || currentPriority;
   const raterName = priorityRatedByName || "User";
+
+  if (isNotRelevant) {
+    if (variant === "detail") {
+      return (
+        <div className="space-y-2">
+          <label className="block text-xs font-semibold" style={{ color: "var(--text-2)" }}>
+            Priorität &amp; Rating
+          </label>
+          <div
+            className="rounded-md px-3 py-2 text-xs font-medium border select-none"
+            style={{
+              background: "var(--surface-2)",
+              color: "var(--text-3)",
+              borderColor: "var(--border)",
+            }}
+            title="Nicht relevante Leads im Archiv haben keine Priorität"
+          >
+            Keine Priorität (Nicht relevant)
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <span
+        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium border select-none"
+        style={{
+          background: "var(--surface-2)",
+          color: "var(--text-3)",
+          borderColor: "var(--border)",
+        }}
+        title="Nicht relevante Leads haben keine Priorität"
+        onClick={(e) => e.stopPropagation()}
+      >
+        Keine Priorität
+      </span>
+    );
+  }
 
   async function handleSelect(newPriority: Priority) {
     if (newPriority === currentPriority && isUserRated) {

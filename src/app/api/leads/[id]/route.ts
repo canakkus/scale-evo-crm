@@ -218,6 +218,11 @@ export async function PATCH(
           }
         : {};
 
+    const nextStatus = data.status !== undefined ? data.status : existingLead.status;
+    const nextScore = data.score !== undefined ? parseInt(data.score, 10) : existingLead.score;
+    const isNextNotRelevant = nextStatus === "NOT_RELEVANT";
+    const isRestoringFromNotRelevant = existingLead.status === "NOT_RELEVANT" && !isNextNotRelevant;
+
     const updated = await prisma.lead.update({
       where: { id },
       data: {
@@ -249,28 +254,37 @@ export async function PATCH(
         menuCheckedAt: data.menuCheckedAt !== undefined ? (data.menuCheckedAt ? new Date(data.menuCheckedAt) : null) : existingLead.menuCheckedAt,
         acquisitionType: data.acquisitionType !== undefined ? data.acquisitionType : existingLead.acquisitionType,
         nfcDemoUrl: data.nfcDemoUrl !== undefined ? (data.nfcDemoUrl ? String(data.nfcDemoUrl).trim() : null) : existingLead.nfcDemoUrl,
-        isFocus: (data.status === "NOT_RELEVANT" || (!data.status && existingLead.status === "NOT_RELEVANT"))
-          ? false
-          : (data.isFocus !== undefined ? Boolean(data.isFocus) : existingLead.isFocus),
-        status: data.status !== undefined ? data.status : existingLead.status,
-        ...(data.resetPriorityToAuto
+        status: nextStatus,
+        ...(isNextNotRelevant
           ? {
-              priority: existingLead.score >= 70 ? "HIGH" : existingLead.score >= 40 ? "MEDIUM" : "LOW",
+              isFocus: false,
+              priority: "LOW",
               prioritySource: "SYSTEM",
               priorityRatedAt: null,
               priorityRatedById: null,
               priorityRatedByName: null,
             }
-          : data.priority !== undefined
-          ? {
-              priority: data.priority,
-              prioritySource: "USER",
-              priorityRatedAt: new Date(),
-              priorityRatedById: user.id,
-              priorityRatedByName: (user.user_metadata?.displayName as string) || (user.email ? user.email.split("@")[0] : "User"),
-            }
-          : {}),
-        score: data.score !== undefined ? parseInt(data.score, 10) : existingLead.score,
+          : {
+              isFocus: data.isFocus !== undefined ? Boolean(data.isFocus) : existingLead.isFocus,
+              ...(data.resetPriorityToAuto || (isRestoringFromNotRelevant && data.priority === undefined)
+                ? {
+                    priority: nextScore >= 70 ? "HIGH" : nextScore >= 40 ? "MEDIUM" : "LOW",
+                    prioritySource: "SYSTEM",
+                    priorityRatedAt: null,
+                    priorityRatedById: null,
+                    priorityRatedByName: null,
+                  }
+                : data.priority !== undefined
+                ? {
+                    priority: data.priority,
+                    prioritySource: "USER",
+                    priorityRatedAt: new Date(),
+                    priorityRatedById: user.id,
+                    priorityRatedByName: (user.user_metadata?.displayName as string) || (user.email ? user.email.split("@")[0] : "User"),
+                  }
+                : {}),
+            }),
+        score: nextScore,
         lastContactAt: data.lastContactAt !== undefined ? (data.lastContactAt ? new Date(data.lastContactAt) : null) : existingLead.lastContactAt,
         nextFollowUpAt: data.nextFollowUpAt !== undefined ? (data.nextFollowUpAt ? new Date(data.nextFollowUpAt) : null) : existingLead.nextFollowUpAt,
         // Reihenfolge ist bedeutsam: erst entwerten, dann — falls derselbe

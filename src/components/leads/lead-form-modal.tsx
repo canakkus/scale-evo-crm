@@ -348,16 +348,26 @@ export function LeadFormModal({ isOpen, onClose, onSuccess }: LeadFormModalProps
 
             <div>
               <label className="block text-xs font-medium mb-1" style={{ color: "var(--text-2)" }}>Priorität</label>
-              <select
-                className="w-full rounded-md px-3 py-2 text-sm border outline-none"
-                style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
-                value={formData.priority}
-                onChange={(e) => setFormData({ ...formData, priority: e.target.value as Priority })}
-              >
-                <option value="LOW">Niedrig</option>
-                <option value="MEDIUM">Mittel</option>
-                <option value="HIGH">Hoch</option>
-              </select>
+              {formData.status === "NOT_RELEVANT" ? (
+                <div
+                  className="w-full rounded-md px-3 py-2 text-sm border opacity-75 cursor-not-allowed"
+                  style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text-3)" }}
+                  title="Nicht relevante Leads haben keine Priorität"
+                >
+                  Keine Priorität (Nicht relevant)
+                </div>
+              ) : (
+                <select
+                  className="w-full rounded-md px-3 py-2 text-sm border outline-none"
+                  style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
+                  value={formData.priority}
+                  onChange={(e) => setFormData({ ...formData, priority: e.target.value as Priority })}
+                >
+                  <option value="LOW">Niedrig</option>
+                  <option value="MEDIUM">Mittel</option>
+                  <option value="HIGH">Hoch</option>
+                </select>
+              )}
             </div>
           </div>
 

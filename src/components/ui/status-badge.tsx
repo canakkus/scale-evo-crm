@@ -45,7 +45,23 @@ export function StatusBadge({ status, className }: { status: LeadStatus; classNa
   );
 }
 
-export function PriorityDot({ priority, className }: { priority: Priority; className?: string }) {
+export function PriorityDot({
+  priority,
+  status,
+  className,
+}: {
+  priority: Priority;
+  status?: LeadStatus | string;
+  className?: string;
+}) {
+  if (status === "NOT_RELEVANT") {
+    return (
+      <span className={cn("inline-flex items-center gap-1.5 text-xs", className)} style={{ color: "var(--text-3)" }}>
+        Keine Priorität
+      </span>
+    );
+  }
+
   const dotColors: Record<Priority, string> = {
     HIGH: "#E06868",
     MEDIUM: "#E0A868",

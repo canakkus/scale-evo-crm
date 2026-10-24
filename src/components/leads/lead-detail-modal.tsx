@@ -32,6 +32,8 @@ import {
   Copy,
   Maximize2,
   Minimize2,
+  Archive,
+  RotateCcw,
 } from "lucide-react";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { LeadPriorityBadge } from "@/components/leads/lead-priority-badge";
@@ -259,6 +261,10 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
         setLead({
           ...lead,
           status: newStatus,
+          priority: data?.lead?.priority ?? (newStatus === "NOT_RELEVANT" ? "LOW" : lead.priority),
+          prioritySource: data?.lead?.prioritySource ?? (newStatus === "NOT_RELEVANT" ? "SYSTEM" : lead.prioritySource),
+          priorityRatedAt: data?.lead?.priorityRatedAt !== undefined ? data.lead.priorityRatedAt : (newStatus === "NOT_RELEVANT" ? null : lead.priorityRatedAt),
+          priorityRatedByName: data?.lead?.priorityRatedByName !== undefined ? data.lead.priorityRatedByName : (newStatus === "NOT_RELEVANT" ? null : lead.priorityRatedByName),
           isFocus: data?.lead?.isFocus !== undefined ? data.lead.isFocus : (newStatus === "NOT_RELEVANT" ? false : lead.isFocus),
         });
         if (newStatus === "NOT_RELEVANT") {
@@ -518,6 +524,30 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
               )}
             </h2>
             {lead && <StatusBadge status={lead.status} />}
+            {lead && (
+              ["NOT_RELEVANT", "LOST", "VISITED_NO_INTEREST"].includes(lead.status) ? (
+                <button
+                  type="button"
+                  onClick={() => handleStatusChange("NEW")}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border transition-colors bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20"
+                  title="Aus dem Archiv wiederherstellen (Status: Neu)"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Wiederherstellen</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => handleStatusChange("NOT_RELEVANT")}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border transition-colors hover:bg-amber-500/15 hover:text-amber-400 hover:border-amber-500/30"
+                  style={{ borderColor: "var(--border)", color: "var(--text-2)", background: "var(--surface-2)" }}
+                  title="Als 'Nicht relevant' ins Archiv verschieben (entfernt Priorität)"
+                >
+                  <Archive className="w-3.5 h-3.5" />
+                  <span>Ins Archiv</span>
+                </button>
+              )
+            )}
           </div>
           <button
             type="button"
@@ -574,6 +604,7 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
             {/* Priorität & Rating */}
             <LeadPriorityBadge
               leadId={lead.id}
+              status={lead.status}
               priority={lead.priority}
               prioritySource={lead.prioritySource}
               priorityRatedByName={lead.priorityRatedByName || lead.priorityRatedBy?.displayName || lead.priorityRatedBy?.email}
