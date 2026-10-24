@@ -32,6 +32,8 @@ import {
   Copy,
   Maximize,
   Minimize,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { LeadPriorityBadge } from "@/components/leads/lead-priority-badge";
@@ -50,16 +52,33 @@ type LeadDetailModalProps = {
   onUpdate: () => void;
 };
 
-function extractPitchFromNotes(notes: string): string | null {
+function extractPitchFromNotes(notes: string): { text: string; type: "script" | "pitch"; title: string } | null {
   if (!notes) return null;
+
+  // 1. Prioritize freshly selected acquisition script (last match is the most recent)
+  const scriptRegex = /📞\s*Ausgewähltes Kaltakquise-Skript[^\n]*:\s*\n+([\s\S]+?)(?=\n\n---|\n\n📞|$)/gi;
+  const scriptMatches = [...notes.matchAll(scriptRegex)];
+  if (scriptMatches.length > 0) {
+    const lastMatch = scriptMatches[scriptMatches.length - 1];
+    if (lastMatch && lastMatch[1]?.trim()) {
+      return {
+        text: lastMatch[1].trim(),
+        type: "script",
+        title: "Kaltakquise-Skript (Gespeichert)",
+      };
+    }
+  }
+
+  // 2. Check for "🎯 PITCH & HEBEL" (from audit or manual notes)
   const matchPitchHebel = notes.match(/🎯\s*PITCH\s*&\s*HEBEL[^\n]*:\s*\n+["„]?([\s\S]*?)["“]?(?=\n\n|\n[🔥•#]|$)/i);
   if (matchPitchHebel && matchPitchHebel[1]?.trim()) {
-    return matchPitchHebel[1].trim().replace(/^["„]|["“]$/g, "");
+    return {
+      text: matchPitchHebel[1].trim().replace(/^["„]|["“]$/g, ""),
+      type: "pitch",
+      title: "Kaltakquise-Pitch (Erkannt)",
+    };
   }
-  const matchScript = notes.match(/📞\s*Ausgewähltes Kaltakquise-Skript[^\n]*:\s*\n+([\s\S]+?)(?=\n\n---|\n\n📞|$)/i);
-  if (matchScript && matchScript[1]?.trim()) {
-    return matchScript[1].trim();
-  }
+
   return null;
 }
 
@@ -72,6 +91,8 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
   const [checkingMenu, setCheckingMenu] = useState(false);
   const [preloadedOutreachText, setPreloadedOutreachText] = useState<string | null>(null);
   const [copiedPitch, setCopiedPitch] = useState(false);
+  const [pitchFullscreen, setPitchFullscreen] = useState(false);
+  const [teleprompterFontSize, setTeleprompterFontSize] = useState<number>(24);
 
   // Tab State: "timeline" or "gemini"
   const [activeTab, setActiveTab] = useState<"timeline" | "gemini" | "outreach">("timeline");
@@ -102,6 +123,17 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
       }
     } catch {}
   }, []);
+
+  useEffect(() => {
+    if (!pitchFullscreen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setPitchFullscreen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [pitchFullscreen]);
 
   const handleSidebarResizeStart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -1324,7 +1356,7 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                           type="button"
                           onClick={() => {
                             const pitch = extractPitchFromNotes(notesText);
-                            if (pitch) setPreloadedOutreachText(pitch);
+                            if (pitch) setPreloadedOutreachText(pitch.text);
                             setActiveTab("outreach");
                           }}
                           className="text-xs font-semibold px-2.5 py-1.5 rounded transition-colors border hover:bg-[var(--surface-3)] flex items-center gap-1.5 text-orange-400"
@@ -1354,19 +1386,34 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                           className="rounded-xl border p-3.5 space-y-2.5 transition-all shadow-sm animate-fade-in"
                           style={{
                             background: "linear-gradient(180deg, var(--surface-2) 0%, var(--surface) 100%)",
-                            borderColor: "rgba(249, 115, 22, 0.4)",
+                            borderColor: detectedPitch.type === "script" ? "rgba(16, 185, 129, 0.45)" : "rgba(249, 115, 22, 0.4)",
                           }}
                         >
                           <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-1.5 text-xs font-bold text-orange-400">
+                            <div className="flex items-center gap-1.5 text-xs font-bold" style={{ color: detectedPitch.type === "script" ? "#10b981" : "#f97316" }}>
                               <Sparkles className="w-3.5 h-3.5" />
-                              <span>Kaltakquise-Pitch (Erkannt)</span>
+                              <span>{detectedPitch.title}</span>
                             </div>
                             <div className="flex items-center gap-1.5">
+                              {/* Fullscreen Button */}
+                              <button
+                                type="button"
+                                onClick={() => setPitchFullscreen(true)}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold border transition-all hover:bg-[var(--surface-3)] text-orange-400"
+                                style={{
+                                  borderColor: "rgba(249, 115, 22, 0.35)",
+                                  background: "var(--surface)",
+                                }}
+                                title="Pitch im großen Vollbild-Teleprompter öffnen"
+                              >
+                                <Maximize2 className="w-3.5 h-3.5" />
+                                <span>Vollbild</span>
+                              </button>
+
                               <button
                                 type="button"
                                 onClick={() => {
-                                  navigator.clipboard.writeText(detectedPitch);
+                                  navigator.clipboard.writeText(detectedPitch.text);
                                   setCopiedPitch(true);
                                   setTimeout(() => setCopiedPitch(false), 2000);
                                 }}
@@ -1393,7 +1440,7 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                               <button
                                 type="button"
                                 onClick={() => {
-                                  setPreloadedOutreachText(detectedPitch);
+                                  setPreloadedOutreachText(detectedPitch.text);
                                   setActiveTab("outreach");
                                 }}
                                 className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold text-white transition-all hover:opacity-90 shadow-sm"
@@ -1408,7 +1455,7 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
 
                           <div
                             onClick={() => {
-                              navigator.clipboard.writeText(detectedPitch);
+                              navigator.clipboard.writeText(detectedPitch.text);
                               setCopiedPitch(true);
                               setTimeout(() => setCopiedPitch(false), 2000);
                             }}
@@ -1420,8 +1467,8 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                             }}
                             title="👉 Klicken zum schnellen Kopieren des gesamten Pitchs"
                           >
-                            <p className="font-medium text-[var(--text)] italic leading-relaxed">
-                              „{detectedPitch}“
+                            <p className="font-medium text-[var(--text)] italic leading-relaxed whitespace-pre-wrap">
+                              „{detectedPitch.text}“
                             </p>
                             <div className="mt-2 pt-2 border-t flex items-center justify-between text-[11px] text-[var(--text-3)] group-hover:text-orange-400 transition-colors" style={{ borderColor: "var(--border)" }}>
                               <span className="flex items-center gap-1">
@@ -1761,6 +1808,136 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
         </div>
       )}
       </div>
+
+      {/* Pitch Teleprompter / Fullscreen Modal Overlay */}
+      {pitchFullscreen && (() => {
+        const detectedPitch = extractPitchFromNotes(notesText);
+        if (!detectedPitch || !lead) return null;
+        return (
+          <div className="fixed inset-0 z-[70] flex flex-col bg-black/92 backdrop-blur-md text-white animate-fade-in p-6 sm:p-10 select-none">
+            {/* Top Bar */}
+            <div className="flex items-center justify-between pb-4 border-b border-white/10 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm bg-gradient-to-br from-orange-500 to-amber-600 text-white shadow-lg shadow-orange-500/20">
+                  ⚡
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-bold text-white">{lead.companyName}</h3>
+                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-400 font-semibold border border-orange-500/30">
+                      Teleprompter / Anruf-Modus
+                    </span>
+                  </div>
+                  {lead.phone && (
+                    <a
+                      href={`tel:${lead.phone}`}
+                      className="text-xs text-zinc-400 hover:text-orange-400 transition-colors flex items-center gap-1 mt-0.5"
+                    >
+                      <Phone className="w-3 h-3" />
+                      <span>{lead.phone}</span>
+                    </a>
+                  )}
+                </div>
+              </div>
+
+              {/* Action Controls */}
+              <div className="flex items-center gap-2">
+                {/* Font Size Adjuster */}
+                <div className="flex items-center border border-white/15 rounded-lg overflow-hidden bg-white/5 mr-2">
+                  <button
+                    type="button"
+                    onClick={() => setTeleprompterFontSize((s) => Math.max(16, s - 2))}
+                    className="px-2.5 py-1 text-xs font-bold hover:bg-white/10 transition-colors"
+                    title="Schrift verkleinern"
+                  >
+                    A-
+                  </button>
+                  <span className="px-2 text-[11px] font-mono text-zinc-400 border-x border-white/10">
+                    {teleprompterFontSize}px
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setTeleprompterFontSize((s) => Math.min(42, s + 2))}
+                    className="px-2.5 py-1 text-xs font-bold hover:bg-white/10 transition-colors"
+                    title="Schrift vergrößern"
+                  >
+                    A+
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(detectedPitch.text);
+                    setCopiedPitch(true);
+                    setTimeout(() => setCopiedPitch(false), 2000);
+                  }}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-white/10 hover:bg-white/20 transition-all border border-white/15"
+                >
+                  {copiedPitch ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-emerald-400" />
+                      <span className="text-emerald-400 font-bold">Kopiert!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5 text-orange-400" />
+                      <span>Kopieren</span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPitchFullscreen(false);
+                    setPreloadedOutreachText(detectedPitch.text);
+                    setActiveTab("outreach");
+                  }}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-orange-500 to-amber-600 text-white hover:opacity-95 shadow-md shadow-orange-500/20"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>In Outreach</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setPitchFullscreen(false)}
+                  className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 transition-colors ml-1"
+                  title="Vollbild schließen (Esc)"
+                >
+                  <Minimize2 className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Main Teleprompter Content */}
+            <div className="flex-1 overflow-y-auto flex items-center justify-center p-4 sm:p-8">
+              <div
+                onClick={() => {
+                  navigator.clipboard.writeText(detectedPitch.text);
+                  setCopiedPitch(true);
+                  setTimeout(() => setCopiedPitch(false), 2000);
+                }}
+                className="max-w-4xl w-full p-8 sm:p-12 rounded-2xl bg-white/[0.04] border border-white/10 hover:border-orange-500/40 cursor-pointer transition-all shadow-2xl leading-relaxed whitespace-pre-wrap select-text"
+                style={{ fontSize: `${teleprompterFontSize}px` }}
+                title="Klicken zum schnellen Kopieren"
+              >
+                „{detectedPitch.text}“
+              </div>
+            </div>
+
+            {/* Bottom Status / Shortcut Hint */}
+            <div className="pt-3 border-t border-white/10 flex items-center justify-between text-xs text-zinc-400 shrink-0">
+              <span className="flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-orange-400" />
+                <span>{detectedPitch.title}</span>
+              </span>
+              <span>Drücke <kbd className="px-1.5 py-0.5 rounded bg-white/10 font-mono text-[11px] text-zinc-300">Esc</kbd> zum Schließen</span>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
