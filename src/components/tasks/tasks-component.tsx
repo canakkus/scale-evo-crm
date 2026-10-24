@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Plus,
   CheckCircle2,
@@ -18,9 +18,16 @@ import { TASK_CATEGORY_LABELS, TASK_STATUS_LABELS, PRIORITY_LABELS } from "@/lib
 import { cn, formatDate, timeAgo } from "@/lib/utils";
 import type { TaskCategory, TaskStatus, Priority } from "@prisma/client";
 
-export function TasksComponent() {
-  const [tasks, setTasks] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+export function TasksComponent({
+  initialTasks,
+  leadOptions,
+}: {
+  initialTasks?: any[] | null;
+  leadOptions?: { id: string; companyName: string }[] | null;
+}) {
+  const hasInitialTasks = Array.isArray(initialTasks);
+  const [tasks, setTasks] = useState<any[]>(hasInitialTasks ? initialTasks : []);
+  const [loading, setLoading] = useState(!hasInitialTasks);
   const [statusFilter, setStatusFilter] = useState<string>("OPEN");
   const [categoryFilter, setCategoryFilter] = useState<string>("");
 
@@ -31,7 +38,9 @@ export function TasksComponent() {
   const [newPriority, setNewPriority] = useState<Priority>("MEDIUM");
   const [newDueAt, setNewDueAt] = useState("");
   const [newLeadId, setNewLeadId] = useState("");
-  const [leads, setLeads] = useState<any[]>([]);
+  const [leads, setLeads] = useState<{ id: string; companyName: string }[]>(
+    Array.isArray(leadOptions) ? leadOptions : [],
+  );
   const [creating, setCreating] = useState(false);
 
   // AI Prioritization State
@@ -57,16 +66,22 @@ export function TasksComponent() {
     }
   }, [statusFilter, categoryFilter]);
 
+  const skipInitialTasks = useRef(hasInitialTasks);
   useEffect(() => {
+    if (skipInitialTasks.current) {
+      skipInitialTasks.current = false;
+      return;
+    }
     fetchTasks();
   }, [fetchTasks]);
 
   useEffect(() => {
+    if (Array.isArray(leadOptions)) return;
     fetch("/api/leads?limit=100")
       .then((res) => res.json())
       .then((data) => setLeads(data.leads || []))
       .catch((err) => console.error(err));
-  }, []);
+  }, [leadOptions]);
 
   async function handleToggleTask(id: string, currentStatus: TaskStatus) {
     const nextStatus = currentStatus === "DONE" ? "OPEN" : "DONE";

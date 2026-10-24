@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createSupabaseServerClient } from "./supabase/server";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
@@ -41,19 +42,24 @@ export async function requireAuth(): Promise<User> {
   return user;
 }
 
-export async function getOptionalUser(): Promise<User | null> {
+function hasSupabaseAuthCookie(all: { name: string; value: string }[]): boolean {
+  return all.some((cookie) => cookie.name.startsWith("sb-") && cookie.value);
+}
+
+export const getOptionalUser = cache(async (): Promise<User | null> => {
   try {
-    // 1. Check signed session cookie
     const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get("crm_user_session")?.value;
+    const all = cookieStore.getAll();
+    const sessionCookie = all.find((cookie) => cookie.name === "crm_user_session")?.value;
     if (sessionCookie) {
       const payload = await verifySessionToken(sessionCookie);
-      if (payload) {
-        return sessionToUser(payload);
-      }
+      if (payload) return sessionToUser(payload);
     }
 
-    // 2. Fall back to Supabase auth session
+    // CRM sessions are the signed cookie. Skip the Supabase Auth network
+    // call unless a Supabase cookie is actually present.
+    if (!hasSupabaseAuthCookie(all)) return null;
+
     const supabase = await createSupabaseServerClient();
     const {
       data: { user },
@@ -62,5 +68,5 @@ export async function getOptionalUser(): Promise<User | null> {
   } catch {
     return null;
   }
-}
+});
 

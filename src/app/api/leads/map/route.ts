@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { getOptionalUser } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { leadScope as workspaceLeadScope } from "@/lib/workspace";
+import { listMapLeads } from "@/lib/map-leads";
 
 /**
  * Datenquelle der Lead-Karte. Genau EINE Query, `select`-Whitelist, kein
@@ -37,34 +36,8 @@ export async function GET() {
       return NextResponse.json({ error: "Nicht autorisiert" }, { status: 401 });
     }
 
-    // Wortgleiche Mandanten-Klausel wie in GET /api/leads.
-    const leads = await prisma.lead.findMany({
-      where: await workspaceLeadScope(user),
-      select: {
-        id: true,
-        companyName: true,
-        latitude: true,
-        longitude: true,
-        status: true,
-        acquisitionType: true,
-        industry: true,
-        phone: true,
-        score: true,
-        lastContactAt: true,
-        city: true,
-        address: true,
-        geoPrecision: true,
-        geoStatus: true,
-      },
-      orderBy: { companyName: "asc" },
-    });
-
-    const payload: MapLead[] = leads.map((lead) => ({
-      ...lead,
-      lastContactAt: lead.lastContactAt ? lead.lastContactAt.toISOString() : null,
-    }));
-
-    return NextResponse.json({ leads: payload });
+    const leads: MapLead[] = await listMapLeads(user);
+    return NextResponse.json({ leads });
   } catch (error) {
     console.error("[GET /api/leads/map] Error:", error);
     return NextResponse.json({ error: "Fehler beim Laden der Karten-Leads." }, { status: 500 });

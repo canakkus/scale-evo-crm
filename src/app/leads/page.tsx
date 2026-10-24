@@ -1,10 +1,17 @@
 import { requireAuth } from "@/lib/auth";
+import { listLeads } from "@/lib/leads-list";
 import { LeadsTable } from "@/components/leads/leads-table";
 
 export const metadata = { title: "Leads | Scale Evo CRM" };
 
 export default async function LeadsPage() {
-  await requireAuth();
+  const user = await requireAuth();
+  let initialData = null;
+  try {
+    initialData = await listLeads(user, { page: 1, limit: 20 });
+  } catch (err) {
+    console.error("[Leads] Error fetching data:", err);
+  }
 
   return (
     <div className="p-6 space-y-6 w-full max-w-full">
@@ -19,7 +26,7 @@ export default async function LeadsPage() {
       </div>
 
       {/* Table */}
-      <LeadsTable />
+      <LeadsTable initialData={initialData} />
     </div>
   );
 }

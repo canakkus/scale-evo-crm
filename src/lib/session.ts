@@ -34,15 +34,24 @@ function base64UrlDecode(str: string): string {
   return atob(base64);
 }
 
+let cachedHmacKey: { secret: string; key: Promise<CryptoKey> } | null = null;
+
 async function getHmacKey(): Promise<CryptoKey> {
-  const enc = new TextEncoder();
-  return crypto.subtle.importKey(
-    "raw",
-    enc.encode(getSessionSecret()),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign", "verify"]
-  );
+  const secret = getSessionSecret();
+  if (!cachedHmacKey || cachedHmacKey.secret !== secret) {
+    const enc = new TextEncoder();
+    cachedHmacKey = {
+      secret,
+      key: crypto.subtle.importKey(
+        "raw",
+        enc.encode(secret),
+        { name: "HMAC", hash: "SHA-256" },
+        false,
+        ["sign", "verify"],
+      ),
+    };
+  }
+  return cachedHmacKey.key;
 }
 
 export async function createSessionToken(payload: Omit<SessionPayload, "exp">): Promise<string> {

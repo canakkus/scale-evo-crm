@@ -1,10 +1,17 @@
 import { requireAuth } from "@/lib/auth";
+import { listLeads } from "@/lib/leads-list";
 import { PipelineBoardComponent } from "@/components/pipeline/pipeline-board-component";
 
 export const metadata = { title: "Pipeline Board | Scale Evo CRM" };
 
 export default async function PipelinePage() {
-  await requireAuth();
+  const user = await requireAuth();
+  let initialLeads: Awaited<ReturnType<typeof listLeads>>["leads"] | null = null;
+  try {
+    initialLeads = (await listLeads(user, { limit: 100 })).leads;
+  } catch (err) {
+    console.error("[Pipeline] Error fetching data:", err);
+  }
 
   return (
     <div className="p-6 space-y-6 max-w-full overflow-x-hidden">
@@ -17,7 +24,7 @@ export default async function PipelinePage() {
         </p>
       </div>
 
-      <PipelineBoardComponent />
+      <PipelineBoardComponent initialLeads={initialLeads} />
     </div>
   );
 }

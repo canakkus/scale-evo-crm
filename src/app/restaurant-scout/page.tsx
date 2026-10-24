@@ -27,7 +27,7 @@ import { cn, formatDate } from "@/lib/utils";
 import { formatDistance } from "@/lib/distance";
 import { STATUS_LABELS } from "@/lib/constants";
 import type { LeadStatus } from "@prisma/client";
-import { LeadDetailModal } from "@/components/leads/lead-detail-modal";
+import { LeadDetailModal } from "@/components/leads/lazy-modals";
 import type { RestaurantScoutLeadItem } from "@/services/restaurant-scout";
 
 const CUISINES = [

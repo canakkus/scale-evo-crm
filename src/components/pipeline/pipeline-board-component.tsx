@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   CALL_PIPELINE_STATUSES,
   DM_PIPELINE_STATUSES,
@@ -16,7 +16,7 @@ import {
 } from "@/lib/constants";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getMapsUrl } from "@/lib/maps-url";
-import { LeadDetailModal } from "@/components/leads/lead-detail-modal";
+import { LeadDetailModal } from "@/components/leads/lazy-modals";
 import {
   Phone,
   Globe,
@@ -37,9 +37,10 @@ import {
 } from "lucide-react";
 import type { AcquisitionType, LeadStatus } from "@prisma/client";
 
-export function PipelineBoardComponent() {
-  const [leads, setLeads] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+export function PipelineBoardComponent({ initialLeads }: { initialLeads?: any[] | null }) {
+  const hasInitial = Array.isArray(initialLeads);
+  const [leads, setLeads] = useState<any[]>(hasInitial ? initialLeads : []);
+  const [loading, setLoading] = useState(!hasInitial);
   const [activeTab, setActiveTab] = useState<AcquisitionType | "FOCUS">("CALL");
   const [draggedLead, setDraggedLead] = useState<string | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
@@ -62,7 +63,12 @@ export function PipelineBoardComponent() {
     }
   }, []);
 
+  const skipInitialFetch = useRef(hasInitial);
   useEffect(() => {
+    if (skipInitialFetch.current) {
+      skipInitialFetch.current = false;
+      return;
+    }
     fetchLeads();
   }, [fetchLeads]);
 

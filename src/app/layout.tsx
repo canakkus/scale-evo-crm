@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Sidebar } from "@/components/layout/sidebar";
-import { getOptionalUser } from "@/lib/auth";
+import { getShellUser } from "@/lib/shell-user";
 import { LocationProvider } from "@/lib/location-context";
 import { LocationPromptModal } from "@/components/location/location-prompt-modal";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -26,25 +26,23 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const user = await getOptionalUser();
+  const user = await getShellUser();
 
   return (
     <html lang="de" className={inter.variable} suppressHydrationWarning>
       <body suppressHydrationWarning>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-          <LocationProvider>
+          <LocationProvider initialUser={user}>
             {user ? (
-              // Authenticated: Shell mit Sidebar
               <div className="flex h-screen overflow-hidden">
-                <Sidebar />
+                <Sidebar user={user} />
                 <main className="flex-1 overflow-y-auto">
                   {children}
                 </main>
                 <LocationPromptModal />
               </div>
             ) : (
-              // Unauthenticated: kein Layout (Login-Seite)
-              <>{children}</>
+              children
             )}
           </LocationProvider>
         </ThemeProvider>

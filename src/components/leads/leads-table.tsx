@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Search, User,
   Plus,
@@ -28,16 +28,19 @@ import {
 } from "lucide-react";
 import { StatusBadge, PriorityDot, STATUS_STYLES } from "@/components/ui/status-badge";
 import { LeadPriorityBadge } from "@/components/leads/lead-priority-badge";
-import { LeadFormModal } from "@/components/leads/lead-form-modal";
-import { LeadDetailModal } from "@/components/leads/lead-detail-modal";
+import { LeadDetailModal, LeadFormModal } from "@/components/leads/lazy-modals";
 import { STATUS_LABELS, INDUSTRIES } from "@/lib/constants";
 import { getMapsUrl } from "@/lib/maps-url";
 import { formatDate, timeAgo } from "@/lib/utils";
 import type { LeadStatus } from "@prisma/client";
 
-export function LeadsTable() {
-  const [leads, setLeads] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+export function LeadsTable({
+  initialData,
+}: {
+  initialData?: { leads: any[]; allIndustries?: string[]; pagination?: { totalPages?: number; total?: number } } | null;
+}) {
+  const [leads, setLeads] = useState<any[]>(initialData?.leads ?? []);
+  const [loading, setLoading] = useState(!initialData);
   const [error, setError] = useState("");
 
   // Filters & Search
@@ -49,14 +52,14 @@ export function LeadsTable() {
   const [relevantOnlyFilter, setRelevantOnlyFilter] = useState(false);
   const [sourceFilter, setSourceFilter] = useState<"" | "bot_raw" | "bot" | "manual">("");
   const [industryFilters, setIndustryFilters] = useState<string[]>([]);
-  const [availableIndustries, setAvailableIndustries] = useState<string[]>([]);
+  const [availableIndustries, setAvailableIndustries] = useState<string[]>(initialData?.allIndustries ?? []);
   const [isIndustryDropdownOpen, setIsIndustryDropdownOpen] = useState(false);
   const [industrySearch, setIndustrySearch] = useState("");
   const [updatedDateFilter, setUpdatedDateFilter] = useState("");
   const [customDate, setCustomDate] = useState("");
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalLeads, setTotalLeads] = useState(0);
+  const [totalPages, setTotalPages] = useState(initialData?.pagination?.totalPages || 1);
+  const [totalLeads, setTotalLeads] = useState(initialData?.pagination?.total || 0);
   const [copiedNfcId, setCopiedNfcId] = useState<string | null>(null);
 
   // Selection & Batch Audit
@@ -71,6 +74,7 @@ export function LeadsTable() {
 
   // Modals
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [formMounted, setFormMounted] = useState(false);
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
 
   // Debounce search input to avoid laggy keystrokes & excessive API requests
@@ -205,7 +209,12 @@ export function LeadsTable() {
     setTimeout(() => setCopiedNfcId(null), 2000);
   }
 
+  const skipInitialFetch = useRef(Boolean(initialData));
   useEffect(() => {
+    if (skipInitialFetch.current) {
+      skipInitialFetch.current = false;
+      return;
+    }
     fetchLeads();
   }, [fetchLeads]);
 
@@ -242,14 +251,15 @@ export function LeadsTable() {
       }
     }
 
-    checkBatchState();
-
+    const startTimer = batchState?.running ? null : setTimeout(() => void checkBatchState(), 1500);
     if (batchState?.running) {
+      void checkBatchState();
       interval = setInterval(checkBatchState, 2500);
     }
 
     return () => {
       if (interval) clearInterval(interval);
+      if (startTimer) clearTimeout(startTimer);
     };
   }, [batchState?.running, fetchLeads]);
 
@@ -566,7 +576,10 @@ export function LeadsTable() {
 
             {/* New Lead Button */}
             <button
-              onClick={() => setIsFormOpen(true)}
+              onClick={() => {
+                setFormMounted(true);
+                setIsFormOpen(true);
+              }}
               className="flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs sm:text-sm font-semibold shadow-sm transition-all hover:opacity-90 active:scale-95 shrink-0"
               style={{ background: "var(--accent)", color: "var(--bg)" }}
             >
@@ -1282,17 +1295,21 @@ export function LeadsTable() {
       </div>
 
       {/* Modals */}
-      <LeadFormModal
-        isOpen={isFormOpen}
-        onClose={() => setIsFormOpen(false)}
-        onSuccess={() => fetchLeads()}
-      />
+      {formMounted && (
+        <LeadFormModal
+          isOpen={isFormOpen}
+          onClose={() => setIsFormOpen(false)}
+          onSuccess={() => fetchLeads()}
+        />
+      )}
 
-      <LeadDetailModal
-        leadId={selectedLeadId}
-        onClose={() => setSelectedLeadId(null)}
-        onUpdate={() => fetchLeads()}
-      />
+      {selectedLeadId && (
+        <LeadDetailModal
+          leadId={selectedLeadId}
+          onClose={() => setSelectedLeadId(null)}
+          onUpdate={() => fetchLeads()}
+        />
+      )}
     </div>
   );
 }
