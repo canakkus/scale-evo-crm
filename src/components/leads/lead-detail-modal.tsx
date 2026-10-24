@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   X,
   Phone,
@@ -36,8 +36,13 @@ import {
   PanelRight,
   PanelRightClose,
   ChevronDown,
+  ChevronRight,
   Pencil,
   ArrowLeft,
+  BookOpen,
+  Edit3,
+  CheckCircle2,
+  ShieldAlert,
 } from "lucide-react";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { LeadPriorityBadge } from "@/components/leads/lead-priority-badge";
@@ -48,7 +53,7 @@ import { LeadAuditSection } from "./lead-audit-section";
 import { PlanCallPanel } from "@/components/calendar/plan-call-panel";
 import { STATUS_LABELS, INTERACTION_LABELS } from "@/lib/constants";
 import { formatDate, timeAgo, normalizeInstagramHandle, instagramProfileUrl } from "@/lib/utils";
-import { extractCustomOutreachScript } from "@/lib/outreach-script";
+import { extractCustomOutreachScript, upsertOutreachScriptInNotes } from "@/lib/outreach-script";
 import type { LeadStatus, InteractionType } from "@prisma/client";
 
 type LeadDetailModalProps = {
@@ -56,6 +61,53 @@ type LeadDetailModalProps = {
   onClose: () => void;
   onUpdate: () => void;
 };
+
+const OBJECTIONS_PLAYBOOK = [
+  {
+    id: "agency",
+    title: "🛡️ „Wir haben eine Agentur“",
+    hook: "Mega, das ist schon mal gut! Die Frage ist nur: Wann hat Ihre Agentur das PHP/die Ladezeit zuletzt gecheckt?",
+    fullText: `„Mega, das ist schon mal gut! Dann will ich mich da auch gar nicht einmischen. Die Frage ist nur: Wann hat Ihre Agentur die PHP-Basis das letzte Mal aktualisiert? Die meisten kassieren monatlich für Betreuung ab, lassen das Backend aber auf dem alten Stand laufen, weil ein Update Aufwand bedeutet. Ich schicke Ihnen die zwei Punkte kurz per Mail – dann können Sie das Ihrer Agentur einfach auf den Tisch knallen und prüfen lassen. Wohin darf die Mail gehen?“`,
+  },
+  {
+    id: "works",
+    title: "🛡️ „Funktioniert doch alles“",
+    hook: "Klar, von außen sieht die Seite normal aus – das Risiko liegt unsichtbar auf Server-Ebene wie der TÜV beim Auto.",
+    fullText: `„Klar, von außen sieht die Seite noch ganz normal aus – die stürzt ja nicht sofort ab. Der Sicherheitsverlust und die Google-Abstrafung passieren aber unsichtbar im Hintergrund auf Server-Ebene. Das ist wie beim Auto der TÜV: Er fährt noch, aber die Plakette ist abgelaufen. Ein Blick auf die Screenshots kostet Sie keinen Cent. Wie lautet Ihre Mail?“`,
+  },
+  {
+    id: "mail",
+    title: "🛡️ „Schicken Sie per Mail“",
+    hook: "Mache ich gerne! Damit ich Ihnen keinen 20-Seiten-Spam schicke, sondern genau die 2 Punkte: Wohin?",
+    fullText: `„Mache ich gerne! Damit ich Ihnen keinen 20-Seiten-Spam schicke, sondern genau die zwei Schwachstellen: Wohin darf die Mail gehen? Perfekt. Ich packe Ihnen direkt meinen Kalender-Link dazu. Wann sind Sie denn erfahrungsgemäß am besten erreichbar, falls Sie dazu eine kurze Rückfrage haben?“`,
+  },
+  {
+    id: "cost",
+    title: "🛡️ „Was kostet sowas?“",
+    hook: "Kommt drauf an: ab 500 bis 1.000€ für einen modernen One-Pager. Aber schauen wir erst, ob Bedarf da ist.",
+    fullText: `„Kommt ganz drauf an: Manchmal reicht ein sauberes technisches Update, manchmal lohnt sich direkt ein moderner, extrem schneller One-Pager. Bei uns geht das ab 500 bis 1.000 Euro los. Aber darum geht es jetzt noch gar nicht – lassen Sie uns erst in 5 Minuten schauen, ob bei Ihnen überhaupt Handlungsbedarf besteht. Passt Ihnen Dienstag oder Mittwoch besser?“`,
+  },
+  {
+    id: "closing",
+    title: "🎯 „No-Brainer Abschluss“",
+    hook: "Ich will Ihnen am Telefon absolut nichts verkaufen. Soll ich Ihnen 2 Screenshots schicken und wir schauen kurz 5 Min rein?",
+    fullText: `„Ich will Ihnen jetzt am Telefon absolut nichts verkaufen. Ich habe mir kurz zwei Screenshots von den technischen Schwachstellen gemacht und wie man das modern und schnell löst. Soll ich Ihnen die kurz per Mail rüberschicken und wir werfen nächste Woche mal 5 Minuten gemeinsam über Google Meet einen Blick drauf?“`,
+  },
+];
+
+const getDefaultColdCallScript = (companyName: string) => `Grüß Gott, Can hier. Ich bin gerade auf Ihrer Website (${companyName}) unterwegs und wollte kurz fragen: Wer kümmert sich bei Ihnen eigentlich um die Technik der Website?
+
+[Wenn Inhaber/Verantwortlicher]:
+Perfekt, dann bin ich bei Ihnen direkt richtig. Ich mach's auch ganz kurz, will Sie im Tagesgeschäft nicht aufhalten:
+Ich habe mir vorhin im Quellcode Ihre Website angeschaut – die läuft im Hintergrund technisch noch auf einer älteren PHP-Basis und lädt auf Mobilgeräten relativ träge.
+
+[Problem / Schmerz auf den Punkt bringen]:
+1. Offenes Einfallstor für Spam & Sicherheitslücken bei Formularen
+2. Google bewertet solche veralteten Server-Unterbauten negativ, wodurch Sie im lokalen Ranking langsam abrutschen.
+
+[No-Brainer Abschluss]:
+Ich will Ihnen jetzt am Telefon absolut nichts verkaufen. Ich habe mir kurz zwei Screenshots von den technischen Schwachstellen gemacht.
+Soll ich Ihnen die kurz per Mail rüberschicken und wir werfen nächste Woche mal 5 Minuten gemeinsam via Google Meet einen Blick drauf?`;
 
 export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalProps) {
   const [lead, setLead] = useState<any>(null);
@@ -68,6 +120,17 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
   const [copiedPitch, setCopiedPitch] = useState(false);
   const [pitchFullscreen, setPitchFullscreen] = useState(false);
   const [teleprompterFontSize, setTeleprompterFontSize] = useState<number>(24);
+
+  // Teleprompter / Cold Call Command Center State
+  const [teleprompterMode, setTeleprompterMode] = useState<"read" | "edit">("read");
+  const [teleprompterScript, setTeleprompterScript] = useState<string>("");
+  const [scriptSavingState, setScriptSavingState] = useState<"idle" | "saving" | "saved">("idle");
+  const [liveCallNotes, setLiveCallNotes] = useState<string>("");
+  const [isLoggingOutcome, setIsLoggingOutcome] = useState(false);
+  const [activeObjectionId, setActiveObjectionId] = useState<string | null>(null);
+  const [copiedObjectionId, setCopiedObjectionId] = useState<string | null>(null);
+  const [outcomeSuccessMessage, setOutcomeSuccessMessage] = useState<string | null>(null);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Tab State: "timeline", "gemini" or "outreach"
   const [activeTab, setActiveTab] = useState<"timeline" | "gemini" | "outreach">("timeline");
@@ -118,6 +181,17 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [pitchFullscreen, onClose]);
+
+  // Sync Teleprompter content when opened
+  useEffect(() => {
+    if (pitchFullscreen && lead) {
+      const initial = customOutreachScript || getDefaultColdCallScript(lead.companyName || "der Firma");
+      setTeleprompterScript(initial);
+      setScriptSavingState("idle");
+      setLiveCallNotes("");
+      setOutcomeSuccessMessage(null);
+    }
+  }, [pitchFullscreen, customOutreachScript, lead]);
 
   // Edit Interaction State
   const [editingInteractionId, setEditingInteractionId] = useState<string | null>(null);
@@ -398,6 +472,118 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
     }
   }
 
+  // Debounced auto-save for Teleprompter script edits
+  const handleTeleprompterScriptChange = (newText: string) => {
+    setTeleprompterScript(newText);
+    setScriptSavingState("saving");
+
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    debounceTimerRef.current = setTimeout(async () => {
+      if (!lead) return;
+      try {
+        const newNotes = upsertOutreachScriptInNotes(lead.notes, newText);
+        const res = await fetch(`/api/leads/${lead.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ notes: newNotes }),
+        });
+        if (res.ok) {
+          setNotesText(newNotes);
+          setCustomOutreachScript(newText);
+          setLead((prev: any) => (prev ? { ...prev, notes: newNotes } : prev));
+          setScriptSavingState("saved");
+          onUpdate();
+          setTimeout(() => setScriptSavingState("idle"), 2500);
+        } else {
+          setScriptSavingState("idle");
+        }
+      } catch (err) {
+        console.error("Auto-save script failed:", err);
+        setScriptSavingState("idle");
+      }
+    }, 750);
+  };
+
+  // 1-Click Call Outcome logger
+  const handleLogCallOutcome = async (
+    outcomeType: "APPOINTMENT" | "FOLLOW_UP" | "NO_REACH" | "NOT_RELEVANT"
+  ) => {
+    if (!lead || isLoggingOutcome) return;
+    setIsLoggingOutcome(true);
+
+    try {
+      let statusToSet: LeadStatus | null = null;
+      let outcomeLabel = "";
+
+      switch (outcomeType) {
+        case "APPOINTMENT":
+          statusToSet = "APPOINTMENT";
+          outcomeLabel = "Termin vereinbart (Meeting/Demo)";
+          break;
+        case "FOLLOW_UP":
+          statusToSet = "FOLLOW_UP";
+          outcomeLabel = "Wiedervorlage / Später anrufen";
+          break;
+        case "NO_REACH":
+          statusToSet = "CONTACTED";
+          outcomeLabel = "Nicht erreicht / Mailbox";
+          break;
+        case "NOT_RELEVANT":
+          statusToSet = "NOT_RELEVANT";
+          outcomeLabel = "Kein Interesse / Nicht relevant";
+          break;
+      }
+
+      const timestamp = new Intl.DateTimeFormat("de-AT", {
+        dateStyle: "short",
+        timeStyle: "short",
+        timeZone: "Europe/Vienna",
+      }).format(new Date());
+
+      const noteLines = [
+        `📞 Cold Call Ergebnis: ${outcomeLabel} (${timestamp} Uhr)`,
+        liveCallNotes.trim() ? `Notizen: ${liveCallNotes.trim()}` : null,
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+      // 1. Create Interaction in DB
+      await fetch(`/api/leads/${lead.id}/interactions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "PHONE",
+          note: noteLines,
+        }),
+      });
+
+      // 2. Update status if changed
+      if (statusToSet && statusToSet !== lead.status) {
+        await handleStatusChange(statusToSet);
+      }
+
+      // 3. Refresh Lead
+      const updatedRes = await fetch(`/api/leads/${lead.id}`);
+      if (updatedRes.ok) {
+        const data = await updatedRes.json();
+        if (data.lead) setLead(data.lead);
+      }
+      onUpdate();
+
+      // 4. Feedback & Auto-close after brief toast
+      setOutcomeSuccessMessage(`✓ Anruf als „${outcomeLabel}“ protokolliert!`);
+      setTimeout(() => {
+        setPitchFullscreen(false);
+        setOutcomeSuccessMessage(null);
+        setLiveCallNotes("");
+      }, 950);
+    } catch (err) {
+      console.error("Failed to log call outcome:", err);
+    } finally {
+      setIsLoggingOutcome(false);
+    }
+  };
+
   const processAudioUpload = async (file: File) => {
     if (!lead) return;
     setUploadingCall(true);
@@ -566,7 +752,7 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
           )}
         </div>
 
-        {/* Right Side: Quick Action Hub + Priority + Inspector Toggle */}
+        {/* Right Side: Teleprompter + Call Action + Priority + Inspector Toggle */}
         <div className="flex items-center gap-2 shrink-0">
           {lead && (
             <div className="shrink-0">
@@ -591,6 +777,19 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                 }}
               />
             </div>
+          )}
+
+          {/* 1-Click Teleprompter / Call-Cockpit Trigger */}
+          {lead && (
+            <button
+              type="button"
+              onClick={() => setPitchFullscreen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-orange-500/15 to-amber-500/15 text-orange-400 border border-orange-500/30 hover:bg-orange-500/25 transition-all shadow-sm shrink-0"
+              title="Teleprompter & Live-Anrufmodus öffnen"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-orange-400" />
+              <span className="hidden sm:inline">Teleprompter</span>
+            </button>
           )}
 
           {lead?.phone && (
@@ -1984,135 +2183,405 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
         </div>
       )}
 
-      {/* ─── Pitch Teleprompter / Fullscreen Modal Overlay ──────────────────── */}
-      {pitchFullscreen && (() => {
-        const scriptText = customOutreachScript;
-        if (!scriptText || !lead) return null;
-        return (
-          <div className="fixed inset-0 z-[70] flex flex-col bg-black/92 backdrop-blur-md text-white animate-fade-in p-6 sm:p-10 select-none">
-            {/* Top Bar */}
-            <div className="flex items-center justify-between pb-4 border-b border-white/10 shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm bg-gradient-to-br from-orange-500 to-amber-600 text-white shadow-lg shadow-orange-500/20">
-                  ⚡
+      {/* ─── Apple Pitch Teleprompter & Live Call Command Center ─────────────── */}
+      {pitchFullscreen && lead && (
+        <div className="fixed inset-0 z-[70] flex flex-col bg-zinc-950/96 backdrop-blur-md text-white animate-fade-in p-4 sm:p-6 overflow-hidden select-none">
+          {/* Top Bar */}
+          <div className="flex items-center justify-between pb-3 border-b border-white/10 shrink-0 gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm bg-gradient-to-br from-orange-500 to-amber-600 text-white shadow-lg shadow-orange-500/20 shrink-0">
+                ⚡
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base sm:text-lg font-bold text-white truncate">{lead.companyName}</h3>
+                  <span className="hidden sm:inline text-[11px] px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-400 font-semibold border border-orange-500/30 shrink-0">
+                    Teleprompter & Call-Cockpit
+                  </span>
                 </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-bold text-white">{lead.companyName}</h3>
-                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-400 font-semibold border border-orange-500/30">
-                      Teleprompter / Anruf-Modus
-                    </span>
-                  </div>
+                <div className="flex items-center gap-3 mt-0.5 text-xs text-zinc-400">
                   {lead.phone && (
                     <a
                       href={`tel:${lead.phone}`}
-                      className="text-xs text-zinc-400 hover:text-orange-400 transition-colors flex items-center gap-1 mt-0.5"
+                      className="font-mono text-emerald-400 hover:text-emerald-300 transition-colors flex items-center gap-1"
                     >
                       <Phone className="w-3 h-3" />
                       <span>{lead.phone}</span>
                     </a>
                   )}
-                </div>
-              </div>
-
-              {/* Action Controls */}
-              <div className="flex items-center gap-2">
-                {/* Font Size Adjuster */}
-                <div className="flex items-center border border-white/15 rounded-lg overflow-hidden bg-white/5 mr-2">
-                  <button
-                    type="button"
-                    onClick={() => setTeleprompterFontSize((s) => Math.max(16, s - 2))}
-                    className="px-2.5 py-1 text-xs font-bold hover:bg-white/10 transition-colors"
-                    title="Schrift verkleinern"
-                  >
-                    A-
-                  </button>
-                  <span className="px-2 text-[11px] font-mono text-zinc-400 border-x border-white/10">
-                    {teleprompterFontSize}px
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setTeleprompterFontSize((s) => Math.min(42, s + 2))}
-                    className="px-2.5 py-1 text-xs font-bold hover:bg-white/10 transition-colors"
-                    title="Schrift vergrößern"
-                  >
-                    A+
-                  </button>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    navigator.clipboard.writeText(scriptText);
-                    setCopiedPitch(true);
-                    setTimeout(() => setCopiedPitch(false), 2000);
-                  }}
-                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-white/10 hover:bg-white/20 transition-all border border-white/15"
-                >
-                  {copiedPitch ? (
-                    <>
-                      <Check className="w-3.5 h-3.5 text-emerald-400" />
-                      <span className="text-emerald-400 font-bold">Kopiert!</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-3.5 h-3.5 text-orange-400" />
-                      <span>Kopieren</span>
-                    </>
+                  {lead.contactPerson && (
+                    <span className="hidden md:inline text-zinc-400">
+                      Ansprechpartner: <strong className="text-zinc-200">{lead.contactPerson}</strong>
+                    </span>
                   )}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPitchFullscreen(false);
-                    setPreloadedOutreachText(scriptText);
-                    setActiveTab("outreach");
-                  }}
-                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-orange-500 to-amber-600 text-white hover:opacity-95 shadow-md shadow-orange-500/20"
-                >
-                  <Send className="w-3.5 h-3.5" />
-                  <span>In Outreach</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setPitchFullscreen(false)}
-                  className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 transition-colors ml-1"
-                  title="Vollbild schließen (Esc)"
-                >
-                  <Minimize2 className="w-5 h-5" />
-                </button>
+                </div>
               </div>
             </div>
 
-            {/* Main Teleprompter Content */}
-            <div className="flex-1 overflow-y-auto flex items-center justify-center p-4 sm:p-8">
-              <div
+            {/* Middle: Mode Switcher & Auto-Save status */}
+            <div className="hidden md:flex items-center gap-3">
+              <div className="flex items-center p-0.5 rounded-lg bg-white/5 border border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setTeleprompterMode("read")}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold transition-all ${
+                    teleprompterMode === "read"
+                      ? "bg-white/15 text-white shadow-sm"
+                      : "text-zinc-400 hover:text-white"
+                  }`}
+                >
+                  <BookOpen className="w-3.5 h-3.5" />
+                  <span>Lese-Modus</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTeleprompterMode("edit")}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold transition-all ${
+                    teleprompterMode === "edit"
+                      ? "bg-orange-500/25 text-orange-400 border border-orange-500/30 shadow-sm"
+                      : "text-zinc-400 hover:text-white"
+                  }`}
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                  <span>Skript bearbeiten</span>
+                </button>
+              </div>
+
+              {/* Real-time Save status indicator */}
+              <div className="text-xs">
+                {scriptSavingState === "saving" ? (
+                  <span className="flex items-center gap-1.5 text-amber-400 font-medium animate-pulse">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Auto-Save…</span>
+                  </span>
+                ) : scriptSavingState === "saved" ? (
+                  <span className="flex items-center gap-1 text-emerald-400 font-semibold animate-fade-in">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Im Lead gesichert</span>
+                  </span>
+                ) : (
+                  <span className="text-zinc-500 text-[11px]">Auto-Save aktiv</span>
+                )}
+              </div>
+            </div>
+
+            {/* Right: Controls & Exit */}
+            <div className="flex items-center gap-2 shrink-0">
+              {/* Font Size Adjuster */}
+              <div className="hidden sm:flex items-center border border-white/15 rounded-lg overflow-hidden bg-white/5 mr-1">
+                <button
+                  type="button"
+                  onClick={() => setTeleprompterFontSize((s) => Math.max(16, s - 2))}
+                  className="px-2.5 py-1 text-xs font-bold hover:bg-white/10 transition-colors"
+                  title="Schrift verkleinern"
+                >
+                  A-
+                </button>
+                <span className="px-2 text-[11px] font-mono text-zinc-400 border-x border-white/10">
+                  {teleprompterFontSize}px
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setTeleprompterFontSize((s) => Math.min(42, s + 2))}
+                  className="px-2.5 py-1 text-xs font-bold hover:bg-white/10 transition-colors"
+                  title="Schrift vergrößern"
+                >
+                  A+
+                </button>
+              </div>
+
+              <button
+                type="button"
                 onClick={() => {
-                  navigator.clipboard.writeText(scriptText);
+                  navigator.clipboard.writeText(teleprompterScript);
                   setCopiedPitch(true);
                   setTimeout(() => setCopiedPitch(false), 2000);
                 }}
-                className="max-w-4xl w-full p-8 sm:p-12 rounded-2xl bg-white/[0.04] border border-white/10 hover:border-orange-500/40 cursor-pointer transition-all shadow-2xl leading-relaxed whitespace-pre-wrap select-text"
-                style={{ fontSize: `${teleprompterFontSize}px` }}
-                title="Klicken zum schnellen Kopieren"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/10 hover:bg-white/20 transition-all border border-white/15"
               >
-                „{scriptText}“
-              </div>
-            </div>
+                {copiedPitch ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-emerald-400" />
+                    <span className="text-emerald-400 font-bold">Kopiert!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5 text-orange-400" />
+                    <span className="hidden sm:inline">Kopieren</span>
+                  </>
+                )}
+              </button>
 
-            {/* Bottom Status / Shortcut Hint */}
-            <div className="pt-3 border-t border-white/10 flex items-center justify-between text-xs text-zinc-400 shrink-0">
-              <span className="flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-orange-400" />
-                <span>Custom Outreach-Skript</span>
-              </span>
-              <span>Drücke <kbd className="px-1.5 py-0.5 rounded bg-white/10 font-mono text-[11px] text-zinc-300">Esc</kbd> zum Schließen</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setPitchFullscreen(false);
+                  setPreloadedOutreachText(teleprompterScript);
+                  setActiveTab("outreach");
+                }}
+                className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-orange-500 to-amber-600 text-white hover:opacity-95 shadow-md shadow-orange-500/20"
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span>In Outreach</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setPitchFullscreen(false)}
+                className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 transition-colors ml-1"
+                title="Vollbild schließen (Esc)"
+              >
+                <Minimize2 className="w-5 h-5" />
+              </button>
             </div>
           </div>
-        );
-      })()}
+
+          {/* Main Content Area: Split 2-Column Command Center */}
+          <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-4 overflow-hidden py-3">
+            {/* Left Column: Primary Teleprompter Pitch Area */}
+            <div className="flex-1 min-h-0 flex flex-col rounded-2xl bg-white/[0.03] border border-white/10 p-5 sm:p-7 overflow-hidden relative shadow-2xl">
+              <div className="flex items-center justify-between pb-3 border-b border-white/10 shrink-0 mb-3 text-xs text-zinc-400">
+                <span className="font-semibold uppercase tracking-wider text-[11px] text-orange-400 flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Call-Leitfaden (Vollbild-Teleprompter)</span>
+                </span>
+                <span className="text-[11px] text-zinc-400">
+                  {teleprompterMode === "read"
+                    ? "👉 Klick in den Text kopiert das Skript"
+                    : "💡 Live-Edit: Änderungen werden automatisch debounced gespeichert"}
+                </span>
+              </div>
+
+              {teleprompterMode === "read" ? (
+                <div
+                  onClick={() => {
+                    navigator.clipboard.writeText(teleprompterScript);
+                    setCopiedPitch(true);
+                    setTimeout(() => setCopiedPitch(false), 2000);
+                  }}
+                  className="flex-1 overflow-y-auto leading-relaxed whitespace-pre-wrap select-text cursor-pointer pr-2 transition-all hover:text-zinc-100"
+                  style={{ fontSize: `${teleprompterFontSize}px` }}
+                  title="Klicken zum schnellen Kopieren des gesamten Skripts"
+                >
+                  {teleprompterScript}
+                </div>
+              ) : (
+                <div className="flex-1 min-h-0 flex flex-col">
+                  <textarea
+                    value={teleprompterScript}
+                    onChange={(e) => handleTeleprompterScriptChange(e.target.value)}
+                    className="flex-1 min-h-0 w-full bg-transparent border-0 outline-none resize-none leading-relaxed text-zinc-100 font-sans p-0"
+                    style={{ fontSize: `${Math.max(16, teleprompterFontSize - 4)}px` }}
+                    placeholder="Dein Kaltakquise-Skript hier anpassen..."
+                  />
+                  <div className="pt-2 text-[11px] text-zinc-400 border-t border-white/10 flex items-center justify-between shrink-0">
+                    <span>Änderungen aktualisieren automatisch den kanonischen Block im Lead.</span>
+                    <button
+                      type="button"
+                      onClick={() => setTeleprompterMode("read")}
+                      className="text-orange-400 hover:underline font-semibold"
+                    >
+                      Fertig & zurück zum Lese-Modus →
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Right Column: Live-Whisperer (Objection Handling) & Live Call Notes */}
+            <div className="w-full lg:w-[380px] xl:w-[420px] shrink-0 flex flex-col gap-3 min-h-0 overflow-y-auto">
+              {/* Box 1: Einwand-Befreiungsschläge aus Cans Playbook */}
+              <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 space-y-3 shrink-0">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                    <ShieldAlert className="w-3.5 h-3.5" />
+                    <span>Einwandbehandlung (Spickzettel)</span>
+                  </h4>
+                  <span className="text-[10px] text-zinc-500">1-Klick Konter</span>
+                </div>
+
+                <div className="space-y-2">
+                  {OBJECTIONS_PLAYBOOK.map((item) => {
+                    const isExpanded = activeObjectionId === item.id;
+                    const isCopied = copiedObjectionId === item.id;
+
+                    return (
+                      <div
+                        key={item.id}
+                        className={`rounded-lg border transition-all ${
+                          isExpanded
+                            ? "bg-white/10 border-amber-500/40"
+                            : "bg-white/[0.02] border-white/10 hover:border-white/20"
+                        }`}
+                      >
+                        <div
+                          onClick={() => setActiveObjectionId(isExpanded ? null : item.id)}
+                          className="p-2.5 flex items-center justify-between gap-2 cursor-pointer"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            {isExpanded ? (
+                              <ChevronDown className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                            ) : (
+                              <ChevronRight className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                            )}
+                            <span className="text-xs font-semibold text-zinc-200 truncate">{item.title}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigator.clipboard.writeText(item.fullText);
+                              setCopiedObjectionId(item.id);
+                              setTimeout(() => setCopiedObjectionId(null), 2000);
+                            }}
+                            className="p-1 rounded hover:bg-white/10 text-zinc-400 hover:text-white transition-colors shrink-0"
+                            title="Konter in Zwischenablage kopieren"
+                          >
+                            {isCopied ? (
+                              <Check className="w-3.5 h-3.5 text-emerald-400" />
+                            ) : (
+                              <Copy className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                        </div>
+
+                        {/* Kurz-Hook / Sneak Peak wenn geschlossen */}
+                        {!isExpanded && (
+                          <p
+                            onClick={() => setActiveObjectionId(item.id)}
+                            className="px-2.5 pb-2 text-[11px] text-zinc-400 line-clamp-1 italic cursor-pointer"
+                          >
+                            „{item.hook}“
+                          </p>
+                        )}
+
+                        {/* Volltext wenn geöffnet */}
+                        {isExpanded && (
+                          <div className="px-3 pb-3 pt-1 border-t border-white/10 text-xs text-zinc-200 leading-relaxed space-y-2">
+                            <p className="italic whitespace-pre-wrap">{item.fullText}</p>
+                            <div className="flex justify-end pt-1">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(item.fullText);
+                                  setCopiedObjectionId(item.id);
+                                  setTimeout(() => setCopiedObjectionId(null), 2000);
+                                }}
+                                className="text-[11px] font-semibold text-amber-400 hover:underline flex items-center gap-1"
+                              >
+                                {isCopied ? "✓ Konter kopiert!" : "Kopieren"}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Box 2: Live-Anrufnotizen während des Calls */}
+              <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 flex-1 min-h-[160px] flex flex-col space-y-2">
+                <div className="flex items-center justify-between shrink-0">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-300 flex items-center gap-1.5">
+                    <FileText className="w-3.5 h-3.5 text-orange-400" />
+                    <span>Live-Gesprächsnotizen</span>
+                  </h4>
+                  <span className="text-[10px] text-zinc-500">Auto-Timeline-Log</span>
+                </div>
+                <textarea
+                  value={liveCallNotes}
+                  onChange={(e) => setLiveCallNotes(e.target.value)}
+                  placeholder="Stichpunkte während des Telefonats tippen (z. B. Inhaber Markus erwischt, interessiert an Menü + PHP-Update, Termin Di 10 Uhr vereinbart)..."
+                  className="flex-1 w-full rounded-lg p-3 text-xs bg-white/[0.04] border border-white/10 text-white placeholder:text-zinc-500 outline-none resize-none leading-relaxed focus:border-orange-500/50"
+                />
+                <span className="text-[10px] text-zinc-500 shrink-0">
+                  Wird beim Klick auf einen der Abschluss-Buttons unten direkt als Interaktion geloggt.
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Bar: 1-Click Call Outcome & Timeline Logger */}
+          <div className="pt-3 border-t border-white/10 flex flex-wrap items-center justify-between gap-3 shrink-0">
+            {/* Left: Feedback or status prompt */}
+            <div className="flex items-center gap-2">
+              {outcomeSuccessMessage ? (
+                <span className="text-emerald-400 font-bold text-xs flex items-center gap-1.5 animate-fade-in">
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>{outcomeSuccessMessage}</span>
+                </span>
+              ) : isLoggingOutcome ? (
+                <span className="text-amber-400 font-medium text-xs flex items-center gap-1.5 animate-pulse">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Protokolliere Call in CRM-Timeline…</span>
+                </span>
+              ) : (
+                <span className="text-xs text-zinc-400 flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-orange-400" />
+                  <span>Anruf beendet? Mit 1 Klick protokollieren:</span>
+                </span>
+              )}
+            </div>
+
+            {/* Right: 1-Click Action Buttons */}
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                disabled={isLoggingOutcome}
+                onClick={() => handleLogCallOutcome("APPOINTMENT")}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 transition-all shadow-md shadow-emerald-600/20 disabled:opacity-50"
+                title="Status auf 'Termin' setzen & Notiz in Timeline eintragen"
+              >
+                <Calendar className="w-3.5 h-3.5" />
+                <span>Termin fix</span>
+              </button>
+
+              <button
+                type="button"
+                disabled={isLoggingOutcome}
+                onClick={() => handleLogCallOutcome("FOLLOW_UP")}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold text-white bg-amber-600 hover:bg-amber-500 transition-all shadow-md shadow-amber-600/20 disabled:opacity-50"
+                title="Status auf 'Wiedervorlage' setzen & Rückruf protokollieren"
+              >
+                <Clock className="w-3.5 h-3.5" />
+                <span>Wiedervorlage</span>
+              </button>
+
+              <button
+                type="button"
+                disabled={isLoggingOutcome}
+                onClick={() => handleLogCallOutcome("NO_REACH")}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-sky-600 hover:bg-sky-500 transition-all shadow-md shadow-sky-600/20 disabled:opacity-50"
+                title="Anrufversuch: Nicht erreicht / Mailbox in Timeline erfassen"
+              >
+                <Phone className="w-3.5 h-3.5" />
+                <span>Nicht erreicht</span>
+              </button>
+
+              <button
+                type="button"
+                disabled={isLoggingOutcome}
+                onClick={() => handleLogCallOutcome("NOT_RELEVANT")}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-zinc-300 bg-zinc-800 hover:bg-zinc-700 border border-white/10 transition-all disabled:opacity-50"
+                title="Lead ins Archiv verschieben & absagen"
+              >
+                <Archive className="w-3.5 h-3.5" />
+                <span>Kein Interesse</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setPitchFullscreen(false)}
+                className="text-xs text-zinc-400 hover:text-white px-2 py-1.5 transition-colors ml-1"
+                title="Ohne Protokollierung schließen (Esc)"
+              >
+                Schließen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
