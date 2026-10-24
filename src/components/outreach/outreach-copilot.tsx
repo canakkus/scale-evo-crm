@@ -7,13 +7,7 @@ import {
   Copy,
   Check,
   Globe,
-  ExternalLink,
-  ChevronDown,
-  ChevronUp,
-  RefreshCw,
   Loader2,
-  FileText,
-  MessageSquare,
   Flame,
   BookmarkCheck,
   Trash2,
@@ -53,8 +47,6 @@ export function OutreachCopilot({
   onSelectScript,
   onOpenEditor,
 }: OutreachCopilotProps) {
-  const [contextText, setContextText] = useState("");
-  const [isFeedOpen, setIsFeedOpen] = useState(true);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -66,7 +58,7 @@ export function OutreachCopilot({
 
   const chatStorageKey = (id: string) => `outreach_copilot_v1_${id}`;
 
-  // Load chat & context from localStorage on mount / leadId change
+  // Load chat from localStorage on mount / leadId change
   useEffect(() => {
     if (!leadId) return;
     try {
@@ -75,31 +67,24 @@ export function OutreachCopilot({
         const parsed = JSON.parse(raw);
         if (parsed && parsed.version === 1 && Array.isArray(parsed.messages)) {
           setMessages(parsed.messages);
-          setContextText(parsed.contextText || "");
-          if (parsed.messages.length > 0) {
-            setIsFeedOpen(false);
-          }
           return;
         }
       }
     } catch {}
     setMessages([]);
-    setContextText("");
-    setIsFeedOpen(true);
   }, [leadId]);
 
-  // Persist chat & context debounced
+  // Persist chat debounced
   useEffect(() => {
     if (!leadId) return;
     const timer = setTimeout(() => {
       try {
-        if (messages.length > 0 || contextText.trim()) {
+        if (messages.length > 0) {
           localStorage.setItem(
             chatStorageKey(leadId),
             JSON.stringify({
               version: 1,
               messages,
-              contextText,
               updatedAt: new Date().toISOString(),
             })
           );
@@ -109,15 +94,13 @@ export function OutreachCopilot({
       }
     }, 350);
     return () => clearTimeout(timer);
-  }, [leadId, messages, contextText]);
+  }, [leadId, messages]);
 
   const handleClearChat = () => {
     try {
       localStorage.removeItem(chatStorageKey(leadId));
     } catch {}
     setMessages([]);
-    setContextText("");
-    setIsFeedOpen(true);
     setSelectedScriptIdx(null);
   };
 
@@ -131,9 +114,9 @@ export function OutreachCopilot({
     setLoading(true);
     const userPrompt =
       customInstruction ||
-      (contextText.trim()
-        ? `Erstelle mir ein Kaltakquise-Skript basierend auf diesem "Über uns" / Website-Text:\n\n${contextText.trim()}`
-        : `Erstelle mir ein scharfes Kaltakquise-Skript für ${companyName}.`);
+      (companyName
+        ? `Erstelle mir ein scharfes Kaltakquise-Skript für ${companyName}.`
+        : "Erstelle mir ein scharfes Kaltakquise-Skript.");
 
     const newMessages: Message[] = [...messages, { role: "user", content: userPrompt }];
     setMessages(newMessages);
@@ -145,7 +128,6 @@ export function OutreachCopilot({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           leadId,
-          contextText: contextText.trim(),
           messages: newMessages,
           channel,
           tone,
@@ -155,7 +137,6 @@ export function OutreachCopilot({
       const data = await res.json();
       if (res.ok && data.reply) {
         setMessages((prev) => [...prev, { role: "assistant", content: data.reply }]);
-        setIsFeedOpen(false); // Nach erfolgreicher Generierung einklappen für mehr Platz
       } else {
         setMessages((prev) => [
           ...prev,
@@ -172,8 +153,8 @@ export function OutreachCopilot({
     }
   };
 
-  const handleSendChat = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSendChat = (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!inputMessage.trim() || loading) return;
     const msg = inputMessage.trim();
     setInputMessage("");
@@ -248,7 +229,7 @@ export function OutreachCopilot({
               </span>
             </div>
             <p className="text-[11px]" style={{ color: "var(--text-3)" }}>
-              Füttere „Über uns“-Infos für individuelle Hooks & Einwandbehandlung
+              Smarter Kaltakquise-Dialog & Einwandbehandlung in Echtzeit
             </p>
           </div>
         </div>
@@ -282,71 +263,10 @@ export function OutreachCopilot({
         </div>
       </div>
 
-      {/* Accordion: Context Feed Area */}
-      <div
-        className="border-b transition-all"
-        style={{
-          borderColor: "var(--border)",
-          background: isFeedOpen ? "var(--surface-2)" : "transparent",
-        }}
-      >
-        <button
-          type="button"
-          onClick={() => setIsFeedOpen(!isFeedOpen)}
-          className="w-full px-4 py-2 flex items-center justify-between text-xs font-semibold hover:bg-[var(--surface-3)] transition-colors"
-          style={{ color: "var(--text-2)" }}
-        >
-          <div className="flex items-center gap-2">
-            <FileText className="w-3.5 h-3.5" style={{ color: "var(--accent)" }} />
-            <span>
-              {contextText.trim()
-                ? `Website-Kontext hinterlegt (${contextText.trim().length} Zeichen)`
-                : "Website / „Über uns“-Text hier reinfüttern"}
-            </span>
-          </div>
-          {isFeedOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-        </button>
-
-        {isFeedOpen && (
-          <div className="px-4 pb-3 space-y-2">
-            <textarea
-              value={contextText}
-              onChange={(e) => setContextText(e.target.value)}
-              placeholder="Kopiere hier den Text der 'Über uns'-Seite, Philosophie, Speisekarte oder Besonderheiten rein (z. B. 'Familienbetrieb seit 1985, Meisterbetrieb, nur Bio-Produkte')..."
-              rows={3}
-              className="w-full rounded-xl p-3 text-xs outline-none border focus:ring-1 transition-all resize-y"
-              style={{
-                background: "var(--surface)",
-                borderColor: "var(--border-2)",
-                color: "var(--text)",
-              }}
-            />
-            <div className="flex items-center justify-between">
-              <span className="text-[11px]" style={{ color: "var(--text-3)" }}>
-                Tipp: Groq baut aus der echten Story deinen perfekten Gesprächseinstieg.
-              </span>
-              <button
-                type="button"
-                onClick={() => void handleGenerateScript()}
-                disabled={loading}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm active:scale-95 disabled:opacity-50"
-                style={{
-                  background: "var(--accent)",
-                  color: "var(--bg)",
-                }}
-              >
-                {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-                <span>{messages.length === 0 ? "Skript generieren" : "Skript neu erstellen"}</span>
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
       {/* Chat & Script Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-3">
+          <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-3.5 my-auto">
             <div
               className="w-12 h-12 rounded-2xl flex items-center justify-center"
               style={{ background: "rgba(249, 115, 22, 0.1)", color: "#f97316" }}
@@ -358,22 +278,24 @@ export function OutreachCopilot({
                 Bereit für die Kaltakquise
               </h4>
               <p className="text-xs max-w-sm mt-1" style={{ color: "var(--text-3)" }}>
-                Wirf oben Text aus der Website von <strong>{companyName}</strong> rein oder klick direkt auf Skript
-                generieren. Danach kannst du mit Groq sprechen und das Skript live anpassen!
+                Generiere direkt ein Skript für <strong>{companyName}</strong> oder kopiere unten 'Über uns'-Texte,
+                Besonderheiten oder Einwände rein.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => void handleGenerateScript()}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95"
-              style={{
-                background: "var(--accent)",
-                color: "var(--bg)",
-              }}
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Direkt Skript ohne Zusatztext generieren</span>
-            </button>
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={() => void handleGenerateScript()}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95"
+                style={{
+                  background: "var(--accent)",
+                  color: "var(--bg)",
+                }}
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>⚡ Skript für {companyName} generieren</span>
+              </button>
+            </div>
           </div>
         ) : (
           messages.map((msg, idx) => {
@@ -532,14 +454,20 @@ export function OutreachCopilot({
           </div>
         )}
 
-        <form onSubmit={handleSendChat} className="flex items-center gap-2">
-          <input
-            type="text"
+        <form onSubmit={handleSendChat} className="flex items-end gap-2">
+          <textarea
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSendChat();
+              }
+            }}
             disabled={loading}
-            placeholder="Mit Groq sprechen (z. B. 'Mach den Einstieg frecher' oder 'Erwähne Chef Martin')..."
-            className="flex-1 rounded-xl px-3.5 py-2.5 text-xs outline-none border focus:ring-1 transition-all"
+            rows={Math.min(4, Math.max(1, inputMessage.split("\n").length))}
+            placeholder="Mit Groq sprechen, Wünsche anpassen oder 'Über uns'-Infos hier reinkopieren..."
+            className="flex-1 rounded-xl px-3.5 py-2.5 text-xs outline-none border focus:ring-1 transition-all resize-none max-h-32"
             style={{
               background: "var(--surface)",
               borderColor: "var(--border-2)",
@@ -549,13 +477,13 @@ export function OutreachCopilot({
           <button
             type="submit"
             disabled={!inputMessage.trim() || loading}
-            className="px-3.5 py-2.5 rounded-xl text-xs font-bold inline-flex items-center gap-1 transition-all disabled:opacity-40 active:scale-95"
+            className="px-3.5 py-2.5 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 transition-all disabled:opacity-40 active:scale-95 shrink-0"
             style={{
               background: "var(--accent)",
               color: "var(--bg)",
             }}
           >
-            <Send className="w-3.5 h-3.5" />
+            {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
             <span className="hidden sm:inline">Senden</span>
           </button>
         </form>
