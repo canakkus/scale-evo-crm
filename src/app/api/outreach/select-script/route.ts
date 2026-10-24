@@ -4,6 +4,7 @@ import { getOptionalUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { leadScope } from "@/lib/workspace";
 import { ensureDbUser } from "@/lib/outreach-user";
+import { upsertOutreachScriptInNotes } from "@/lib/outreach-script";
 
 const SelectScriptSchema = z.object({
   leadId: z.string().min(1),
@@ -63,21 +64,18 @@ export async function POST(request: Request) {
         };
       }
 
-      // 3. Format header with Vienna timezone
+      // 3. Format header with Vienna timezone & upsert canonical block in notes
       const dateFormatted = new Intl.DateTimeFormat("de-AT", {
         dateStyle: "short",
         timeStyle: "short",
         timeZone: "Europe/Vienna",
       }).format(new Date());
 
-      const scriptHeader = `📞 Ausgewähltes Kaltakquise-Skript (${channel === "PHONE" ? "Telefon" : "DM"} · ${dateFormatted} Uhr):`;
+      const dateLabel = `${channel === "PHONE" ? "Telefon" : "DM"} · ${dateFormatted} Uhr`;
+      const scriptHeader = `📞 Ausgewähltes Kaltakquise-Skript (${dateLabel}):`;
+      const updatedNotes = upsertOutreachScriptInNotes(lead.notes, scriptText, dateLabel);
 
-      const existingNotes = (lead.notes ?? "").trim();
-      const updatedNotes = existingNotes
-        ? `${existingNotes}\n\n---\n${scriptHeader}\n${scriptText}`
-        : `${scriptHeader}\n${scriptText}`;
-
-      // 4. Create DmDraft
+      // 4. Create or update DmDraft
       const draft = await tx.dmDraft.create({
         data: {
           leadId: lead.id,
@@ -91,18 +89,40 @@ export async function POST(request: Request) {
         select: { id: true },
       });
 
-      // 5. Create Interaction
-      const interaction = await tx.interaction.create({
-        data: {
+      // 5. Create or update Interaction (deduplicate within 10 minutes to prevent timeline spamming)
+      const recentInteraction = await tx.interaction.findFirst({
+        where: {
           leadId: lead.id,
           type: "NOTE",
-          note: `${scriptHeader}\n\n${scriptText}`,
+          note: { startsWith: "📞 Ausgewähltes Kaltakquise-Skript" },
           createdById: dbUser.id,
+          createdAt: { gte: new Date(Date.now() - 10 * 60_000) },
         },
+        orderBy: { createdAt: "desc" },
         select: { id: true },
       });
 
-      // 6. Update Lead Notes
+      let interactionId: string;
+      if (recentInteraction) {
+        await tx.interaction.update({
+          where: { id: recentInteraction.id },
+          data: { note: `${scriptHeader}\n\n${scriptText}` },
+        });
+        interactionId = recentInteraction.id;
+      } else {
+        const createdInteraction = await tx.interaction.create({
+          data: {
+            leadId: lead.id,
+            type: "NOTE",
+            note: `${scriptHeader}\n\n${scriptText}`,
+            createdById: dbUser.id,
+          },
+          select: { id: true },
+        });
+        interactionId = createdInteraction.id;
+      }
+
+      // 6. Update Lead Notes in-place
       const updatedLead = await tx.lead.update({
         where: { id: lead.id },
         data: { notes: updatedNotes },
@@ -111,8 +131,9 @@ export async function POST(request: Request) {
 
       return {
         draftId: draft.id,
-        interactionId: interaction.id,
+        interactionId,
         notes: updatedLead.notes,
+        scriptText,
         deduplicated: false,
       };
     });
@@ -122,6 +143,7 @@ export async function POST(request: Request) {
       draftId: result.draftId,
       interactionId: result.interactionId,
       notes: result.notes,
+      scriptText: result.scriptText ?? scriptText,
       deduplicated: result.deduplicated,
     });
   } catch (error: any) {

@@ -44,6 +44,7 @@ import { LeadAuditSection } from "./lead-audit-section";
 import { PlanCallPanel } from "@/components/calendar/plan-call-panel";
 import { STATUS_LABELS, INTERACTION_LABELS } from "@/lib/constants";
 import { formatDate, timeAgo, normalizeInstagramHandle, instagramProfileUrl } from "@/lib/utils";
+import { extractCustomOutreachScript } from "@/lib/outreach-script";
 import type { LeadStatus, InteractionType } from "@prisma/client";
 
 type LeadDetailModalProps = {
@@ -51,29 +52,6 @@ type LeadDetailModalProps = {
   onClose: () => void;
   onUpdate: () => void;
 };
-
-function extractCustomOutreachScript(notes?: string | null, leadDraft?: any): string | null {
-  // 1. If lead has a custom draft from DmDraft, use that
-  if (leadDraft) {
-    const draftText = (leadDraft.bodyEdited || leadDraft.bodyGenerated || "").trim();
-    if (draftText) return draftText;
-  }
-
-  if (!notes) return null;
-
-  // 2. Only look for custom selected/saved scripts (never auto retro-audit pitches!)
-  const scriptRegex = /📞\s*Ausgewähltes Kaltakquise-Skript[^\n]*:\s*\n+([\s\S]+?)(?=\n\n---|\n\n📞|$)/gi;
-  const scriptMatches = [...notes.matchAll(scriptRegex)];
-  if (scriptMatches.length > 0) {
-    const lastMatch = scriptMatches[scriptMatches.length - 1];
-    if (lastMatch && lastMatch[1]?.trim()) {
-      return lastMatch[1].trim();
-    }
-  }
-
-  // ABSOLUTELY NOTHING AUTOMATICALLY GENERATED! (No retro-audit pitch!)
-  return null;
-}
 
 export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalProps) {
   const [lead, setLead] = useState<any>(null);
@@ -213,7 +191,7 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
         if (data.lead) {
           setLead(data.lead);
           setNotesText(data.lead.notes || "");
-          const script = extractCustomOutreachScript(data.lead.notes, data.lead.dmDrafts?.[0]);
+          const script = extractCustomOutreachScript(data.lead.notes);
           setCustomOutreachScript(script);
 
           // Initialize edit values
@@ -344,6 +322,8 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
       });
       if (res.ok) {
         setLead({ ...lead, notes: notesText });
+        const updatedScript = extractCustomOutreachScript(notesText);
+        setCustomOutreachScript(updatedScript);
         onUpdate();
       }
     } catch (err) {
@@ -1332,52 +1312,33 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
 
             {/* Tab Content Box */}
             <div className="flex-1 overflow-y-auto p-6">
-              {activeTab === "outreach" ? (
+              {/* Outreach Tab - kept mounted so Copilot chat history and edits are never lost on tab switch */}
+              <div className={activeTab === "outreach" ? "h-full" : "hidden"}>
                 <OutreachLeadPanel
+                  key={lead.id}
                   leadId={lead.id}
                   companyName={lead.companyName}
                   instagram={lead.instagram ?? null}
                   website={lead.website ?? null}
                   initialScriptText={preloadedOutreachText}
-                  onScriptSelected={(scriptText, updatedNotes) => {
+                  onLiveScriptEdit={(scriptText) => {
+                    setCustomOutreachScript(scriptText);
+                  }}
+                  onScriptSaved={(scriptText, updatedNotes) => {
                     setCustomOutreachScript(scriptText);
                     if (updatedNotes) {
                       setNotesText(updatedNotes);
                       setLead((prev: any) => (prev ? { ...prev, notes: updatedNotes } : prev));
                     }
-                    // Fetch full lead data including interactions timeline & drafts
-                    fetch(`/api/leads/${lead.id}`)
-                      .then((r) => r.json())
-                      .then((d) => {
-                        if (d.lead) {
-                          setLead(d.lead);
-                          setNotesText(d.lead.notes || "");
-                          const s = extractCustomOutreachScript(d.lead.notes, d.lead.dmDrafts?.[0]);
-                          if (s) setCustomOutreachScript(s);
-                        }
-                      })
-                      .catch(console.error);
                     onUpdate();
                   }}
-                  onSent={async () => {
+                  onSent={() => {
                     onUpdate();
-                    try {
-                      const res = await fetch(`/api/leads/${lead.id}`);
-                      if (res.ok) {
-                        const data = await res.json();
-                        if (data.lead) {
-                          setLead(data.lead);
-                          setNotesText(data.lead.notes || "");
-                          const s = extractCustomOutreachScript(data.lead.notes, data.lead.dmDrafts?.[0]);
-                          if (s) setCustomOutreachScript(s);
-                        }
-                      }
-                    } catch (e) {
-                      console.error(e);
-                    }
                   }}
                 />
-              ) : activeTab === "timeline" ? (
+              </div>
+
+              {activeTab === "timeline" ? (
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 items-start">
                   {/* Left sub-column: Notes */}
                   <div className="min-w-0 space-y-3">
@@ -1623,7 +1584,7 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                     />
                   </div>
                 </div>
-              ) : (
+              ) : activeTab === "gemini" ? (
                 // Gemini Transcripts Tab Content
                 <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
                   {/* Left sub-column: Upload Audio (4 cols of 12) */}
@@ -1831,7 +1792,7 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                     )}
                   </div>
                 </div>
-              )}
+              ) : null}
             </div>
           </div>
         </div>

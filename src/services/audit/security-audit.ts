@@ -1,7 +1,7 @@
 import * as cheerio from "cheerio";
 import type { AuditCategory, AuditSeverity } from "@prisma/client";
 import { normalizeUrl } from "@/lib/utils";
-import { assertPublicHttpUrl } from "./url-guard";
+import { assertPublicHttpUrl, safeFetch } from "./url-guard";
 
 /**
  * Passiver Erst-Audit einer Lead-Website. Es wird genau EINE Seite per GET
@@ -161,22 +161,20 @@ export async function runSecurityAudit(input: string): Promise<SecurityAuditResu
   const startedAt = performance.now();
   let tlsFailureMessage: string | null = null;
 
-  let response: Response | null = await fetch(url, {
+  let response: Response | null = await safeFetch(url, {
     headers: { "User-Agent": USER_AGENT, "Accept-Language": "de-DE,de;q=0.9,en;q=0.8" },
-    redirect: "follow",
     cache: "no-store",
-    signal: AbortSignal.timeout(9_000),
+    timeoutMs: 9_000,
   }).catch((err: unknown) => {
     tlsFailureMessage = err instanceof Error ? `${err.message}${(err as { cause?: { code?: string } }).cause?.code ? ` (${(err as { cause?: { code?: string } }).cause?.code})` : ""}` : String(err);
     return null;
   });
 
   if (!response && url.startsWith("https://")) {
-    response = await fetch(url.replace(/^https:\/\//, "http://"), {
+    response = await safeFetch(url.replace(/^https:\/\//, "http://"), {
       headers: { "User-Agent": USER_AGENT },
-      redirect: "follow",
       cache: "no-store",
-      signal: AbortSignal.timeout(7_000),
+      timeoutMs: 7_000,
     }).catch(() => null);
 
     if (response) {

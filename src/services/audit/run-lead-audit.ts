@@ -207,22 +207,32 @@ export async function runLeadAudit(leadId: string): Promise<void> {
     data: { auditStatus: "running", auditAttemptedAt: new Date() },
   });
 
-  const result = await runSecurityAudit(lead.website);
-  const issues = [...result.issues];
+  try {
+    const result = await runSecurityAudit(lead.website);
+    const issues = [...result.issues];
 
-  if (result.shouldScreenshot) {
-    const shot = await takeAndStoreScreenshot(leadId, result.url);
-    for (const issue of shot.issues) {
-      if (!issues.some((existing) => existing.code === issue.code)) issues.push(issue);
+    if (result.shouldScreenshot) {
+      const shot = await takeAndStoreScreenshot(leadId, result.url);
+      for (const issue of shot.issues) {
+        if (!issues.some((existing) => existing.code === issue.code)) issues.push(issue);
+      }
     }
-  }
 
-  await prisma.$transaction([
-    prisma.leadAuditIssue.deleteMany({ where: { leadId } }),
-    prisma.leadAuditIssue.createMany({ data: issues.map((issue) => ({ ...issue, leadId })) }),
-    prisma.lead.update({
-      where: { id: leadId },
-      data: { auditStatus: "done", auditSeverity: computeSeverityScore(issues) },
-    }),
-  ]);
+    await prisma.$transaction([
+      prisma.leadAuditIssue.deleteMany({ where: { leadId } }),
+      prisma.leadAuditIssue.createMany({ data: issues.map((issue) => ({ ...issue, leadId })) }),
+      prisma.lead.update({
+        where: { id: leadId },
+        data: { auditStatus: "done", auditSeverity: computeSeverityScore(issues) },
+      }),
+    ]);
+  } catch (err) {
+    await prisma.lead
+      .update({
+        where: { id: leadId },
+        data: { auditStatus: "failed" },
+      })
+      .catch(() => null);
+    throw err;
+  }
 }

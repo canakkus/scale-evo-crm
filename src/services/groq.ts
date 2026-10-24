@@ -370,7 +370,7 @@ export async function executeAssistantTool(name: string, args: any, userId: stri
         const targetLeads = await prisma.lead.findMany({
           where: { AND: andClauses },
           take: takeLimit,
-          select: { id: true, companyName: true, status: true },
+          select: { id: true, companyName: true, status: true, score: true },
         });
 
         if (targetLeads.length === 0) {
@@ -384,22 +384,39 @@ export async function executeAssistantTool(name: string, args: any, userId: stri
 
         const idsToUpdate = targetLeads.map((l) => l.id);
 
-        await prisma.lead.updateMany({
-          where: { id: { in: idsToUpdate } },
-          data: {
-            status: newStatus as any,
-            ...(newStatus === "NOT_RELEVANT"
-              ? {
-                  isFocus: false,
-                  priority: "LOW",
-                  prioritySource: "SYSTEM",
-                  priorityRatedAt: null,
-                  priorityRatedById: null,
-                  priorityRatedByName: null,
-                }
-              : {}),
-          },
-        });
+        if (newStatus === "NOT_RELEVANT") {
+          await prisma.lead.updateMany({
+            where: { id: { in: idsToUpdate } },
+            data: {
+              status: "NOT_RELEVANT",
+              isFocus: false,
+              priority: "LOW",
+              prioritySource: "SYSTEM",
+              priorityRatedAt: null,
+              priorityRatedById: null,
+              priorityRatedByName: null,
+            },
+          });
+        } else {
+          // If unarchiving leads from NOT_RELEVANT, recalculate system priority from score
+          await prisma.$transaction(
+            targetLeads.map((l) => {
+              const wasNotRelevant = l.status === "NOT_RELEVANT";
+              const restoredPriority = wasNotRelevant
+                ? ((l.score ?? 0) >= 70 ? "HIGH" : (l.score ?? 0) >= 40 ? "MEDIUM" : "LOW")
+                : undefined;
+              return prisma.lead.update({
+                where: { id: l.id },
+                data: {
+                  status: newStatus as any,
+                  ...(restoredPriority
+                    ? { priority: restoredPriority as any, prioritySource: "SYSTEM" }
+                    : {}),
+                },
+              });
+            })
+          );
+        }
 
         return {
           success: true,

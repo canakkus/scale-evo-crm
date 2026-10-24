@@ -524,6 +524,8 @@ export function LeadsTable({
                   const next = !prev;
                   if (!next && ["NOT_RELEVANT", "LOST", "VISITED_NO_INTEREST"].includes(statusFilter)) {
                     setStatusFilter("");
+                  } else if (next && statusFilter && !["NOT_RELEVANT", "LOST", "VISITED_NO_INTEREST"].includes(statusFilter)) {
+                    setStatusFilter("");
                   }
                   return next;
                 });
@@ -719,7 +721,7 @@ export function LeadsTable({
                 setStatusFilter(nextStatus);
                 if (["NOT_RELEVANT", "LOST", "VISITED_NO_INTEREST"].includes(nextStatus)) {
                   setArchiveFilter(true);
-                } else if (nextStatus) {
+                } else {
                   setArchiveFilter(false);
                 }
                 setSelectedLeadIds([]);

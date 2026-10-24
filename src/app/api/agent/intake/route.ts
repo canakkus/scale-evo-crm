@@ -73,14 +73,16 @@ export async function POST(request: Request) {
       const website = body.website?.trim() || null;
       const treatwellUrl = body.treatwellUrl?.trim() || null;
       const email = body.email?.trim() || null;
+      const phone = body.phone?.trim() || null;
 
-      // Duplicate check: Look for existing lead by website, treatwellUrl, email, or companyName
+      // Duplicate check: Look for existing lead by website, treatwellUrl, email, phone, or companyName
       const existing = await prisma.lead.findFirst({
         where: {
           OR: [
             ...(website ? [{ website: { equals: website, mode: "insensitive" as const } }] : []),
             ...(treatwellUrl ? [{ treatwellUrl: { equals: treatwellUrl, mode: "insensitive" as const } }] : []),
             ...(email ? [{ email: { equals: email, mode: "insensitive" as const } }] : []),
+            ...(phone ? [{ phone: { equals: phone, mode: "insensitive" as const } }] : []),
             { companyName: { equals: companyName, mode: "insensitive" as const } },
           ],
         },
@@ -101,8 +103,9 @@ export async function POST(request: Request) {
       const followUpDate = body.nextFollowUpAt ? new Date(body.nextFollowUpAt) : null;
       const isValidFollowUp = followUpDate && !isNaN(followUpDate.getTime());
 
-      if (existing && (isRaw || existing.status === "NOT_RELEVANT")) {
-        // Raw duplicates and archived NOT_RELEVANT leads are skipped and never re-prioritized.
+      const isArchived = ["NOT_RELEVANT", "LOST", "VISITED_NO_INTEREST"].includes(existing?.status as string);
+      if (existing && (isRaw || isArchived)) {
+        // Raw duplicates and archived leads (NOT_RELEVANT, LOST, VISITED_NO_INTEREST) are skipped and never re-prioritized.
         return NextResponse.json({
           success: true,
           duplicate: true,
@@ -111,7 +114,7 @@ export async function POST(request: Request) {
       }
 
       if (existing) {
-        // Update existing active lead with enrichment notes & follow-up
+        // Update existing active lead with enrichment notes & follow-up (protect user priority rating)
         lead = await prisma.lead.update({
           where: { id: existing.id },
           data: {
@@ -121,7 +124,7 @@ export async function POST(request: Request) {
             ...(isValidFollowUp ? { nextFollowUpAt: followUpDate } : {}),
             ...(body.phone && !existing.phone ? { phone: body.phone } : {}),
             ...(body.instagram && !existing.instagram ? { instagram: body.instagram } : {}),
-            priority: priorityValue,
+            ...(existing.prioritySource === "USER" ? {} : { priority: priorityValue }),
           },
         });
       } else {
@@ -170,8 +173,8 @@ export async function POST(request: Request) {
         });
       }
 
-      // Sync follow-up to Apple Calendar & Reminders if scheduled
-      if (isValidFollowUp && followUpDate && !isRaw && lead.status !== "NOT_RELEVANT") {
+      // Sync follow-up to Apple Calendar & Reminders if scheduled (never for archived leads)
+      if (isValidFollowUp && followUpDate && !isRaw && !["NOT_RELEVANT", "LOST", "VISITED_NO_INTEREST"].includes(lead.status)) {
         try {
           appleSyncResult = await pushToAppleEcosystem({
             userEmail: user.email || FALLBACK_USER_EMAIL,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { AlertTriangle, Check, Copy, Phone, Sparkles, AtSign, Flame, CheckCircle2 } from "lucide-react";
+import { AlertTriangle, Check, Copy, Phone, Sparkles, AtSign, Flame, CheckCircle2, BookmarkCheck, Loader2 } from "lucide-react";
 import { CHAR_COLORS, charState, speakingSeconds } from "@/lib/score-visuals";
 import { normalizeInstagramHandle } from "@/lib/utils";
 import { OutreachCopilot } from "./outreach-copilot";
@@ -27,7 +27,8 @@ export function OutreachLeadPanel({
   website,
   initialScriptText,
   onSent,
-  onScriptSelected,
+  onLiveScriptEdit,
+  onScriptSaved,
 }: {
   leadId: string;
   companyName: string;
@@ -35,7 +36,8 @@ export function OutreachLeadPanel({
   website?: string | null;
   initialScriptText?: string | null;
   onSent?: () => void;
-  onScriptSelected?: (scriptText: string, notes?: string) => void;
+  onLiveScriptEdit?: (scriptText: string) => void;
+  onScriptSaved?: (scriptText: string, notes?: string) => void;
 }) {
   const [panelMode, setPanelMode] = useState<"copilot" | "variants">(initialScriptText ? "variants" : "copilot");
   const [channel, setChannel] = useState<Channel>(instagram ? "INSTAGRAM_DM" : "PHONE");
@@ -50,6 +52,7 @@ export function OutreachLeadPanel({
     initialScriptText ? { 0: initialScriptText } : {}
   );
   const [busy, setBusy] = useState(false);
+  const [savingScript, setSavingScript] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [receipt, setReceipt] = useState<string | null>(null);
@@ -120,6 +123,37 @@ export function OutreachLeadPanel({
     }
   }
 
+  async function handleSaveEditorScript() {
+    if (!text.trim() || savingScript) return;
+    setSavingScript(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/outreach/select-script", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          leadId,
+          scriptText: text.trim(),
+          channel: channel === "PHONE" ? "PHONE" : "INSTAGRAM_DM",
+          tone,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        setScriptNotice("Skript in Notizen & Timeline gespeichert!");
+        onScriptSaved?.(text.trim(), data.notes);
+        onSent?.();
+      } else {
+        setError(data.error || "Fehler beim Speichern des Skripts.");
+      }
+    } catch (err: any) {
+      console.error(err);
+      setError("Netzwerkfehler beim Speichern des Skripts.");
+    } finally {
+      setSavingScript(false);
+    }
+  }
+
   return (
     <div className="space-y-4">
       {/* Mode Switcher: Groq Copilot vs. 3 Schnell-Varianten */}
@@ -148,62 +182,73 @@ export function OutreachLeadPanel({
               boxShadow: panelMode === "variants" ? "var(--shadow-sm)" : "none",
             }}
           >
-            3 Schnell-Varianten
+            3 Schnell-Varianten / Editor
           </button>
         </div>
       </div>
 
-      {panelMode === "copilot" ? (
-        <div className="h-[520px]">
-          <OutreachCopilot
-            leadId={leadId}
-            companyName={companyName}
-            website={website}
-            channel={channel}
-            tone={tone}
-            onSelectScript={(scriptText, draftId, notes) => {
-              setVariants([
-                {
-                  index: 0,
-                  body: scriptText,
-                  charCount: scriptText.length,
-                  draftId: draftId ?? null,
-                },
-              ]);
-              setEdited({ 0: scriptText });
-              setSelected(0);
-              setPanelMode("variants");
-              setScriptNotice("Skript in Notizen & Timeline gespeichert und in Variante A geladen!");
-              onScriptSelected?.(scriptText, notes);
-              onSent?.();
+      <div className={panelMode === "copilot" ? "h-[540px] flex flex-col" : "hidden"}>
+        <OutreachCopilot
+          leadId={leadId}
+          companyName={companyName}
+          website={website}
+          channel={channel}
+          tone={tone}
+          onSelectScript={(scriptText, draftId, notes) => {
+            setVariants([
+              {
+                index: 0,
+                body: scriptText,
+                charCount: scriptText.length,
+                draftId: draftId ?? null,
+              },
+            ]);
+            setEdited({ 0: scriptText });
+            setSelected(0);
+            setScriptNotice("Skript in Notizen & Timeline gespeichert!");
+            onScriptSaved?.(scriptText, notes);
+            onSent?.();
+          }}
+          onOpenEditor={(scriptText) => {
+            setVariants([
+              {
+                index: 0,
+                body: scriptText,
+                charCount: scriptText.length,
+                draftId: null,
+              },
+            ]);
+            setEdited({ 0: scriptText });
+            setSelected(0);
+            setPanelMode("variants");
+          }}
+        />
+      </div>
+
+      <div className={panelMode === "variants" ? "space-y-3" : "hidden"}>
+        {scriptNotice && (
+          <div
+            className="flex items-center justify-between gap-2 rounded-xl p-3 text-xs font-semibold animate-fade-in"
+            style={{
+              background: "rgba(16, 185, 129, 0.12)",
+              color: "#10b981",
+              border: "1px solid rgba(16, 185, 129, 0.25)",
             }}
-          />
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {scriptNotice && (
-            <div
-              className="flex items-center justify-between gap-2 rounded-xl p-3 text-xs font-semibold animate-fade-in"
-              style={{
-                background: "rgba(16, 185, 129, 0.12)",
-                color: "#10b981",
-                border: "1px solid rgba(16, 185, 129, 0.25)",
-              }}
-            >
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 shrink-0" />
-                <span>{scriptNotice}</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setScriptNotice(null)}
-                className="text-emerald-400 hover:text-emerald-200 text-xs px-1"
-              >
-                ✕
-              </button>
+          >
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              <span>{scriptNotice}</span>
             </div>
-          )}
-          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setScriptNotice(null)}
+              className="text-emerald-400 hover:text-emerald-200 text-xs px-1"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+        <div className="flex flex-wrap items-center gap-2">
         <div className="inline-flex rounded-xl border p-1" style={{ borderColor: "var(--border)" }}>
           {(["INSTAGRAM_DM", "PHONE"] as Channel[]).map((key) => (
             <button
@@ -290,7 +335,7 @@ export function OutreachLeadPanel({
             onChange={(event) => {
               const val = event.target.value;
               setEdited((prev) => ({ ...prev, [selected]: val }));
-              onScriptSelected?.(val);
+              onLiveScriptEdit?.(val);
             }}
             className="w-full rounded-lg p-4 text-sm leading-6 outline-none"
             style={{ minHeight: 160, background: "var(--surface-2)", color: "var(--text)", border: "1px solid var(--border)" }}
@@ -323,19 +368,35 @@ export function OutreachLeadPanel({
           </span>
         </div>
       ) : variants.length > 0 ? (
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
           <span className="font-mono text-[11px]" style={{ color: CHAR_COLORS[charState(text.length, charLimit)] }}>
             {channel === "PHONE" ? `~${speakingSeconds(text.length)} Sek.` : `${text.length}/${charLimit} Zeichen`}
           </span>
-          <button onClick={() => void copyAndOpen()} className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold"
-                  style={{ background: "var(--accent)", color: "var(--bg)" }}>
-            <Copy className="h-3.5 w-3.5" />
-            {channel === "PHONE" ? "Text kopieren" : "Kopieren & Instagram öffnen"}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => void handleSaveEditorScript()}
+              disabled={savingScript || !text.trim()}
+              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold border transition-all active:scale-95 disabled:opacity-50"
+              style={{
+                background: "var(--surface)",
+                borderColor: "rgba(249, 115, 22, 0.4)",
+                color: "#f97316",
+              }}
+              title="Dieses bearbeitete Skript in den Lead-Notizen & Pitch-Karte speichern"
+            >
+              {savingScript ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <BookmarkCheck className="h-3.5 w-3.5" />}
+              <span>{savingScript ? "Speichert…" : "Skript speichern & Notiz anlegen"}</span>
+            </button>
+            <button onClick={() => void copyAndOpen()} className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold"
+                    style={{ background: "var(--accent)", color: "var(--bg)" }}>
+              <Copy className="h-3.5 w-3.5" />
+              {channel === "PHONE" ? "Text kopieren" : "Kopieren & Instagram öffnen"}
+            </button>
+          </div>
         </div>
       ) : null}
-        </div>
-      )}
+      </div>
     </div>
   );
 }

@@ -16,6 +16,8 @@ import {
   MessageSquare,
   Flame,
   BookmarkCheck,
+  Trash2,
+  Edit3,
 } from "lucide-react";
 import { MarkdownContent } from "@/components/ui/markdown-content";
 
@@ -31,6 +33,7 @@ type OutreachCopilotProps = {
   channel?: "PHONE" | "WALK_IN" | "INSTAGRAM_DM";
   tone?: "CASUAL_VIENNESE" | "PROFESSIONAL_DU" | "FORMAL_SIE";
   onSelectScript?: (scriptText: string, draftId?: string, notes?: string) => void;
+  onOpenEditor?: (scriptText: string) => void;
 };
 
 const SUGGESTIONS = [
@@ -48,6 +51,7 @@ export function OutreachCopilot({
   channel = "PHONE",
   tone = "CASUAL_VIENNESE",
   onSelectScript,
+  onOpenEditor,
 }: OutreachCopilotProps) {
   const [contextText, setContextText] = useState("");
   const [isFeedOpen, setIsFeedOpen] = useState(true);
@@ -59,6 +63,63 @@ export function OutreachCopilot({
   const [selectingScriptIdx, setSelectingScriptIdx] = useState<number | null>(null);
   const [selectError, setSelectError] = useState<string | null>(null);
   const chatBottomRef = useRef<HTMLDivElement | null>(null);
+
+  const chatStorageKey = (id: string) => `outreach_copilot_v1_${id}`;
+
+  // Load chat & context from localStorage on mount / leadId change
+  useEffect(() => {
+    if (!leadId) return;
+    try {
+      const raw = localStorage.getItem(chatStorageKey(leadId));
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed.version === 1 && Array.isArray(parsed.messages)) {
+          setMessages(parsed.messages);
+          setContextText(parsed.contextText || "");
+          if (parsed.messages.length > 0) {
+            setIsFeedOpen(false);
+          }
+          return;
+        }
+      }
+    } catch {}
+    setMessages([]);
+    setContextText("");
+    setIsFeedOpen(true);
+  }, [leadId]);
+
+  // Persist chat & context debounced
+  useEffect(() => {
+    if (!leadId) return;
+    const timer = setTimeout(() => {
+      try {
+        if (messages.length > 0 || contextText.trim()) {
+          localStorage.setItem(
+            chatStorageKey(leadId),
+            JSON.stringify({
+              version: 1,
+              messages,
+              contextText,
+              updatedAt: new Date().toISOString(),
+            })
+          );
+        }
+      } catch (e) {
+        console.warn("[OutreachCopilot] localStorage save error:", e);
+      }
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [leadId, messages, contextText]);
+
+  const handleClearChat = () => {
+    try {
+      localStorage.removeItem(chatStorageKey(leadId));
+    } catch {}
+    setMessages([]);
+    setContextText("");
+    setIsFeedOpen(true);
+    setSelectedScriptIdx(null);
+  };
 
   // Auto-scroll chat to bottom
   useEffect(() => {
@@ -192,19 +253,33 @@ export function OutreachCopilot({
           </div>
         </div>
 
-        {website && (
-          <a
-            href={website.startsWith("http") ? website : `https://${website}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-md hover:underline"
-            style={{ background: "var(--surface-3)", color: "var(--text-2)" }}
-            title="Website öffnen zum Kopieren der Über-uns-Seite"
-          >
-            <Globe className="w-3.5 h-3.5" />
-            <span>Website ↗</span>
-          </a>
-        )}
+        <div className="flex items-center gap-2">
+          {messages.length > 0 && (
+            <button
+              type="button"
+              onClick={handleClearChat}
+              className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-md hover:bg-[var(--surface-3)] transition-colors text-[var(--text-3)] hover:text-red-400"
+              title="Chat-Verlauf für diesen Lead leeren"
+            >
+              <Trash2 className="w-3 h-3" />
+              <span>Chat leeren</span>
+            </button>
+          )}
+
+          {website && (
+            <a
+              href={website.startsWith("http") ? website : `https://${website}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-md hover:underline"
+              style={{ background: "var(--surface-3)", color: "var(--text-2)" }}
+              title="Website öffnen zum Kopieren der Über-uns-Seite"
+            >
+              <Globe className="w-3.5 h-3.5" />
+              <span>Website ↗</span>
+            </a>
+          )}
+        </div>
       </div>
 
       {/* Accordion: Context Feed Area */}
@@ -335,40 +410,55 @@ export function OutreachCopilot({
                         className="pt-2 border-t flex flex-wrap items-center justify-between gap-2"
                         style={{ borderColor: "var(--border)" }}
                       >
-                        <button
-                          type="button"
-                          onClick={() => void handleSelectScript(msg.content, idx)}
-                          disabled={selectingScriptIdx !== null}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border active:scale-95 disabled:opacity-60 shadow-xs"
-                          style={{
-                            background:
-                              selectedScriptIdx === idx
-                                ? "rgba(16, 185, 129, 0.15)"
-                                : "var(--surface)",
-                            borderColor:
-                              selectedScriptIdx === idx ? "#10b981" : "var(--border)",
-                            color:
-                              selectedScriptIdx === idx ? "#10b981" : "var(--text)",
-                          }}
-                          title="Dieses Skript für Outreach festlegen und in den Lead-Notizen protokollieren"
-                        >
-                          {selectingScriptIdx === idx ? (
-                            <>
-                              <Loader2 className="w-3.5 h-3.5 animate-spin text-orange-500" />
-                              <span>Wird gespeichert…</span>
-                            </>
-                          ) : selectedScriptIdx === idx ? (
-                            <>
-                              <Check className="w-3.5 h-3.5 text-emerald-500" />
-                              <span>Für Outreach & Notizen ausgewählt ✓</span>
-                            </>
-                          ) : (
-                            <>
-                              <BookmarkCheck className="w-3.5 h-3.5 text-orange-500" />
-                              <span>Skript auswählen & Notiz anlegen</span>
-                            </>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => void handleSelectScript(msg.content, idx)}
+                            disabled={selectingScriptIdx !== null}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border active:scale-95 disabled:opacity-60 shadow-xs"
+                            style={{
+                              background:
+                                selectedScriptIdx === idx
+                                  ? "rgba(16, 185, 129, 0.15)"
+                                  : "var(--surface)",
+                              borderColor:
+                                selectedScriptIdx === idx ? "#10b981" : "var(--border)",
+                              color:
+                                selectedScriptIdx === idx ? "#10b981" : "var(--text)",
+                            }}
+                            title="Dieses Skript für Outreach festlegen und in den Lead-Notizen protokollieren"
+                          >
+                            {selectingScriptIdx === idx ? (
+                              <>
+                                <Loader2 className="w-3.5 h-3.5 animate-spin text-orange-500" />
+                                <span>Wird gespeichert…</span>
+                              </>
+                            ) : selectedScriptIdx === idx ? (
+                              <>
+                                <Check className="w-3.5 h-3.5 text-emerald-500" />
+                                <span>Für Outreach & Notizen ausgewählt ✓</span>
+                              </>
+                            ) : (
+                              <>
+                                <BookmarkCheck className="w-3.5 h-3.5 text-orange-500" />
+                                <span>Skript auswählen & Notiz anlegen</span>
+                              </>
+                            )}
+                          </button>
+
+                          {selectedScriptIdx === idx && onOpenEditor && (
+                            <button
+                              type="button"
+                              onClick={() => onOpenEditor(msg.content)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all hover:bg-[var(--surface-3)] text-orange-400 animate-fade-in"
+                              style={{ borderColor: "rgba(249, 115, 22, 0.4)", background: "var(--surface)" }}
+                              title="Dieses Skript im Editor öffnen & verfeinern"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                              <span>Im Editor bearbeiten ↗</span>
+                            </button>
                           )}
-                        </button>
+                        </div>
 
                         <button
                           type="button"
