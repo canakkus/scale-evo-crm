@@ -134,6 +134,20 @@ export function OutreachLeadPanel({
             website={website}
             channel={channel}
             tone={tone}
+            onSelectScript={(scriptText, draftId) => {
+              setVariants([
+                {
+                  index: 0,
+                  body: scriptText,
+                  charCount: scriptText.length,
+                  draftId: draftId ?? null,
+                },
+              ]);
+              setEdited({ 0: scriptText });
+              setSelected(0);
+              setPanelMode("variants");
+              onSent?.();
+            }}
           />
         </div>
       ) : (

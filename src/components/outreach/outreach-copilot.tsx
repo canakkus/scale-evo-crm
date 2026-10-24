@@ -15,7 +15,9 @@ import {
   FileText,
   MessageSquare,
   Flame,
+  BookmarkCheck,
 } from "lucide-react";
+import { MarkdownContent } from "@/components/ui/markdown-content";
 
 type Message = {
   role: "user" | "assistant";
@@ -28,6 +30,7 @@ type OutreachCopilotProps = {
   website?: string | null;
   channel?: "PHONE" | "WALK_IN" | "INSTAGRAM_DM";
   tone?: "CASUAL_VIENNESE" | "PROFESSIONAL_DU" | "FORMAL_SIE";
+  onSelectScript?: (scriptText: string, draftId?: string) => void;
 };
 
 const SUGGESTIONS = [
@@ -44,6 +47,7 @@ export function OutreachCopilot({
   website,
   channel = "PHONE",
   tone = "CASUAL_VIENNESE",
+  onSelectScript,
 }: OutreachCopilotProps) {
   const [contextText, setContextText] = useState("");
   const [isFeedOpen, setIsFeedOpen] = useState(true);
@@ -51,6 +55,9 @@ export function OutreachCopilot({
   const [inputMessage, setInputMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [selectedScriptIdx, setSelectedScriptIdx] = useState<number | null>(null);
+  const [selectingScriptIdx, setSelectingScriptIdx] = useState<number | null>(null);
+  const [selectError, setSelectError] = useState<string | null>(null);
   const chatBottomRef = useRef<HTMLDivElement | null>(null);
 
   // Auto-scroll chat to bottom
@@ -116,6 +123,35 @@ export function OutreachCopilot({
     navigator.clipboard.writeText(text);
     setCopiedIndex(idx);
     setTimeout(() => setCopiedIndex(null), 2000);
+  };
+
+  const handleSelectScript = async (text: string, idx: number) => {
+    setSelectingScriptIdx(idx);
+    setSelectError(null);
+    try {
+      const res = await fetch("/api/outreach/select-script", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          leadId,
+          scriptText: text,
+          channel: channel === "PHONE" ? "PHONE" : "INSTAGRAM_DM",
+          tone,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        setSelectedScriptIdx(idx);
+        onSelectScript?.(text, data.draftId);
+      } else {
+        setSelectError(data.error || "Skript konnte nicht gespeichert werden.");
+      }
+    } catch (err: any) {
+      console.error("Fehler beim Übernehmen des Skripts:", err);
+      setSelectError("Netzwerkfehler beim Speichern des Skripts.");
+    } finally {
+      setSelectingScriptIdx(null);
+    }
   };
 
   return (
@@ -282,8 +318,8 @@ export function OutreachCopilot({
                   )}
                 </div>
                 <div
-                  className={`relative rounded-2xl p-4 text-xs leading-relaxed max-w-[95%] whitespace-pre-wrap select-text border shadow-sm ${
-                    isAssistant ? "" : "font-medium"
+                  className={`relative rounded-2xl p-4 text-xs leading-relaxed max-w-[95%] select-text border shadow-sm ${
+                    isAssistant ? "w-full" : "font-medium whitespace-pre-wrap"
                   }`}
                   style={{
                     background: isAssistant ? "var(--surface-2)" : "var(--accent)",
@@ -291,26 +327,77 @@ export function OutreachCopilot({
                     borderColor: isAssistant ? "var(--border)" : "transparent",
                   }}
                 >
-                  {isAssistant && (
-                    <button
-                      type="button"
-                      onClick={() => copyToClipboard(msg.content, idx)}
-                      className="absolute top-3 right-3 p-1.5 rounded-lg border transition-all hover:bg-[var(--surface-3)]"
-                      style={{
-                        borderColor: "var(--border)",
-                        background: "var(--surface)",
-                        color: "var(--text-2)",
-                      }}
-                      title="Skript kopieren"
-                    >
-                      {copiedIndex === idx ? (
-                        <Check className="w-3.5 h-3.5 text-emerald-500" />
-                      ) : (
-                        <Copy className="w-3.5 h-3.5" />
-                      )}
-                    </button>
+                  {isAssistant ? (
+                    <div className="space-y-3">
+                      <MarkdownContent content={msg.content} />
+
+                      <div
+                        className="pt-2 border-t flex flex-wrap items-center justify-between gap-2"
+                        style={{ borderColor: "var(--border)" }}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => void handleSelectScript(msg.content, idx)}
+                          disabled={selectingScriptIdx !== null}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border active:scale-95 disabled:opacity-60 shadow-xs"
+                          style={{
+                            background:
+                              selectedScriptIdx === idx
+                                ? "rgba(16, 185, 129, 0.15)"
+                                : "var(--surface)",
+                            borderColor:
+                              selectedScriptIdx === idx ? "#10b981" : "var(--border)",
+                            color:
+                              selectedScriptIdx === idx ? "#10b981" : "var(--text)",
+                          }}
+                          title="Dieses Skript für Outreach festlegen und in den Lead-Notizen protokollieren"
+                        >
+                          {selectingScriptIdx === idx ? (
+                            <>
+                              <Loader2 className="w-3.5 h-3.5 animate-spin text-orange-500" />
+                              <span>Wird gespeichert…</span>
+                            </>
+                          ) : selectedScriptIdx === idx ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 text-emerald-500" />
+                              <span>Für Outreach & Notizen ausgewählt ✓</span>
+                            </>
+                          ) : (
+                            <>
+                              <BookmarkCheck className="w-3.5 h-3.5 text-orange-500" />
+                              <span>Skript auswählen & Notiz anlegen</span>
+                            </>
+                          )}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => copyToClipboard(msg.content, idx)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-all hover:bg-[var(--surface-3)]"
+                          style={{
+                            borderColor: "var(--border)",
+                            background: "var(--surface)",
+                            color: "var(--text-2)",
+                          }}
+                          title="Vollständiges Skript in Zwischenablage kopieren"
+                        >
+                          {copiedIndex === idx ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 text-emerald-500" />
+                              <span>Kopiert</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3.5 h-3.5" />
+                              <span>Kopieren</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    msg.content
                   )}
-                  {msg.content}
                 </div>
               </div>
             );

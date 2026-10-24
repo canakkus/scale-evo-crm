@@ -517,6 +517,19 @@ export default function OutreachPageComponent() {
                     website={active.website}
                     channel={channel}
                     tone={tone}
+                    onSelectScript={(scriptText, draftId) => {
+                      setVariants([
+                        {
+                          index: 0,
+                          body: scriptText,
+                          charCount: scriptText.length,
+                          draftId: draftId ?? null,
+                        },
+                      ]);
+                      setEdited({ 0: scriptText });
+                      setExpanded(0);
+                      setOutreachMode("variants");
+                    }}
                   />
                 </div>
               ) : (
