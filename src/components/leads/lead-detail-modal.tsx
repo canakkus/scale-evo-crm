@@ -138,11 +138,6 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
     };
   }, [isResizingSidebar]);
 
-  // New Interaction Form
-  const [newInteractionType, setNewInteractionType] = useState<InteractionType>("PHONE");
-  const [newInteractionNote, setNewInteractionNote] = useState("");
-  const [addingInteraction, setAddingInteraction] = useState(false);
-
   // Edit Interaction State
   const [editingInteractionId, setEditingInteractionId] = useState<string | null>(null);
   const [editInteractionNote, setEditInteractionNote] = useState("");
@@ -349,37 +344,6 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
     }
   }
 
-  async function handleAddInteraction(e: React.FormEvent) {
-    e.preventDefault();
-    if (!newInteractionNote.trim() || !lead) return;
-    setAddingInteraction(true);
-
-    try {
-      const res = await fetch(`/api/leads/${lead.id}/interactions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: newInteractionType,
-          note: newInteractionNote,
-        }),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setLead({
-          ...lead,
-          interactions: [data.interaction, ...(lead.interactions || [])],
-        });
-        setNewInteractionNote("");
-        onUpdate();
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setAddingInteraction(false);
-    }
-  }
-
   async function handleUpdateInteraction(interactionId: string) {
     if (!editInteractionNote.trim() || !lead) return;
     setSavingInteractionId(interactionId);
@@ -486,6 +450,17 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
     MIXED:    { bg: "var(--status-planned-bg)", tx: "var(--status-planned-tx)", label: "Gemischt" },
   };
 
+  const toggleFullscreen = () => {
+    setIsFullscreen((prev) => !prev);
+    try {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen?.().catch(() => {});
+      } else {
+        document.exitFullscreen?.().catch(() => {});
+      }
+    } catch {}
+  };
+
   return (
     <div className={`fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-fade-in ${isFullscreen ? 'p-0' : 'p-4 sm:p-6'}`}>
       <div className={`w-full flex flex-col shadow-2xl overflow-hidden border ${isFullscreen ? 'h-full rounded-none max-w-none border-none' : 'max-w-6xl max-h-[90vh] rounded-2xl'}`} style={{ background: "var(--bg)", borderColor: "var(--border)" }}>
@@ -530,18 +505,36 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
             </h2>
             {lead && <StatusBadge status={lead.status} />}
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             <button
-              onClick={() => setIsFullscreen(!isFullscreen)}
-              className="p-1.5 rounded-lg transition-colors hover:bg-[var(--surface-3)]"
-              style={{ color: "var(--text-2)" }}
+              type="button"
+              onClick={toggleFullscreen}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all hover:bg-[var(--surface-3)]"
+              style={{
+                borderColor: "var(--border)",
+                background: "var(--surface-2)",
+                color: "var(--text)",
+              }}
+              title={isFullscreen ? "Fenster-Modus wiederherstellen" : "Vollbildmodus aktivieren"}
             >
-              {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
+              {isFullscreen ? (
+                <>
+                  <Minimize className="w-3.5 h-3.5 text-orange-400" />
+                  <span>Fenster</span>
+                </>
+              ) : (
+                <>
+                  <Maximize className="w-3.5 h-3.5 text-orange-400" />
+                  <span>Vollbild</span>
+                </>
+              )}
             </button>
             <button
+              type="button"
               onClick={onClose}
               className="p-1.5 rounded-lg transition-colors hover:bg-[var(--surface-3)]"
               style={{ color: "var(--text-2)" }}
+              title="Schließen (Esc)"
             >
               <X className="w-6 h-6" />
             </button>
@@ -1454,123 +1447,79 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                     />
                   </div>
 
-                  {/* Right sub-column: Timeline */}
+                  {/* Right sub-column: Timeline (nur bei Einträgen), Audit & Attachments */}
                   <div className="min-w-0 space-y-4 xl:border-l xl:pl-8" style={{ borderColor: "var(--border)" }}>
-                    <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--text-2)" }}>
-                      Kontakt-Timeline ({lead.interactions?.length || 0})
-                    </h3>
-
-                    {/* Add Interaction Form */}
-                    <form onSubmit={handleAddInteraction} className="flex gap-2">
-                      <select
-                        className="rounded-md px-2.5 py-1.5 text-xs border outline-none cursor-pointer"
-                        style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
-                        value={newInteractionType}
-                        onChange={(e) => setNewInteractionType(e.target.value as InteractionType)}
-                      >
-                        {Object.entries(INTERACTION_LABELS).map(([key, label]) => (
-                          <option key={key} value={key}>{label}</option>
-                        ))}
-                      </select>
-                      <input
-                        type="text"
-                        required
-                        placeholder="Neue Interaktion protokollieren..."
-                        className="min-w-0 flex-1 rounded-md px-3 py-1.5 text-xs border outline-none"
-                        style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
-                        value={newInteractionNote}
-                        onChange={(e) => setNewInteractionNote(e.target.value)}
-                      />
-                      <button
-                        type="submit"
-                        disabled={addingInteraction}
-                        className="shrink-0 px-4 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1 transition-all active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed disabled:active:scale-100"
-                        style={{ background: "var(--accent)", color: "var(--bg)" }}
-                      >
-                        {addingInteraction ? (
-                          <>
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            Speichert...
-                          </>
-                        ) : (
-                          <>
-                            <Send className="w-3.5 h-3.5" />
-                            Hinzufügen
-                          </>
-                        )}
-                      </button>
-                    </form>
-
-                    {/* Timeline Items */}
-                    <div className="space-y-3">
-                      {lead.interactions?.length === 0 ? (
-                        <p className="text-xs italic" style={{ color: "var(--text-3)" }}>
-                          Noch keine Interaktionen aufgezeichnet.
-                        </p>
-                      ) : (
-                        lead.interactions?.map((item: any) => (
-                          <div
-                            key={item.id}
-                            className="p-4 rounded-lg border text-xs space-y-1.5"
-                            style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}
-                          >
-                            <div className="flex items-center justify-between">
-                              <span className="font-bold text-[11px]" style={{ color: "var(--accent)" }}>
-                                {INTERACTION_LABELS[item.type as InteractionType] || item.type}
-                              </span>
-                              <div className="flex items-center gap-2">
-                                <span className="text-[10px]" style={{ color: "var(--text-3)" }}>
-                                  {timeAgo(item.createdAt)}
+                    {/* Timeline Items (nur wenn Interaktionen existieren) */}
+                    {lead.interactions && lead.interactions.length > 0 && (
+                      <div className="space-y-3">
+                        <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--text-2)" }}>
+                          Kontakt-Verlauf ({lead.interactions.length})
+                        </h3>
+                        <div className="space-y-3">
+                          {lead.interactions.map((item: any) => (
+                            <div
+                              key={item.id}
+                              className="p-4 rounded-lg border text-xs space-y-1.5"
+                              style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="font-bold text-[11px]" style={{ color: "var(--accent)" }}>
+                                  {INTERACTION_LABELS[item.type as InteractionType] || item.type}
                                 </span>
-                                {editingInteractionId !== item.id && (
-                                  <button
-                                    onClick={() => {
-                                      setEditingInteractionId(item.id);
-                                      setEditInteractionNote(item.note);
-                                    }}
-                                    className="text-[10px] hover:underline"
-                                    style={{ color: "var(--accent)" }}
-                                  >
-                                    Bearbeiten
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                            
-                            {editingInteractionId === item.id ? (
-                              <div className="mt-2 space-y-2">
-                                <textarea
-                                  className="w-full rounded px-2.5 py-1.5 text-xs border outline-none resize-none"
-                                  style={{ background: "var(--surface-3)", borderColor: "var(--border)", color: "var(--text)" }}
-                                  rows={3}
-                                  value={editInteractionNote}
-                                  onChange={(e) => setEditInteractionNote(e.target.value)}
-                                />
                                 <div className="flex items-center gap-2">
-                                  <button
-                                    onClick={() => handleUpdateInteraction(item.id)}
-                                    disabled={savingInteractionId === item.id}
-                                    className="px-2 py-1 rounded text-[10px] font-semibold"
-                                    style={{ background: "var(--accent)", color: "var(--bg)" }}
-                                  >
-                                    {savingInteractionId === item.id ? "Speichert..." : "Speichern"}
-                                  </button>
-                                  <button
-                                    onClick={() => setEditingInteractionId(null)}
-                                    className="px-2 py-1 rounded text-[10px] font-semibold hover:opacity-80 transition-opacity"
-                                    style={{ background: "var(--surface-3)", color: "var(--text)" }}
-                                  >
-                                    Abbrechen
-                                  </button>
+                                  <span className="text-[10px]" style={{ color: "var(--text-3)" }}>
+                                    {timeAgo(item.createdAt)}
+                                  </span>
+                                  {editingInteractionId !== item.id && (
+                                    <button
+                                      onClick={() => {
+                                        setEditingInteractionId(item.id);
+                                        setEditInteractionNote(item.note);
+                                      }}
+                                      className="text-[10px] hover:underline"
+                                      style={{ color: "var(--accent)" }}
+                                    >
+                                      Bearbeiten
+                                    </button>
+                                  )}
                                 </div>
                               </div>
-                            ) : (
-                              <p style={{ color: "var(--text-2)" }} className="whitespace-pre-wrap">{item.note}</p>
-                            )}
-                          </div>
-                        ))
-                      )}
-                    </div>
+
+                              {editingInteractionId === item.id ? (
+                                <div className="mt-2 space-y-2">
+                                  <textarea
+                                    className="w-full rounded px-2.5 py-1.5 text-xs border outline-none resize-none"
+                                    style={{ background: "var(--surface-3)", borderColor: "var(--border)", color: "var(--text)" }}
+                                    rows={3}
+                                    value={editInteractionNote}
+                                    onChange={(e) => setEditInteractionNote(e.target.value)}
+                                  />
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      onClick={() => handleUpdateInteraction(item.id)}
+                                      disabled={savingInteractionId === item.id}
+                                      className="px-2 py-1 rounded text-[10px] font-semibold"
+                                      style={{ background: "var(--accent)", color: "var(--bg)" }}
+                                    >
+                                      {savingInteractionId === item.id ? "Speichert..." : "Speichern"}
+                                    </button>
+                                    <button
+                                      onClick={() => setEditingInteractionId(null)}
+                                      className="px-2 py-1 rounded text-[10px] font-semibold hover:opacity-80 transition-opacity"
+                                      style={{ background: "var(--surface-3)", color: "var(--text)" }}
+                                    >
+                                      Abbrechen
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <p style={{ color: "var(--text-2)" }} className="whitespace-pre-wrap">{item.note}</p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Website-Probleme & Audit (lazy) */}
                     {lead.website && (
