@@ -17,6 +17,7 @@ export const DEFAULT_NAV_ITEMS: NavItemConfig[] = [
   { href: "/cold-calls", label: "Cold Calls", visible: true },
   { href: "/outreach", label: "Outreach", visible: true },
   { href: "/follow-ups", label: "Follow-ups", visible: true },
+  { href: "/calendar", label: "Kalender", visible: true },
   { href: "/journal", label: "Journal", visible: true },
   { href: "/tasks", label: "Tasks", visible: true },
   { href: "/ai", label: "KI-Assistent", visible: true },

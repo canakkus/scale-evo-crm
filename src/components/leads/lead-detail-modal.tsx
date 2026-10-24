@@ -42,6 +42,7 @@ import { OutreachLeadPanel } from "@/components/outreach/outreach-lead-panel";
 import { CustomAudioPlayer } from "@/components/ui/custom-audio-player";
 import { LeadAttachments } from "./lead-attachments";
 import { LeadAuditSection } from "./lead-audit-section";
+import { PlanCallPanel } from "@/components/calendar/plan-call-panel";
 import { STATUS_LABELS, INTERACTION_LABELS } from "@/lib/constants";
 import { formatDate, timeAgo, normalizeInstagramHandle, instagramProfileUrl } from "@/lib/utils";
 import type { LeadStatus, InteractionType } from "@prisma/client";
@@ -553,6 +554,8 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
         <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
           {/* Left Column: Quick Info & Status */}
           <div className="w-full md:w-80 shrink-0 border-r overflow-y-auto p-6 space-y-6" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+            <PlanCallPanel leadId={lead.id} leadName={lead.companyName} />
+
             {/* Status Switcher */}
             <div>
               <label className="block text-xs font-semibold mb-2" style={{ color: "var(--text-2)" }}>

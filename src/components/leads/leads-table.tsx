@@ -35,7 +35,7 @@ import { getMapsUrl } from "@/lib/maps-url";
 import { formatDate, timeAgo } from "@/lib/utils";
 import type { LeadStatus } from "@prisma/client";
 
-export function LeadsTable() {
+export function LeadsTable({ initialLeadId = null }: { initialLeadId?: string | null }) {
   const [leads, setLeads] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -71,7 +71,7 @@ export function LeadsTable() {
 
   // Modals
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(initialLeadId);
 
   // Debounce search input to avoid laggy keystrokes & excessive API requests
   useEffect(() => {

@@ -134,6 +134,18 @@ enum CallRecordingStatus {
   FAILED
 }
 
+enum PlannedCallType {
+  COLD_CALL
+  MEETING
+  FOLLOW_UP
+}
+
+enum PlannedCallStatus {
+  PLANNED
+  DONE
+  CANCELLED
+}
+
 // ============================================================
 // Core Models
 // ============================================================
@@ -219,6 +231,7 @@ model Lead {
   interactions Interaction[]
   audits       WebsiteAudit[]
   tasks        Task[]
+  plannedCalls PlannedCall[]
   callRecordings CallRecording[]
   scoutResults ScoutResult[]
   dmDrafts     DmDraft[]
@@ -249,6 +262,8 @@ model User {
   baseLongitude          Float?
   preferredLocationMode  String?            @default("default") // "live" | "fixed" | "default"
   workClockStartedAt     DateTime?
+  /// Geheimnis für das persönliche iCalendar-Abo. Die webcal-URL ist der einzige Zugriff.
+  calendarFeedToken      String?            @unique
   createdAt              DateTime           @default(now())
   updatedAt              DateTime           @updatedAt
 
@@ -262,6 +277,7 @@ model User {
   coldCalls      ColdCall[]
   coldCallsSeen  ColdCallSeen[]
   tasks          Task[]
+  plannedCalls   PlannedCall[]
   scoutSessions  ScoutSession[]
   callRecordings CallRecording[]
   aiChats        AiChatMessage[]
@@ -510,6 +526,35 @@ model ScoutResult {
 
   @@index([sessionId])
   @@index([leadId])
+}
+
+// ============================================================
+// Geplante Anrufe (Kalender). Persönlich wie Tasks, hängen am Lead.
+// Additive Tabelle — bestehende Lead-Zeilen werden nicht verändert.
+// ============================================================
+
+model PlannedCall {
+  id              String            @id @default(cuid())
+  leadId          String
+  userId          String            @db.Uuid
+  startsAt        DateTime
+  durationMinutes Int               @default(15)
+  /// Minuten vor dem Termin. 0 = keine VALARM-Erinnerung im Kalenderabo.
+  reminderMinutes Int               @default(15)
+  type            PlannedCallType   @default(COLD_CALL)
+  status          PlannedCallStatus @default(PLANNED)
+  note            String?           @db.Text
+  /// iCalendar SEQUENCE. Steigt bei jeder Änderung, UID bleibt die id.
+  sequence        Int               @default(0)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, startsAt])
+  @@index([leadId, startsAt])
+  @@index([userId, status])
 }
 
 // ============================================================
