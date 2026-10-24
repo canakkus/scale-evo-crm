@@ -287,7 +287,11 @@ export function OutreachLeadPanel({
           </div>
           <textarea
             value={text}
-            onChange={(event) => setEdited((prev) => ({ ...prev, [selected]: event.target.value }))}
+            onChange={(event) => {
+              const val = event.target.value;
+              setEdited((prev) => ({ ...prev, [selected]: val }));
+              onScriptSelected?.(val);
+            }}
             className="w-full rounded-lg p-4 text-sm leading-6 outline-none"
             style={{ minHeight: 160, background: "var(--surface-2)", color: "var(--text)", border: "1px solid var(--border)" }}
           />

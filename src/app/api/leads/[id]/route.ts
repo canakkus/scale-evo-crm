@@ -91,6 +91,7 @@ export async function GET(
         tasks: { where: { userId: user.id }, orderBy: { createdAt: "desc" } },
         callRecordings: { orderBy: { createdAt: "desc" } },
         attachments: { orderBy: { createdAt: "desc" } },
+        dmDrafts: { orderBy: { createdAt: "desc" }, take: 1 },
       },
     });
 

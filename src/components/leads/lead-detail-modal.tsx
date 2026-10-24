@@ -52,33 +52,26 @@ type LeadDetailModalProps = {
   onUpdate: () => void;
 };
 
-function extractPitchFromNotes(notes: string): { text: string; type: "script" | "pitch"; title: string } | null {
+function extractCustomOutreachScript(notes?: string | null, leadDraft?: any): string | null {
+  // 1. If lead has a custom draft from DmDraft, use that
+  if (leadDraft) {
+    const draftText = (leadDraft.bodyEdited || leadDraft.bodyGenerated || "").trim();
+    if (draftText) return draftText;
+  }
+
   if (!notes) return null;
 
-  // 1. Prioritize freshly selected acquisition script (last match is the most recent)
+  // 2. Only look for custom selected/saved scripts (never auto retro-audit pitches!)
   const scriptRegex = /📞\s*Ausgewähltes Kaltakquise-Skript[^\n]*:\s*\n+([\s\S]+?)(?=\n\n---|\n\n📞|$)/gi;
   const scriptMatches = [...notes.matchAll(scriptRegex)];
   if (scriptMatches.length > 0) {
     const lastMatch = scriptMatches[scriptMatches.length - 1];
     if (lastMatch && lastMatch[1]?.trim()) {
-      return {
-        text: lastMatch[1].trim(),
-        type: "script",
-        title: "Kaltakquise-Skript (Gespeichert)",
-      };
+      return lastMatch[1].trim();
     }
   }
 
-  // 2. Check for "🎯 PITCH & HEBEL" (from audit or manual notes)
-  const matchPitchHebel = notes.match(/🎯\s*PITCH\s*&\s*HEBEL[^\n]*:\s*\n+["„]?([\s\S]*?)["“]?(?=\n\n|\n[🔥•#]|$)/i);
-  if (matchPitchHebel && matchPitchHebel[1]?.trim()) {
-    return {
-      text: matchPitchHebel[1].trim().replace(/^["„]|["“]$/g, ""),
-      type: "pitch",
-      title: "Kaltakquise-Pitch (Erkannt)",
-    };
-  }
-
+  // ABSOLUTELY NOTHING AUTOMATICALLY GENERATED! (No retro-audit pitch!)
   return null;
 }
 
@@ -89,6 +82,7 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
   const [notesText, setNotesText] = useState("");
   const [savingNotes, setSavingNotes] = useState(false);
   const [checkingMenu, setCheckingMenu] = useState(false);
+  const [customOutreachScript, setCustomOutreachScript] = useState<string | null>(null);
   const [preloadedOutreachText, setPreloadedOutreachText] = useState<string | null>(null);
   const [copiedPitch, setCopiedPitch] = useState(false);
   const [pitchFullscreen, setPitchFullscreen] = useState(false);
@@ -220,6 +214,8 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
         if (data.lead) {
           setLead(data.lead);
           setNotesText(data.lead.notes || "");
+          const script = extractCustomOutreachScript(data.lead.notes, data.lead.dmDrafts?.[0]);
+          setCustomOutreachScript(script);
 
           // Initialize edit values
           setEditCompanyName(data.lead.companyName || "");
@@ -1311,17 +1307,20 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                   website={lead.website ?? null}
                   initialScriptText={preloadedOutreachText}
                   onScriptSelected={(scriptText, updatedNotes) => {
+                    setCustomOutreachScript(scriptText);
                     if (updatedNotes) {
                       setNotesText(updatedNotes);
                       setLead((prev: any) => (prev ? { ...prev, notes: updatedNotes } : prev));
                     }
-                    // Fetch full lead data including interactions timeline
+                    // Fetch full lead data including interactions timeline & drafts
                     fetch(`/api/leads/${lead.id}`)
                       .then((r) => r.json())
                       .then((d) => {
                         if (d.lead) {
                           setLead(d.lead);
                           setNotesText(d.lead.notes || "");
+                          const s = extractCustomOutreachScript(d.lead.notes, d.lead.dmDrafts?.[0]);
+                          if (s) setCustomOutreachScript(s);
                         }
                       })
                       .catch(console.error);
@@ -1336,6 +1335,8 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                         if (data.lead) {
                           setLead(data.lead);
                           setNotesText(data.lead.notes || "");
+                          const s = extractCustomOutreachScript(data.lead.notes, data.lead.dmDrafts?.[0]);
+                          if (s) setCustomOutreachScript(s);
                         }
                       }
                     } catch (e) {
@@ -1355,8 +1356,7 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                         <button
                           type="button"
                           onClick={() => {
-                            const pitch = extractPitchFromNotes(notesText);
-                            if (pitch) setPreloadedOutreachText(pitch.text);
+                            if (customOutreachScript) setPreloadedOutreachText(customOutreachScript);
                             setActiveTab("outreach");
                           }}
                           className="text-xs font-semibold px-2.5 py-1.5 rounded transition-colors border hover:bg-[var(--surface-3)] flex items-center gap-1.5 text-orange-400"
@@ -1377,115 +1377,111 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                       </div>
                     </div>
 
-                    {/* Anklickbare Pitch- & Hebel-Karte */}
-                    {(() => {
-                      const detectedPitch = extractPitchFromNotes(notesText);
-                      if (!detectedPitch) return null;
-                      return (
-                        <div
-                          className="rounded-xl border p-3.5 space-y-2.5 transition-all shadow-sm animate-fade-in"
-                          style={{
-                            background: "linear-gradient(180deg, var(--surface-2) 0%, var(--surface) 100%)",
-                            borderColor: detectedPitch.type === "script" ? "rgba(16, 185, 129, 0.45)" : "rgba(249, 115, 22, 0.4)",
-                          }}
-                        >
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-1.5 text-xs font-bold" style={{ color: detectedPitch.type === "script" ? "#10b981" : "#f97316" }}>
-                              <Sparkles className="w-3.5 h-3.5" />
-                              <span>{detectedPitch.title}</span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              {/* Fullscreen Button */}
-                              <button
-                                type="button"
-                                onClick={() => setPitchFullscreen(true)}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold border transition-all hover:bg-[var(--surface-3)] text-orange-400"
-                                style={{
-                                  borderColor: "rgba(249, 115, 22, 0.35)",
-                                  background: "var(--surface)",
-                                }}
-                                title="Pitch im großen Vollbild-Teleprompter öffnen"
-                              >
-                                <Maximize2 className="w-3.5 h-3.5" />
-                                <span>Vollbild</span>
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  navigator.clipboard.writeText(detectedPitch.text);
-                                  setCopiedPitch(true);
-                                  setTimeout(() => setCopiedPitch(false), 2000);
-                                }}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold border transition-all hover:bg-[var(--surface-3)]"
-                                style={{
-                                  borderColor: "var(--border)",
-                                  background: "var(--surface)",
-                                  color: "var(--text)",
-                                }}
-                                title="Pitch kopieren"
-                              >
-                                {copiedPitch ? (
-                                  <>
-                                    <Check className="w-3.5 h-3.5 text-emerald-400" />
-                                    <span className="text-emerald-400 font-bold">Kopiert!</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <Copy className="w-3.5 h-3.5 text-orange-400" />
-                                    <span>Kopieren</span>
-                                  </>
-                                )}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setPreloadedOutreachText(detectedPitch.text);
-                                  setActiveTab("outreach");
-                                }}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold text-white transition-all hover:opacity-90 shadow-sm"
-                                style={{ background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)" }}
-                                title="Pitch direkt im Outreach-Editor laden"
-                              >
-                                <Send className="w-3 h-3" />
-                                <span>In Outreach öffnen</span>
-                              </button>
-                            </div>
+                    {/* Mirror des Custom Outreach-Skripts (NUR wenn ein echtes Custom-Skript existiert!) */}
+                    {customOutreachScript && (
+                      <div
+                        className="rounded-xl border p-3.5 space-y-2.5 transition-all shadow-sm animate-fade-in"
+                        style={{
+                          background: "linear-gradient(180deg, var(--surface-2) 0%, var(--surface) 100%)",
+                          borderColor: "rgba(249, 115, 22, 0.4)",
+                        }}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5 text-xs font-bold text-orange-400">
+                            <Sparkles className="w-3.5 h-3.5" />
+                            <span>Custom Outreach-Skript</span>
                           </div>
+                          <div className="flex items-center gap-1.5">
+                            {/* Fullscreen Button */}
+                            <button
+                              type="button"
+                              onClick={() => setPitchFullscreen(true)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold border transition-all hover:bg-[var(--surface-3)] text-orange-400"
+                              style={{
+                                borderColor: "rgba(249, 115, 22, 0.35)",
+                                background: "var(--surface)",
+                              }}
+                              title="Skript im Vollbild-Teleprompter öffnen"
+                            >
+                              <Maximize2 className="w-3.5 h-3.5" />
+                              <span>Vollbild</span>
+                            </button>
 
-                          <div
-                            onClick={() => {
-                              navigator.clipboard.writeText(detectedPitch.text);
-                              setCopiedPitch(true);
-                              setTimeout(() => setCopiedPitch(false), 2000);
-                            }}
-                            className="group relative p-3 rounded-lg border text-xs leading-relaxed cursor-pointer transition-all hover:border-orange-500/60 hover:bg-orange-500/5 select-none"
-                            style={{
-                              background: "var(--surface-3)",
-                              borderColor: "var(--border)",
-                              color: "var(--text)",
-                            }}
-                            title="👉 Klicken zum schnellen Kopieren des gesamten Pitchs"
-                          >
-                            <p className="font-medium text-[var(--text)] italic leading-relaxed whitespace-pre-wrap">
-                              „{detectedPitch.text}“
-                            </p>
-                            <div className="mt-2 pt-2 border-t flex items-center justify-between text-[11px] text-[var(--text-3)] group-hover:text-orange-400 transition-colors" style={{ borderColor: "var(--border)" }}>
-                              <span className="flex items-center gap-1">
-                                <Copy className="w-3 h-3" />
-                                Klicken zum Kopieren
-                              </span>
-                              <span className="text-emerald-400 font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
-                                {copiedPitch ? "✓ In Zwischenablage kopiert!" : "1-Klick Copy"}
-                              </span>
-                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(customOutreachScript);
+                                setCopiedPitch(true);
+                                setTimeout(() => setCopiedPitch(false), 2000);
+                              }}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold border transition-all hover:bg-[var(--surface-3)]"
+                              style={{
+                                borderColor: "var(--border)",
+                                background: "var(--surface)",
+                                color: "var(--text)",
+                              }}
+                              title="Skript kopieren"
+                            >
+                              {copiedPitch ? (
+                                <>
+                                  <Check className="w-3.5 h-3.5 text-emerald-400" />
+                                  <span className="text-emerald-400 font-bold">Kopiert!</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="w-3.5 h-3.5 text-orange-400" />
+                                  <span>Kopieren</span>
+                                </>
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setPreloadedOutreachText(customOutreachScript);
+                                setActiveTab("outreach");
+                              }}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold text-white transition-all hover:opacity-90 shadow-sm"
+                              style={{ background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)" }}
+                              title="Skript direkt im Outreach-Editor öffnen"
+                            >
+                              <Send className="w-3 h-3" />
+                              <span>In Outreach öffnen</span>
+                            </button>
                           </div>
                         </div>
-                      );
-                    })()}
+
+                        <div
+                          onClick={() => {
+                            navigator.clipboard.writeText(customOutreachScript);
+                            setCopiedPitch(true);
+                            setTimeout(() => setCopiedPitch(false), 2000);
+                          }}
+                          className="group relative p-3 rounded-lg border text-xs leading-relaxed cursor-pointer transition-all hover:border-orange-500/60 hover:bg-orange-500/5 select-none"
+                          style={{
+                            background: "var(--surface-3)",
+                            borderColor: "var(--border)",
+                            color: "var(--text)",
+                          }}
+                          title="👉 Klicken zum schnellen Kopieren des gesamten Skripts"
+                        >
+                          <p className="font-medium text-[var(--text)] italic leading-relaxed whitespace-pre-wrap">
+                            „{customOutreachScript}“
+                          </p>
+                          <div className="mt-2 pt-2 border-t flex items-center justify-between text-[11px] text-[var(--text-3)] group-hover:text-orange-400 transition-colors" style={{ borderColor: "var(--border)" }}>
+                            <span className="flex items-center gap-1">
+                              <Copy className="w-3 h-3" />
+                              Klicken zum Kopieren
+                            </span>
+                            <span className="text-emerald-400 font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
+                              {copiedPitch ? "✓ In Zwischenablage kopiert!" : "1-Klick Copy"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     <textarea
-                      rows={extractPitchFromNotes(notesText) ? 8 : 14}
+                      rows={customOutreachScript ? 8 : 14}
                       className="w-full rounded-md p-4 text-xs border outline-none resize-none leading-relaxed"
                       style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
                       value={notesText}
@@ -1811,8 +1807,8 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
 
       {/* Pitch Teleprompter / Fullscreen Modal Overlay */}
       {pitchFullscreen && (() => {
-        const detectedPitch = extractPitchFromNotes(notesText);
-        if (!detectedPitch || !lead) return null;
+        const scriptText = customOutreachScript;
+        if (!scriptText || !lead) return null;
         return (
           <div className="fixed inset-0 z-[70] flex flex-col bg-black/92 backdrop-blur-md text-white animate-fade-in p-6 sm:p-10 select-none">
             {/* Top Bar */}
@@ -1868,7 +1864,7 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                 <button
                   type="button"
                   onClick={() => {
-                    navigator.clipboard.writeText(detectedPitch.text);
+                    navigator.clipboard.writeText(scriptText);
                     setCopiedPitch(true);
                     setTimeout(() => setCopiedPitch(false), 2000);
                   }}
@@ -1891,7 +1887,7 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                   type="button"
                   onClick={() => {
                     setPitchFullscreen(false);
-                    setPreloadedOutreachText(detectedPitch.text);
+                    setPreloadedOutreachText(scriptText);
                     setActiveTab("outreach");
                   }}
                   className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-orange-500 to-amber-600 text-white hover:opacity-95 shadow-md shadow-orange-500/20"
@@ -1915,7 +1911,7 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
             <div className="flex-1 overflow-y-auto flex items-center justify-center p-4 sm:p-8">
               <div
                 onClick={() => {
-                  navigator.clipboard.writeText(detectedPitch.text);
+                  navigator.clipboard.writeText(scriptText);
                   setCopiedPitch(true);
                   setTimeout(() => setCopiedPitch(false), 2000);
                 }}
@@ -1923,7 +1919,7 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                 style={{ fontSize: `${teleprompterFontSize}px` }}
                 title="Klicken zum schnellen Kopieren"
               >
-                „{detectedPitch.text}“
+                „{scriptText}“
               </div>
             </div>
 
@@ -1931,7 +1927,7 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
             <div className="pt-3 border-t border-white/10 flex items-center justify-between text-xs text-zinc-400 shrink-0">
               <span className="flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5 text-orange-400" />
-                <span>{detectedPitch.title}</span>
+                <span>Custom Outreach-Skript</span>
               </span>
               <span>Drücke <kbd className="px-1.5 py-0.5 rounded bg-white/10 font-mono text-[11px] text-zinc-300">Esc</kbd> zum Schließen</span>
             </div>
