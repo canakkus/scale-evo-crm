@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { verifySessionToken } from "@/lib/session";
 
-const PUBLIC_PATHS = ["/login", "/api/auth/login", "/api/auth/logout", "/api/agent"];
+import { isPublicCrmPath } from "@/lib/public-paths";
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -61,7 +61,7 @@ export async function proxy(request: NextRequest) {
   }
 
   // 3. Handle Public Paths
-  const isPublicPath = PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p));
+  const isPublicPath = isPublicCrmPath(pathname);
 
   // If already logged in and visiting /login -> redirect to home / CRM
   if (isAuthenticated && pathname === "/login") {

@@ -3,8 +3,15 @@ import { LeadsTable } from "@/components/leads/leads-table";
 
 export const metadata = { title: "Leads | Scale Evo CRM" };
 
-export default async function LeadsPage() {
+export default async function LeadsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ lead?: string | string[] }>;
+}) {
   await requireAuth();
+  const params = await searchParams;
+  const leadParam = params.lead;
+  const initialLeadId = Array.isArray(leadParam) ? leadParam[0] : leadParam;
 
   return (
     <div className="p-6 space-y-6 w-full max-w-full">
@@ -19,7 +26,7 @@ export default async function LeadsPage() {
       </div>
 
       {/* Table */}
-      <LeadsTable />
+      <LeadsTable initialLeadId={initialLeadId || null} />
     </div>
   );
 }
