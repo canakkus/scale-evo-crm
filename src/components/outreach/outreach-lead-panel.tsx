@@ -155,9 +155,9 @@ export function OutreachLeadPanel({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="flex-1 min-h-0 flex flex-col h-full space-y-3">
       {/* Mode Switcher: Groq Copilot vs. 3 Schnell-Varianten */}
-      <div className="flex items-center justify-between border-b pb-3" style={{ borderColor: "var(--border)" }}>
+      <div className="flex items-center justify-between border-b pb-3 shrink-0" style={{ borderColor: "var(--border)" }}>
         <div className="flex items-center gap-1.5 p-1 rounded-xl border" style={{ borderColor: "var(--border)", background: "var(--surface-2)" }}>
           <button
             type="button"
@@ -170,7 +170,6 @@ export function OutreachLeadPanel({
             }}
           >
             <span>⚡ Groq Kaltakquise Copilot</span>
-            <span className="text-[10px] px-1 rounded font-mono font-bold bg-orange-500/15 text-orange-500">Über uns Feed</span>
           </button>
           <button
             type="button"
@@ -187,7 +186,7 @@ export function OutreachLeadPanel({
         </div>
       </div>
 
-      <div className={panelMode === "copilot" ? "h-[540px] flex flex-col" : "hidden"}>
+      <div className={panelMode === "copilot" ? "flex-1 min-h-0 flex flex-col" : "hidden"}>
         <OutreachCopilot
           leadId={leadId}
           companyName={companyName}
@@ -225,7 +224,7 @@ export function OutreachLeadPanel({
         />
       </div>
 
-      <div className={panelMode === "variants" ? "space-y-3" : "hidden"}>
+      <div className={panelMode === "variants" ? "flex-1 min-h-0 overflow-y-auto space-y-3" : "hidden"}>
         {scriptNotice && (
           <div
             className="flex items-center justify-between gap-2 rounded-xl p-3 text-xs font-semibold animate-fade-in"

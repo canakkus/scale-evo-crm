@@ -1311,9 +1311,9 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
             </div>
 
             {/* Tab Content Box */}
-            <div className="flex-1 overflow-y-auto p-6">
+            <div className={`flex-1 min-h-0 ${activeTab === "outreach" ? "overflow-hidden p-6 flex flex-col" : "overflow-y-auto p-6"}`}>
               {/* Outreach Tab - kept mounted so Copilot chat history and edits are never lost on tab switch */}
-              <div className={activeTab === "outreach" ? "h-full" : "hidden"}>
+              <div className={activeTab === "outreach" ? "flex-1 min-h-0 flex flex-col h-full" : "hidden"}>
                 <OutreachLeadPanel
                   key={lead.id}
                   leadId={lead.id}
