@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   X,
   Phone,
@@ -73,6 +73,58 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
   const [uploadingCall, setUploadingCall] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const [isDragging, setIsDragging] = useState(false);
+
+  // Resizable Left Sidebar State
+  const [sidebarWidth, setSidebarWidth] = useState<number>(320);
+  const [isResizingSidebar, setIsResizingSidebar] = useState(false);
+  const startDragRef = useRef<{ startX: number; startWidth: number } | null>(null);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("lead_detail_sidebar_w");
+      if (saved) {
+        const val = parseInt(saved, 10);
+        if (!isNaN(val) && val >= 240 && val <= 650) {
+          setSidebarWidth(val);
+        }
+      }
+    } catch {}
+  }, []);
+
+  const handleSidebarResizeStart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    startDragRef.current = { startX: e.clientX, startWidth: sidebarWidth };
+    setIsResizingSidebar(true);
+  };
+
+  useEffect(() => {
+    if (!isResizingSidebar) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!startDragRef.current) return;
+      const delta = e.clientX - startDragRef.current.startX;
+      const newWidth = Math.max(260, Math.min(650, startDragRef.current.startWidth + delta));
+      setSidebarWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizingSidebar(false);
+      startDragRef.current = null;
+      setSidebarWidth((w) => {
+        try {
+          localStorage.setItem("lead_detail_sidebar_w", String(w));
+        } catch {}
+        return w;
+      });
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isResizingSidebar]);
 
   // New Interaction Form
   const [newInteractionType, setNewInteractionType] = useState<InteractionType>("PHONE");
@@ -551,9 +603,22 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
           <span>Lädt Lead Details…</span>
         </div>
       ) : (
-        <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+        <div
+          className={`flex-1 flex flex-col md:flex-row overflow-hidden ${
+            isResizingSidebar ? "select-none cursor-col-resize" : ""
+          }`}
+        >
           {/* Left Column: Quick Info & Status */}
-          <div className="w-full md:w-80 shrink-0 border-r overflow-y-auto p-6 space-y-6" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+          <div
+            className="w-full md:w-[var(--sidebar-w)] shrink-0 border-r overflow-y-auto p-6 space-y-6"
+            style={
+              {
+                borderColor: "var(--border)",
+                background: "var(--surface)",
+                "--sidebar-w": `${sidebarWidth}px`,
+              } as React.CSSProperties
+            }
+          >
             <PlanCallPanel leadId={lead.id} leadName={lead.companyName} />
 
             {/* Status Switcher */}
@@ -1378,8 +1443,25 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
             )}
           </div>
 
+          {/* Drag Handle Divider (Desktop only) */}
+          <div
+            onMouseDown={handleSidebarResizeStart}
+            className={`hidden md:flex items-center justify-center w-2 hover:w-3 cursor-col-resize z-20 shrink-0 group select-none transition-all -ml-1 -mr-1 ${
+              isResizingSidebar ? "bg-[var(--accent)]/15" : "bg-transparent"
+            }`}
+            title="Seitenleiste verschieben (Größe anpassen)"
+          >
+            <div
+              className={`w-1 h-12 rounded-full transition-colors ${
+                isResizingSidebar
+                  ? "bg-[var(--accent)]"
+                  : "bg-[var(--border-2)] group-hover:bg-[var(--accent)]"
+              }`}
+            />
+          </div>
+
           {/* Right Area: Tabs Header & Tab Content */}
-          <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-1 flex flex-col overflow-hidden min-w-0">
             {/* Tab Bar */}
             <div className="flex items-center border-b px-6 py-2 shrink-0" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
               <button

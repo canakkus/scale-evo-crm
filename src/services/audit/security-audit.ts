@@ -47,6 +47,86 @@ function clip(value: string, max = 400): string {
   return flat.length > max ? `${flat.slice(0, max)}...` : flat;
 }
 
+function compareSemver(a: string, b: string): number {
+  const pa = a.split(".").map((n) => parseInt(n, 10) || 0);
+  const pb = b.split(".").map((n) => parseInt(n, 10) || 0);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const na = pa[i] || 0;
+    const nb = pb[i] || 0;
+    if (na > nb) return 1;
+    if (na < nb) return -1;
+  }
+  return 0;
+}
+
+type KnownPlugin = {
+  name: string;
+  minSafeVersion: string;
+  highRiskOlderThan?: string;
+  description: string;
+};
+
+const KNOWN_PLUGINS: Record<string, KnownPlugin> = {
+  "contact-form-7": {
+    name: "Contact Form 7",
+    minSafeVersion: "5.8",
+    highRiskOlderThan: "5.4",
+    description: "Formular-Plugin. Ältere Versionen weisen bekannte Upload- und Bypass-Lücken auf.",
+  },
+  revslider: {
+    name: "Slider Revolution",
+    minSafeVersion: "6.6",
+    highRiskOlderThan: "6.0",
+    description: "Slider-Plugin mit bekannter CVE-Historie für Arbitrary File Disclosure.",
+  },
+  "slider-revolution": {
+    name: "Slider Revolution",
+    minSafeVersion: "6.6",
+    highRiskOlderThan: "6.0",
+    description: "Slider-Plugin mit bekannter CVE-Historie.",
+  },
+  elementor: {
+    name: "Elementor Page Builder",
+    minSafeVersion: "3.18",
+    highRiskOlderThan: "3.6.0",
+    description: "Page Builder. Ältere Versionen sind anfällig für Authenticated Stored XSS.",
+  },
+  js_composer: {
+    name: "WPBakery Page Builder",
+    minSafeVersion: "6.9",
+    highRiskOlderThan: "6.4",
+    description: "Page Builder. Ältere Versionen verlangsamen Websites und haben bekannte Sicherheitslücken.",
+  },
+  woocommerce: {
+    name: "WooCommerce",
+    minSafeVersion: "8.5",
+    highRiskOlderThan: "7.0",
+    description: "Shop-System. Veraltete Versionen bergen Risiken bei Checkout- und Kundendaten.",
+  },
+  "all-in-one-seo-pack": {
+    name: "All in One SEO",
+    minSafeVersion: "4.3",
+    highRiskOlderThan: "4.1.5",
+    description: "SEO-Plugin. Ältere Versionen hatten gravierende SQL-Injection Schwachstellen.",
+  },
+  "wordpress-seo": {
+    name: "Yoast SEO",
+    minSafeVersion: "21.0",
+    highRiskOlderThan: "19.0",
+    description: "SEO-Plugin für WordPress.",
+  },
+  gravityforms: {
+    name: "Gravity Forms",
+    minSafeVersion: "2.7",
+    description: "Formular-Plugin.",
+  },
+  "wpforms-lite": {
+    name: "WPForms",
+    minSafeVersion: "1.8",
+    description: "Formular-Plugin.",
+  },
+};
+
 const ERROR_LEAK_PATTERNS: { re: RegExp; label: string }[] = [
   { re: /Traceback \(most recent call last\)/i, label: "Python Stack Trace" },
   { re: /Fatal error:.{0,40}in \/[\w/.-]+\.php/i, label: "PHP Fatal Error mit Dateipfad" },
@@ -290,16 +370,131 @@ export async function runSecurityAudit(input: string): Promise<SecurityAuditResu
     });
   }
 
+  // --- WordPress Core & Plugin Scanner ---------------------------------------
+  let wpVersion: string | null = null;
   const generator = $("meta[name='generator']").attr("content");
   if (generator) {
-    const wp = generator.match(/WordPress (\d+)\.(\d+)/i);
-    if (wp && Number(wp[1]) < 6) {
+    const wpGenMatch = generator.match(/WordPress\s+([0-9.]+)/i);
+    if (wpGenMatch) wpVersion = wpGenMatch[1];
+  }
+
+  // If generator didn't yield a version, check wp core asset links
+  if (!wpVersion) {
+    const wpCoreAssetMatch = rawHtmlForSnippets.match(
+      /(?:wp-includes\/(?:js\/wp-embed|css\/dist\/block-library\/style)\.(?:min\.)?(?:js|css)\?ver=([0-9.]+))/i
+    );
+    if (wpCoreAssetMatch) wpVersion = wpCoreAssetMatch[1];
+  }
+
+  const isWordPress =
+    Boolean(wpVersion) ||
+    Boolean($("link[rel*='wlwmanifest']").length) ||
+    Boolean($("link[rel*='https://api.w.org/']").length) ||
+    rawHtmlForSnippets.includes("/wp-content/") ||
+    rawHtmlForSnippets.includes("/wp-includes/");
+
+  if (wpVersion) {
+    if (compareSemver(wpVersion, "6.0") < 0) {
+      add({
+        category: "OUTDATED",
+        severity: "HIGH",
+        code: "old-wordpress",
+        title: `Kritisch veraltetes WordPress ${wpVersion} (Hohes CVE-Risiko)`,
+        description:
+          "WordPress-Versionen unter 6.0 sind mehrere Jahre alt und weisen öffentlich bekannte Sicherheitslücken auf. Dringendes Upgrade empfohlen.",
+        snippet: generator ? `<meta name="generator" content="${generator}">` : `wp-includes asset ver=${wpVersion}`,
+      });
+    } else if (compareSemver(wpVersion, "6.5") < 0) {
       add({
         category: "OUTDATED",
         severity: "MEDIUM",
         code: "old-wordpress",
-        title: `Veraltetes WordPress ${wp[1]}.${wp[2]}`,
-        snippet: `<meta name="generator" content="${generator}">`,
+        title: `Veraltetes WordPress ${wpVersion}`,
+        description:
+          "Die installierte Version liegt hinter dem aktuellen Sicherheitsstandard (WordPress 6.7+).",
+        snippet: generator ? `<meta name="generator" content="${generator}">` : `wp-includes asset ver=${wpVersion}`,
+      });
+    } else {
+      add({
+        category: "OUTDATED",
+        severity: "INFO",
+        code: "detected-wordpress",
+        title: `WordPress ${wpVersion} erkannt`,
+        snippet: generator ? `<meta name="generator" content="${generator}">` : `ver=${wpVersion}`,
+      });
+    }
+  } else if (isWordPress) {
+    add({
+      category: "OUTDATED",
+      severity: "INFO",
+      code: "detected-wordpress-hidden-version",
+      title: "WordPress erkannt (Versionsnummer verborgen)",
+      description: "Die Website basiert auf WordPress. Die Versionsnummer ist im Quelltext nicht direkt einsehbar.",
+    });
+  }
+
+  // Plugin-Erkennung über Script- & Link-Assets
+  if (isWordPress) {
+    const pluginMatches = [
+      ...rawHtmlForSnippets.matchAll(
+        /\/wp-content\/plugins\/([a-zA-Z0-9_\-]+)\/[^"'?>\s]*?(?:[?&]ver=([0-9.]+))?/gi
+      ),
+    ];
+
+    const detectedPlugins = new Map<string, { slug: string; version: string | null; sampleUrl: string }>();
+
+    for (const match of pluginMatches) {
+      const slug = match[1].toLowerCase();
+      const ver = match[2] || null;
+      const sampleUrl = match[0];
+      if (!detectedPlugins.has(slug)) {
+        detectedPlugins.set(slug, { slug, version: ver, sampleUrl });
+      } else if (ver && !detectedPlugins.get(slug)!.version) {
+        detectedPlugins.get(slug)!.version = ver;
+      }
+    }
+
+    // Bekannte Plugins auf veraltete Versionen prüfen
+    for (const [slug, info] of detectedPlugins.entries()) {
+      const known = KNOWN_PLUGINS[slug];
+      if (known && info.version) {
+        if (known.highRiskOlderThan && compareSemver(info.version, known.highRiskOlderThan) < 0) {
+          add({
+            category: "SECURITY",
+            severity: "HIGH",
+            code: `vulnerable-plugin-${slug}`,
+            title: `Sicherheitsrisiko: Stark veraltetes Plugin ${known.name} v${info.version}`,
+            description: `${known.description} Versionen vor v${known.highRiskOlderThan} haben bekannte Schwachstellen.`,
+            snippet: clip(info.sampleUrl, 160),
+          });
+        } else if (compareSemver(info.version, known.minSafeVersion) < 0) {
+          add({
+            category: "OUTDATED",
+            severity: "MEDIUM",
+            code: `outdated-plugin-${slug}`,
+            title: `Veraltetes Plugin: ${known.name} v${info.version}`,
+            description: `${known.description} Aktuelle Mindestversion: v${known.minSafeVersion}.`,
+            snippet: clip(info.sampleUrl, 160),
+          });
+        }
+      }
+    }
+
+    if (detectedPlugins.size > 0) {
+      const pluginSummary = Array.from(detectedPlugins.values())
+        .map((p) => {
+          const name = KNOWN_PLUGINS[p.slug]?.name || p.slug;
+          return p.version ? `${name} (v${p.version})` : name;
+        })
+        .join(", ");
+
+      add({
+        category: "OUTDATED",
+        severity: "INFO",
+        code: "wp-plugins-detected",
+        title: `${detectedPlugins.size} WordPress-Plugin${detectedPlugins.size === 1 ? "" : "s"} erkannt`,
+        description: `Erkannte Plugins im Quelltext: ${clip(pluginSummary, 300)}`,
+        snippet: clip(pluginSummary, 200),
       });
     }
   }

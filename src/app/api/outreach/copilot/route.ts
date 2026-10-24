@@ -16,9 +16,9 @@ Ziel der Ansprache ist IMMER der Verkauf von modernen Websites, Online-Terminbuc
 
 DEINE REGELN:
 1. Keine leeren Floskeln ("Hoffe es geht gut", "Ich bin Can von...", "Störe ich?").
-2. Nutze den gefütterten Kontext (z.B. "Über uns", Gründergeschichte, Speisekarte, Spezialisierungen) als echten, persönlichen HOOK.
+2. Nutze den gefütterten Kontext (z.B. "Über uns", Gründergeschichte, Speisekarte, Spezialisierungen) und echte Website-Audit-Befunde als echten, persönlichen HOOK.
 3. Sprache: Authentisches Deutsch / Österreichisch (bei Wienerisch: natürlicher Wiener Schmäh / lockeres Denglisch ohne peinlich zu wirken; bei "Du": direkt & Augenhöhe; bei "Sie": professionell, respektvoll, modern).
-4. KEIN TECH-JARGON: Niemals Web-Begriffe wie "Bootstrap-Theme", "Contact Form 7", "React", "Plugin", "Theme von 2023" erwähnen! Inhaber verstehen das nicht und werten es als Spam. Formuliere Schmerzen immer aus Sicht von Patienten/Kunden & Empfangsentlastung (z.B. "Wer am Wochenende mit Schmerzen buchen will, muss warten", "Telefon klingelt während Behandlung", "Rezeption tippt Termine manuell ein").
+4. KEIN UNNÖTIGER TECH-JARGON: Wenn Audit-Befunde (z. B. altes WordPress oder veraltetes Plugin) vorliegen, übersetze sie in laienverständliche Kundensprache (z. B. "altes System, bei dem Buchungen mobil abbrechen oder Sicherheitswarnungen drohen"). Niemals sterile Quelltext-Audit-Vorträge halten.
 5. Einwand "Wir haben schon genug Kunden / Wir sind voll": Niemals mit "Wachstum unterstützen" antworten! Volle Praxen/Salons wollen kein Wachstum – sie wollen ENTLASTUNG: "Telefon-Chaos stoppen, Rezeption 1–2h pro Tag entlasten, Terminausfälle (No-Shows) eliminieren".
 6. FORMATIERUNG (WICHTIG):
    - KEINE Markdown-Tabellen (| col | col |)! Am Telefon sind Tabellen unbrauchbar.
@@ -70,10 +70,25 @@ export async function POST(request: Request) {
           website: true,
           contactPerson: true,
           instagram: true,
+          auditIssues: {
+            where: {
+              severity: { in: ["CRITICAL", "HIGH", "MEDIUM"] },
+            },
+            select: {
+              title: true,
+              category: true,
+              severity: true,
+            },
+            take: 6,
+          },
         },
       });
 
       if (lead) {
+        const auditText = lead.auditIssues?.length
+          ? `\nECHTE WEBSITE-AUDIT-BEFUNDE:\n${lead.auditIssues.map((a) => `- [${a.severity}] ${a.title}`).join("\n")}`
+          : "";
+
         leadInfo = `
 LEAD-DATEN:
 - Betrieb: ${lead.companyName}
@@ -82,7 +97,7 @@ LEAD-DATEN:
 - Ansprechpartner: ${lead.contactPerson || "Inhaber / Geschäftsführung"}
 - Telefon: ${lead.phone || "Nicht hinterlegt"}
 - Website: ${lead.website || "Keine"}
-- Instagram: ${lead.instagram || "Keines"}
+- Instagram: ${lead.instagram || "Keines"}${auditText}
 `;
       }
     }
