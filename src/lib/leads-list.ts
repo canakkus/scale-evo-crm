@@ -216,6 +216,12 @@ export async function listLeads(user: SessionUser, query: LeadListQuery = {}) {
         createdBy: { select: { id: true, displayName: true, email: true } },
         assignedTo: { select: { id: true, displayName: true, email: true } },
         priorityRatedBy: { select: { id: true, displayName: true, email: true } },
+        plannedCalls: {
+          where: { status: "PLANNED" },
+          orderBy: { startsAt: "asc" },
+          take: 1,
+          select: { id: true, startsAt: true, type: true, note: true },
+        },
         _count: { select: { interactions: true, audits: true, tasks: true } },
       },
     }),

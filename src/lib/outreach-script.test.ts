@@ -89,3 +89,20 @@ Ende`;
   const matches = [...cleaned.matchAll(/📞 Ausgewähltes Kaltakquise-Skript/g)];
   assert.equal(matches.length, 1);
 });
+
+test("extractObjectionsFromScript extracts structured objections from outreach script", async () => {
+  const { extractObjectionsFromScript } = await import("./outreach-script");
+  const script = `Hallo, ich bin Can.
+  
+---
+**🛡️ Schnelle Einwandbehandlung (Konter für Teleprompter):**
+• **„Wir haben eine Agentur“:** „Mega, das ist gut. Wann hat die Agentur die PHP-Basis geprüft?“
+• **„Funktioniert doch alles“:** „Klar, von außen sieht die Seite normal aus – das Risiko liegt auf Server-Ebene.“
+• **„Was kostet das?“:** „Ab 500 bis 1.000 Euro, aber schauen wir erst, ob Bedarf da ist.“`;
+
+  const objections = extractObjectionsFromScript(script);
+  assert.equal(objections.length, 3);
+  assert.equal(objections[0].title, "🛡️ „Wir haben eine Agentur“");
+  assert.match(objections[0].hook, /Mega, das ist gut/);
+  assert.match(objections[0].fullText, /Wann hat die Agentur/);
+});

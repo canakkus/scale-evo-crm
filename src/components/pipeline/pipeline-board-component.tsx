@@ -35,6 +35,7 @@ import {
   RefreshCw,
   Mail,
   Archive,
+  Calendar,
 } from "lucide-react";
 import type { AcquisitionType, LeadStatus } from "@prisma/client";
 
@@ -547,6 +548,58 @@ export function PipelineBoardComponent({ initialLeads }: { initialLeads?: any[] 
                                   {lead.industry || "Branche k.A."}
                                   {lead.city ? ` · ${lead.city}` : ""}
                                 </p>
+
+                                {/* Termin / Cold Call Marker */}
+                                {(() => {
+                                  const plannedCall = lead.plannedCalls?.[0];
+                                  const followUpDate = plannedCall?.startsAt || lead.nextFollowUpAt;
+                                  if (!followUpDate) return null;
+
+                                  const dateObj = new Date(followUpDate);
+                                  const isToday =
+                                    new Date().toDateString() === dateObj.toDateString();
+                                  const isPast = dateObj < new Date();
+                                  const timeFormatted = new Intl.DateTimeFormat("de-AT", {
+                                    weekday: "short",
+                                    day: "2-digit",
+                                    month: "2-digit",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  }).format(dateObj);
+
+                                  const callType = plannedCall?.type;
+                                  const isColdCall =
+                                    callType === "COLD_CALL" ||
+                                    (!callType && (lead.acquisitionType === "CALL" || !lead.acquisitionType));
+                                  const label = isColdCall
+                                    ? "Cold Call"
+                                    : callType === "MEETING"
+                                    ? "Termin"
+                                    : "Wiedervorlage";
+
+                                  return (
+                                    <div
+                                      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold border my-1 transition-all ${
+                                        isPast
+                                          ? "bg-red-500/15 text-red-400 border-red-500/30"
+                                          : isToday
+                                          ? "bg-amber-500/15 text-amber-300 border-amber-500/35 animate-pulse"
+                                          : "bg-blue-500/15 text-blue-300 border-blue-500/30"
+                                      }`}
+                                      title={
+                                        plannedCall?.note
+                                          ? `${label} (${timeFormatted} Uhr): ${plannedCall.note}`
+                                          : `${label}: ${timeFormatted} Uhr`
+                                      }
+                                    >
+                                      <Calendar className="w-3 h-3 shrink-0" />
+                                      <span>
+                                        {label}: {isToday ? `Heute, ${dateObj.toLocaleTimeString("de-AT", { hour: "2-digit", minute: "2-digit" })} Uhr` : `${timeFormatted} Uhr`}
+                                      </span>
+                                    </div>
+                                  );
+                                })()}
+
                                 <p className="truncate" title={lead.address}>
                                   {lead.address}
                                 </p>

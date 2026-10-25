@@ -53,7 +53,12 @@ import { LeadAuditSection } from "./lead-audit-section";
 import { PlanCallPanel } from "@/components/calendar/plan-call-panel";
 import { STATUS_LABELS, INTERACTION_LABELS } from "@/lib/constants";
 import { formatDate, timeAgo, normalizeInstagramHandle, instagramProfileUrl } from "@/lib/utils";
-import { extractCustomOutreachScript, upsertOutreachScriptInNotes } from "@/lib/outreach-script";
+import {
+  extractCustomOutreachScript,
+  upsertOutreachScriptInNotes,
+  extractObjectionsFromScript,
+  type ObjectionItem,
+} from "@/lib/outreach-script";
 import type { LeadStatus, InteractionType } from "@prisma/client";
 
 type LeadDetailModalProps = {
@@ -167,20 +172,32 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
     });
   };
 
-  // Keyboard shortcut: Escape closes modal or teleprompter
+  // Synchronisiere URL mit Browser-History & PushState (ermöglicht Vor/Zurück im Browser)
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        if (pitchFullscreen) {
-          setPitchFullscreen(false);
-        } else {
-          onClose();
-        }
+    if (!leadId || typeof window === "undefined") return;
+
+    const currentUrl = new URL(window.location.href);
+    const hasDirectPage = currentUrl.pathname.startsWith(`/leads/${leadId}`);
+    const previousPath = window.location.pathname + window.location.search;
+
+    if (!hasDirectPage) {
+      window.history.pushState({ leadModal: true, leadId }, "", `/leads/${leadId}`);
+    }
+
+    const handlePopState = () => {
+      // Browser "Zurück" gedrückt
+      onClose();
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+      // Wenn das Modal normal geschlossen wird (z. B. via X oder Esc), URL wieder auf den Vorzustand setzen
+      if (window.location.pathname.startsWith(`/leads/${leadId}`)) {
+        window.history.replaceState(null, "", previousPath.startsWith(`/leads/${leadId}`) ? "/leads" : previousPath);
       }
     };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [pitchFullscreen, onClose]);
+  }, [leadId, onClose]);
 
   // Sync Teleprompter content when opened
   useEffect(() => {
@@ -428,6 +445,34 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
     }
   }
 
+  // Keyboard shortcuts: Escape closes modal/teleprompter, ⌥⌘I toggles inspector, ⌥⌘T toggles teleprompter, ⌘S saves notes/details
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (pitchFullscreen) {
+          setPitchFullscreen(false);
+        } else {
+          onClose();
+        }
+      } else if ((e.metaKey || e.ctrlKey) && e.altKey && (e.key === "i" || e.key === "I")) {
+        e.preventDefault();
+        toggleInspector();
+      } else if ((e.metaKey || e.ctrlKey) && e.altKey && (e.key === "t" || e.key === "T")) {
+        e.preventDefault();
+        setPitchFullscreen((prev) => !prev);
+      } else if ((e.metaKey || e.ctrlKey) && (e.key === "s" || e.key === "S")) {
+        e.preventDefault();
+        if (isEditing) {
+          handleSaveLeadDetails();
+        } else {
+          handleSaveNotes();
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [pitchFullscreen, onClose, isEditing, notesText, editCompanyName, editPhone, editEmail, customOutreachScript, lead]);
+
   async function handleCheckMenu() {
     if (!lead) return;
     setCheckingMenu(true);
@@ -668,7 +713,12 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-[var(--bg)] text-[var(--text)] overflow-hidden animate-fade-in">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={lead?.companyName ? `Lead Details: ${lead.companyName}` : "Lead Details"}
+      className="fixed inset-0 z-50 flex flex-col bg-[var(--bg)] text-[var(--text)] overflow-hidden animate-fade-in"
+    >
       {/* ─── Apple Header Row 1: Primary Bar ───────────────────────────────── */}
       <div
         className="flex items-center justify-between px-4 sm:px-6 py-2.5 border-b shrink-0 gap-3"
@@ -789,7 +839,7 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
               type="button"
               onClick={() => setPitchFullscreen(true)}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-orange-500/15 to-amber-500/15 text-orange-400 border border-orange-500/30 hover:bg-orange-500/25 transition-all shadow-sm shrink-0"
-              title="Teleprompter & Live-Anrufmodus öffnen"
+              title="Teleprompter & Live-Anrufmodus öffnen (⌥⌘T)"
             >
               <Sparkles className="w-3.5 h-3.5 text-orange-400" />
               <span className="hidden sm:inline">Teleprompter</span>
@@ -847,7 +897,7 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                 ? "bg-[var(--accent)] text-[var(--bg)] border-[var(--accent)] shadow-sm"
                 : "bg-[var(--surface-2)] text-[var(--text)] border-[var(--border)] hover:bg-[var(--surface-3)]"
             }`}
-            title="Details & Bearbeiten (Inspector anzeigen/ausblenden)"
+            title="Details & Bearbeiten (Inspector anzeigen/ausblenden, ⌥⌘I)"
           >
             <PanelRight className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">{inspectorOpen ? "Details schließen" : "Details & Edit"}</span>
@@ -1043,9 +1093,11 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                   initialScriptText={preloadedOutreachText}
                   onLiveScriptEdit={(scriptText) => {
                     setCustomOutreachScript(scriptText);
+                    setTeleprompterScript(scriptText);
                   }}
                   onScriptSaved={(scriptText, updatedNotes) => {
                     setCustomOutreachScript(scriptText);
+                    setTeleprompterScript(scriptText);
                     if (updatedNotes) {
                       setNotesText(updatedNotes);
                       setLead((prev: any) => (prev ? { ...prev, notes: updatedNotes } : prev));
@@ -2218,7 +2270,7 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                     <span>Im Lead gesichert</span>
                   </span>
                 ) : (
-                  <span className="text-zinc-500 text-[11px]">Auto-Save aktiv</span>
+                  <span className="text-zinc-400 text-xs font-medium">Auto-Save aktiv</span>
                 )}
               </div>
             </div>
@@ -2235,7 +2287,7 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                 >
                   A-
                 </button>
-                <span className="px-2 text-[11px] font-mono text-zinc-400 border-x border-white/10">
+                <span className="px-2 text-xs font-mono text-zinc-300 border-x border-white/10">
                   {teleprompterFontSize}px
                 </span>
                 <button
@@ -2299,11 +2351,11 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
             {/* Left Column: Primary Teleprompter Pitch Area */}
             <div className="flex-1 min-h-0 flex flex-col rounded-2xl bg-white/[0.03] border border-white/10 p-5 sm:p-7 overflow-hidden relative shadow-2xl">
               <div className="flex items-center justify-between pb-3 border-b border-white/10 shrink-0 mb-3 text-xs text-zinc-400">
-                <span className="font-semibold uppercase tracking-wider text-[11px] text-orange-400 flex items-center gap-1.5">
+                <span className="font-semibold uppercase tracking-wider text-xs text-orange-400 flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5" />
                   <span>Call-Leitfaden (Vollbild-Teleprompter)</span>
                 </span>
-                <span className="text-[11px] text-zinc-400">
+                <span className="text-xs text-zinc-400">
                   {teleprompterMode === "read"
                     ? "👉 Klick in den Text kopiert das Skript"
                     : "💡 Live-Edit: Änderungen werden automatisch debounced gespeichert"}
@@ -2348,95 +2400,105 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
 
             {/* Right Column: Live-Whisperer (Objection Handling) & Live Call Notes */}
             <div className="w-full lg:w-[380px] xl:w-[420px] shrink-0 flex flex-col gap-3 min-h-0 overflow-y-auto">
-              {/* Box 1: Einwand-Befreiungsschläge aus Cans Playbook */}
-              <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 space-y-3 shrink-0">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
-                    <ShieldAlert className="w-3.5 h-3.5" />
-                    <span>Einwandbehandlung (Spickzettel)</span>
-                  </h4>
-                  <span className="text-[10px] text-zinc-500">1-Klick Konter</span>
-                </div>
+              {/* Box 1: Einwand-Befreiungsschläge aus Cans Playbook / dynamisch aus Copilot */}
+              {(() => {
+                const dynamicObjections = extractObjectionsFromScript(teleprompterScript || customOutreachScript);
+                const activePlaybook = dynamicObjections.length > 0 ? dynamicObjections : OBJECTIONS_PLAYBOOK;
+                const isDynamic = dynamicObjections.length > 0;
 
-                <div className="space-y-2">
-                  {OBJECTIONS_PLAYBOOK.map((item) => {
-                    const isExpanded = activeObjectionId === item.id;
-                    const isCopied = copiedObjectionId === item.id;
+                return (
+                  <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 space-y-3 shrink-0">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                        <ShieldAlert className="w-3.5 h-3.5" />
+                        <span>Einwandbehandlung (Spickzettel)</span>
+                      </h4>
+                      <span className="text-[10px] text-zinc-500">
+                        {isDynamic ? "⚡ KI-Konter aktiv" : "1-Klick Konter"}
+                      </span>
+                    </div>
 
-                    return (
-                      <div
-                        key={item.id}
-                        className={`rounded-lg border transition-all ${
-                          isExpanded
-                            ? "bg-white/10 border-amber-500/40"
-                            : "bg-white/[0.02] border-white/10 hover:border-white/20"
-                        }`}
-                      >
-                        <div
-                          onClick={() => setActiveObjectionId(isExpanded ? null : item.id)}
-                          className="p-2.5 flex items-center justify-between gap-2 cursor-pointer"
-                        >
-                          <div className="flex items-center gap-2 min-w-0">
-                            {isExpanded ? (
-                              <ChevronDown className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                            ) : (
-                              <ChevronRight className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                            )}
-                            <span className="text-xs font-semibold text-zinc-200 truncate">{item.title}</span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigator.clipboard.writeText(item.fullText);
-                              setCopiedObjectionId(item.id);
-                              setTimeout(() => setCopiedObjectionId(null), 2000);
-                            }}
-                            className="p-1 rounded hover:bg-white/10 text-zinc-400 hover:text-white transition-colors shrink-0"
-                            title="Konter in Zwischenablage kopieren"
+                    <div className="space-y-2">
+                      {activePlaybook.map((item) => {
+                        const isExpanded = activeObjectionId === item.id;
+                        const isCopied = copiedObjectionId === item.id;
+
+                        return (
+                          <div
+                            key={item.id}
+                            className={`rounded-lg border transition-all ${
+                              isExpanded
+                                ? "bg-white/10 border-amber-500/40"
+                                : "bg-white/[0.02] border-white/10 hover:border-white/20"
+                            }`}
                           >
-                            {isCopied ? (
-                              <Check className="w-3.5 h-3.5 text-emerald-400" />
-                            ) : (
-                              <Copy className="w-3.5 h-3.5" />
-                            )}
-                          </button>
-                        </div>
-
-                        {/* Kurz-Hook / Sneak Peak wenn geschlossen */}
-                        {!isExpanded && (
-                          <p
-                            onClick={() => setActiveObjectionId(item.id)}
-                            className="px-2.5 pb-2 text-[11px] text-zinc-400 line-clamp-1 italic cursor-pointer"
-                          >
-                            „{item.hook}“
-                          </p>
-                        )}
-
-                        {/* Volltext wenn geöffnet */}
-                        {isExpanded && (
-                          <div className="px-3 pb-3 pt-1 border-t border-white/10 text-xs text-zinc-200 leading-relaxed space-y-2">
-                            <p className="italic whitespace-pre-wrap">{item.fullText}</p>
-                            <div className="flex justify-end pt-1">
+                            <div
+                              onClick={() => setActiveObjectionId(isExpanded ? null : item.id)}
+                              className="p-2.5 flex items-center justify-between gap-2 cursor-pointer"
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                {isExpanded ? (
+                                  <ChevronDown className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                                ) : (
+                                  <ChevronRight className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                                )}
+                                <span className="text-xs font-semibold text-zinc-200 truncate">{item.title}</span>
+                              </div>
                               <button
                                 type="button"
-                                onClick={() => {
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   navigator.clipboard.writeText(item.fullText);
                                   setCopiedObjectionId(item.id);
                                   setTimeout(() => setCopiedObjectionId(null), 2000);
                                 }}
-                                className="text-[11px] font-semibold text-amber-400 hover:underline flex items-center gap-1"
+                                className="p-1 rounded hover:bg-white/10 text-zinc-400 hover:text-white transition-colors shrink-0"
+                                title="Konter in Zwischenablage kopieren"
                               >
-                                {isCopied ? "✓ Konter kopiert!" : "Kopieren"}
+                                {isCopied ? (
+                                  <Check className="w-3.5 h-3.5 text-emerald-400" />
+                                ) : (
+                                  <Copy className="w-3.5 h-3.5" />
+                                )}
                               </button>
                             </div>
+
+                            {/* Kurz-Hook / Sneak Peak wenn geschlossen */}
+                            {!isExpanded && (
+                              <p
+                                onClick={() => setActiveObjectionId(item.id)}
+                                className="px-2.5 pb-2 text-[11px] text-zinc-400 line-clamp-1 italic cursor-pointer"
+                              >
+                                „{item.hook}“
+                              </p>
+                            )}
+
+                            {/* Volltext wenn geöffnet */}
+                            {isExpanded && (
+                              <div className="px-3 pb-3 pt-1 border-t border-white/10 text-xs text-zinc-200 leading-relaxed space-y-2">
+                                <p className="italic whitespace-pre-wrap">{item.fullText}</p>
+                                <div className="flex justify-end pt-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(item.fullText);
+                                      setCopiedObjectionId(item.id);
+                                      setTimeout(() => setCopiedObjectionId(null), 2000);
+                                    }}
+                                    className="text-[11px] font-semibold text-amber-400 hover:underline flex items-center gap-1"
+                                  >
+                                    {isCopied ? "✓ Konter kopiert!" : "Kopieren"}
+                                  </button>
+                                </div>
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Box 2: Live-Anrufnotizen während des Calls */}
               <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 flex-1 min-h-[160px] flex flex-col space-y-2">

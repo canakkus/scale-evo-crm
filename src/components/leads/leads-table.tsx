@@ -26,6 +26,7 @@ import {
   ShieldAlert,
   Archive,
   RotateCcw,
+  Calendar,
 } from "lucide-react";
 import { StatusBadge, PriorityDot, STATUS_STYLES } from "@/components/ui/status-badge";
 import { LeadPriorityBadge } from "@/components/leads/lead-priority-badge";
@@ -1113,8 +1114,59 @@ export function LeadsTable({
                             </span>
                           )}
                         </div>
-                        <div className="text-xs font-medium pl-6" style={{ color: "var(--text-2)" }}>
-                          {lead.industry || "—"}
+                        <div className="text-xs font-medium pl-6 flex flex-wrap items-center gap-2" style={{ color: "var(--text-2)" }}>
+                          <span>{lead.industry || "—"}</span>
+
+                          {/* Termin / Cold Call Marker */}
+                          {(() => {
+                            const plannedCall = lead.plannedCalls?.[0];
+                            const followUpDate = plannedCall?.startsAt || lead.nextFollowUpAt;
+                            if (!followUpDate) return null;
+
+                            const dateObj = new Date(followUpDate);
+                            const isToday =
+                              new Date().toDateString() === dateObj.toDateString();
+                            const isPast = dateObj < new Date();
+                            const timeFormatted = new Intl.DateTimeFormat("de-AT", {
+                              weekday: "short",
+                              day: "2-digit",
+                              month: "2-digit",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            }).format(dateObj);
+
+                            const callType = plannedCall?.type;
+                            const isColdCall =
+                              callType === "COLD_CALL" ||
+                              (!callType && (lead.acquisitionType === "CALL" || !lead.acquisitionType));
+                            const label = isColdCall
+                              ? "Cold Call"
+                              : callType === "MEETING"
+                              ? "Termin"
+                              : "Wiedervorlage";
+
+                            return (
+                              <span
+                                className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold border transition-all ${
+                                  isPast
+                                    ? "bg-red-500/15 text-red-400 border-red-500/30"
+                                    : isToday
+                                    ? "bg-amber-500/15 text-amber-300 border-amber-500/35 animate-pulse"
+                                    : "bg-blue-500/15 text-blue-300 border-blue-500/30"
+                                }`}
+                                title={
+                                  plannedCall?.note
+                                    ? `${label} (${timeFormatted} Uhr): ${plannedCall.note}`
+                                    : `${label}: ${timeFormatted} Uhr`
+                                }
+                              >
+                                <Calendar className="w-3 h-3 shrink-0" />
+                                <span>
+                                  {label}: {isToday ? `Heute, ${dateObj.toLocaleTimeString("de-AT", { hour: "2-digit", minute: "2-digit" })} Uhr` : `${timeFormatted} Uhr`}
+                                </span>
+                              </span>
+                            );
+                          })()}
                         </div>
                       </td>
 

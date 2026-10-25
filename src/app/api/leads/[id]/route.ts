@@ -92,6 +92,12 @@ export async function GET(
         callRecordings: { orderBy: { createdAt: "desc" } },
         attachments: { orderBy: { createdAt: "desc" } },
         dmDrafts: { orderBy: { createdAt: "desc" }, take: 1 },
+        plannedCalls: {
+          where: { status: "PLANNED" },
+          orderBy: { startsAt: "asc" },
+          take: 1,
+          select: { id: true, startsAt: true, type: true, note: true },
+        },
       },
     });
 

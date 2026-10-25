@@ -110,3 +110,72 @@ export function upsertOutreachScriptInNotes(
   // Fall C: Noch kein Skript vorhanden -> hinten anhaengen
   return `${base}\n\n---\n${block}`;
 }
+
+export type ObjectionItem = {
+  id: string;
+  title: string;
+  hook: string;
+  fullText: string;
+};
+
+/**
+ * Extrahiert dynamisch strukturierte Einwaende & Konter aus einem Kaltakquise-Skript,
+ * um die Einwandbehandlungs-Karten im Teleprompter direkt zu befuellen.
+ */
+export function extractObjectionsFromScript(scriptText?: string | null): ObjectionItem[] {
+  if (!scriptText) return [];
+
+  const lines = scriptText.split("\n");
+  const results: ObjectionItem[] = [];
+  let inObjectionSection = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const rawLine = lines[i].trim();
+    if (!rawLine) continue;
+
+    if (
+      rawLine.includes("Einwandbehandlung") ||
+      rawLine.includes("Konter") ||
+      rawLine.includes("🛡️")
+    ) {
+      inObjectionSection = true;
+      continue;
+    }
+
+    // Match bullet lines: • **„Titel“:** „Text“ or - **Titel**: Text or • Titel: Text
+    const match =
+      rawLine.match(/^[\u2022\-\*\d\.]+\s*\*\*([^\*]+)\*\*[:\s]+(.*)$/) ||
+      rawLine.match(/^[\u2022\-\*\d\.]+\s*([^:\n]+)[:]\s*(.*)$/);
+
+    if (match && (inObjectionSection || rawLine.includes("„") || rawLine.includes("\""))) {
+      let title = match[1].trim().replace(/^["„“'«»]+|["„“'«»:]+$/g, "");
+      let fullText = match[2].trim().replace(/^["„“'«»]+|["„“'«»]+$/g, "");
+
+      if (!title || !fullText || title.length > 70) continue;
+
+      // Extract short hook for collapsed state
+      const periodIdx = fullText.indexOf(". ");
+      const qIdx = fullText.indexOf("? ");
+      const splitCandidates = [periodIdx, qIdx].filter((idx) => idx !== -1);
+      const firstSentenceEnd = splitCandidates.length > 0 ? Math.min(...splitCandidates) : -1;
+
+      let hook = "";
+      if (firstSentenceEnd !== -1 && firstSentenceEnd < 100) {
+        hook = fullText.slice(0, firstSentenceEnd + 1).trim();
+      } else if (fullText.length > 85) {
+        hook = fullText.slice(0, 82).trim() + "…";
+      } else {
+        hook = fullText;
+      }
+
+      results.push({
+        id: `dyn_${results.length}`,
+        title: title.startsWith("🛡️") || title.startsWith("🎯") ? title : `🛡️ „${title}“`,
+        hook,
+        fullText: `„${fullText}“`,
+      });
+    }
+  }
+
+  return results;
+}
