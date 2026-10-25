@@ -356,6 +356,10 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
       if (res.ok) {
         setLead({ ...lead, acquisitionType: newType });
         setEditAcquisitionType(newType);
+        // Bei Auswahl von Walk-In den Inspector automatisch öffnen, falls er noch zu ist
+        if (newType === "WALK_IN") {
+          setInspectorOpen(true);
+        }
         onUpdate();
       }
     } catch (err) {
@@ -1561,8 +1565,12 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                 </div>
               </div>
 
-              {/* Cold Call planen Panel */}
-              <PlanCallPanel leadId={lead.id} leadName={lead.companyName} />
+              {/* Planen Panel (Cold Call vs. Walk-In) */}
+              <PlanCallPanel
+                leadId={lead.id}
+                leadName={lead.companyName}
+                acquisitionType={lead.acquisitionType || "CALL"}
+              />
 
               {/* Status & Priorität Management */}
               <div className="p-4 rounded-xl border space-y-4" style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Phone } from "lucide-react";
+import { Phone, Footprints } from "lucide-react";
 import { PlanCallForm } from "@/components/calendar/plan-call-form";
 import { phoneToTelUri, type PlannedCallDto, type PlannedCallStatus } from "@/lib/planned-call";
 
@@ -17,10 +17,19 @@ async function patchCall(id: string, body: { status: PlannedCallStatus }) {
   }
 }
 
-export function PlanCallPanel({ leadId, leadName }: { leadId: string; leadName: string }) {
+export function PlanCallPanel({
+  leadId,
+  leadName,
+  acquisitionType = "CALL",
+}: {
+  leadId: string;
+  leadName: string;
+  acquisitionType?: string;
+}) {
   const [open, setOpen] = useState(false);
   const [calls, setCalls] = useState<PlannedCallDto[]>([]);
   const [error, setError] = useState("");
+  const isWalkIn = acquisitionType === "WALK_IN";
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/planned-calls?leadId=${encodeURIComponent(leadId)}`);
@@ -52,8 +61,8 @@ export function PlanCallPanel({ leadId, leadName }: { leadId: string; leadName: 
     <div className="space-y-2 rounded-lg border p-3" style={{ borderColor: "var(--border)", background: "var(--surface-2)" }}>
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 text-xs font-semibold" style={{ color: "var(--text)" }}>
-          <Phone className="w-3.5 h-3.5" />
-          <span>Cold Call</span>
+          {isWalkIn ? <Footprints className="w-3.5 h-3.5 text-purple-400" /> : <Phone className="w-3.5 h-3.5" />}
+          <span>{isWalkIn ? "Walk-In Termin" : "Cold Call"}</span>
         </div>
         <button
           type="button"
@@ -61,7 +70,7 @@ export function PlanCallPanel({ leadId, leadName }: { leadId: string; leadName: 
           className="text-xs font-semibold"
           style={{ color: "var(--accent)" }}
         >
-          {open ? "Schließen" : "Call planen"}
+          {open ? "Schließen" : isWalkIn ? "Walk-In planen" : "Call planen"}
         </button>
       </div>
 

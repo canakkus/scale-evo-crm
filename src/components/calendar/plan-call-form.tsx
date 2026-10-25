@@ -171,10 +171,11 @@ export function PlanCallForm({ leadId, leadName, editing, defaultStartsAt, onSav
           />
         </label>
         <label className="block text-xs font-semibold" style={{ color: "var(--text-2)" }} htmlFor="plan-time">
-          Uhrzeit
+          Uhrzeit (24h)
           <input
             id="plan-time"
             type="time"
+            step="60"
             required
             value={timePart}
             onChange={(event) => setTimePart(event.target.value)}
