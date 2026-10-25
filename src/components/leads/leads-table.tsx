@@ -27,6 +27,7 @@ import {
   Archive,
   RotateCcw,
   Calendar,
+  Columns,
 } from "lucide-react";
 import { StatusBadge, PriorityDot, STATUS_STYLES } from "@/components/ui/status-badge";
 import { LeadPriorityBadge } from "@/components/leads/lead-priority-badge";
@@ -78,10 +79,31 @@ export function LeadsTable({
     cancelRequested?: boolean;
   } | null>(null);
 
-  // Modals
+  // Modals & Apple 3-Pane Split View
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [formMounted, setFormMounted] = useState(false);
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(initialLeadId);
+  const [splitViewMode, setSplitViewMode] = useState<boolean>(true);
+  const [isDetailExpanded, setIsDetailExpanded] = useState<boolean>(false);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("leads_split_view_mode");
+      if (saved !== null) {
+        setSplitViewMode(saved === "true");
+      }
+    } catch {}
+  }, []);
+
+  const toggleSplitViewMode = () => {
+    setSplitViewMode((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("leads_split_view_mode", String(next));
+      } catch {}
+      return next;
+    });
+  };
 
   // Debounce search input to avoid laggy keystrokes & excessive API requests
   useEffect(() => {
@@ -393,9 +415,14 @@ export function LeadsTable({
     }
   }
 
+  const isSplitActive = Boolean(selectedLeadId && splitViewMode && !isDetailExpanded);
+
   return (
-    <div className="space-y-6">
-      {/* Action Bar / Controls */}
+    <div className="w-full">
+      <div className={`w-full transition-all duration-300 ${isSplitActive ? "flex flex-col lg:flex-row gap-4 items-start" : "space-y-6"}`}>
+        {/* Left Side: Table & Controls */}
+        <div className={`transition-all duration-300 ${isSplitActive ? "w-full lg:w-[48%] xl:w-[42%] shrink-0 space-y-4" : "w-full space-y-6"}`}>
+          {/* Action Bar / Controls */}
       <div className="flex flex-col gap-3">
         {/* Top Row: Channel Switcher & Primary Actions */}
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -614,6 +641,21 @@ export function LeadsTable({
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-[var(--accent)]" : ""}`} style={{ color: "var(--text-2)" }} />
               <span className="hidden lg:inline ml-1.5" style={{ color: "var(--text-2)" }}>Aktualisieren</span>
+            </button>
+
+            {/* Apple 3-Pane Split View Toggle */}
+            <button
+              type="button"
+              onClick={toggleSplitViewMode}
+              title={splitViewMode ? "Split View aktiv (klicken für Vollbild-Tabelle)" : "Split View aktivieren (3-Spalten Layout)"}
+              className={`hidden lg:flex items-center gap-1.5 rounded-xl px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm font-semibold border transition-all shrink-0 cursor-pointer ${
+                splitViewMode
+                  ? "bg-blue-500/15 text-blue-400 border-blue-500/35 shadow-sm"
+                  : "bg-[var(--surface)] text-[var(--text-2)] border-[var(--border)] hover:bg-[var(--surface-2)]"
+              }`}
+            >
+              <Columns className="w-3.5 h-3.5" />
+              <span className="hidden xl:inline">{splitViewMode ? "Split View" : "Tabelle"}</span>
             </button>
 
             {/* Health-Check All Button */}
@@ -1026,7 +1068,11 @@ export function LeadsTable({
                     <tr
                       key={lead.id}
                       onClick={() => setSelectedLeadId(lead.id)}
-                      className="hover:bg-[var(--surface-3)] transition-colors cursor-pointer group"
+                      className={`transition-all cursor-pointer group ${
+                        selectedLeadId === lead.id
+                          ? "bg-blue-500/10 dark:bg-blue-500/15 border-l-4 border-[var(--accent)] font-medium"
+                          : "hover:bg-[var(--surface-3)]"
+                      }`}
                     >
                       {/* Checkbox */}
                       <td className="w-10 px-4 py-4 text-center align-top" onClick={(e) => e.stopPropagation()}>
@@ -1476,6 +1522,21 @@ export function LeadsTable({
             </div>
           </div>
         )}
+        </div>
+
+        {/* Right Side: Docked Apple 3-Pane Split View Detail Pane */}
+        {isSplitActive && (
+          <div className="w-full lg:flex-1 min-w-0 h-[calc(100vh-6.5rem)] sticky top-4 overflow-hidden z-20 animate-fade-in">
+            <LeadDetailModal
+              leadId={selectedLeadId}
+              onClose={() => setSelectedLeadId(null)}
+              onUpdate={() => fetchLeads()}
+              mode="split"
+              isExpanded={false}
+              onToggleExpand={() => setIsDetailExpanded(true)}
+            />
+          </div>
+        )}
       </div>
 
       {/* Modals */}
@@ -1487,13 +1548,20 @@ export function LeadsTable({
         />
       )}
 
-      {selectedLeadId && (
+      {selectedLeadId && (!splitViewMode || isDetailExpanded) && (
         <LeadDetailModal
           leadId={selectedLeadId}
-          onClose={() => setSelectedLeadId(null)}
+          onClose={() => {
+            setSelectedLeadId(null);
+            setIsDetailExpanded(false);
+          }}
           onUpdate={() => fetchLeads()}
+          mode="modal"
+          isExpanded={true}
+          onToggleExpand={() => setIsDetailExpanded(false)}
         />
       )}
+      </div>
     </div>
   );
 }

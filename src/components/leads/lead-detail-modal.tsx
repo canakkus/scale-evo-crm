@@ -61,10 +61,13 @@ import {
 } from "@/lib/outreach-script";
 import type { LeadStatus, InteractionType } from "@prisma/client";
 
-type LeadDetailModalProps = {
+export type LeadDetailModalProps = {
   leadId: string | null;
   onClose: () => void;
   onUpdate: () => void;
+  mode?: "modal" | "split";
+  onToggleExpand?: () => void;
+  isExpanded?: boolean;
 };
 
 const OBJECTIONS_PLAYBOOK = [
@@ -114,7 +117,14 @@ Ich habe mir vorhin im Quellcode Ihre Website angeschaut – die läuft im Hinte
 Ich will Ihnen jetzt am Telefon absolut nichts verkaufen. Ich habe mir kurz zwei Screenshots von den technischen Schwachstellen gemacht.
 Soll ich Ihnen die kurz per Mail rüberschicken und wir werfen nächste Woche mal 5 Minuten gemeinsam via Google Meet einen Blick drauf?`;
 
-export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalProps) {
+export function LeadDetailModal({
+  leadId,
+  onClose,
+  onUpdate,
+  mode = "modal",
+  onToggleExpand,
+  isExpanded = false,
+}: LeadDetailModalProps) {
   const [lead, setLead] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [notesText, setNotesText] = useState("");
@@ -712,12 +722,18 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
     MIXED:    { bg: "var(--status-planned-bg)", tx: "var(--status-planned-tx)", label: "Gemischt" },
   };
 
+  const isSplitPane = mode === "split" && !isExpanded;
+
   return (
     <div
-      role="dialog"
-      aria-modal="true"
+      role={isSplitPane ? "region" : "dialog"}
+      aria-modal={isSplitPane ? undefined : "true"}
       aria-label={lead?.companyName ? `Lead Details: ${lead.companyName}` : "Lead Details"}
-      className="fixed inset-0 z-50 flex flex-col bg-[var(--bg)] text-[var(--text)] overflow-hidden animate-fade-in"
+      className={
+        isSplitPane
+          ? "w-full h-full flex flex-col bg-[var(--bg)] text-[var(--text)] overflow-hidden rounded-2xl border border-[var(--border)] shadow-xl animate-fade-in"
+          : "fixed inset-0 z-50 flex flex-col bg-[var(--bg)] text-[var(--text)] overflow-hidden animate-fade-in"
+      }
     >
       {/* ─── Apple Header Row 1: Primary Bar ───────────────────────────────── */}
       <div
@@ -903,6 +919,18 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
             <span className="hidden sm:inline">{inspectorOpen ? "Details schließen" : "Details & Edit"}</span>
             {isEditing && <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse ml-0.5" />}
           </button>
+
+          {onToggleExpand && (
+            <button
+              type="button"
+              onClick={onToggleExpand}
+              className="p-1.5 rounded-lg transition-colors hover:bg-[var(--surface-3)] shrink-0 ml-0.5"
+              style={{ color: "var(--text-2)" }}
+              title={isExpanded ? "Split View (Nebeneinander)" : "Vollbildmodus"}
+            >
+              {isExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+            </button>
+          )}
 
           <button
             type="button"
