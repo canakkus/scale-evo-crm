@@ -1614,69 +1614,19 @@ export function LeadDetailModal({ leadId, onClose, onUpdate }: LeadDetailModalPr
                     onUpdate();
                   }}
                 />
-
-                {/* Akquise-Weg Switcher */}
-                <div>
-                  <label className="block text-xs font-semibold mb-2" style={{ color: "var(--text-2)" }}>
-                    Akquise-Weg wählen
-                  </label>
-                  <select
-                    className="w-full rounded-md px-3 py-2 text-xs font-medium border outline-none cursor-pointer"
-                    style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text)" }}
-                    value={lead.acquisitionType || "CALL"}
-                    onChange={(e) => handleAcquisitionTypeChange(e.target.value)}
-                  >
-                    <option value="CALL">📞 Cold Call</option>
-                    <option value="WALK_IN">🚶 Walk-In</option>
-                    <option value="DM">💬 Instagram DM</option>
-                    <option value="EMAIL">✉️ E-Mail Akquise</option>
-                  </select>
-                </div>
               </div>
 
               {/* Inspector Content: Details View vs. Full Edit Form */}
               {!isEditing ? (
                 <div className="space-y-5 text-sm">
-                  {/* Akquise-Kanal & Fokus */}
-                  <div className="flex flex-col gap-1">
-                    <span className="font-semibold text-xs text-[var(--text-3)]">Akquise-Kanal:</span>
+                  {/* Fokus */}
+                  {lead.isFocus && (
                     <div className="flex items-center gap-2">
-                      <span
-                        className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-md"
-                        style={{
-                          background:
-                            lead.acquisitionType === "DM"
-                              ? "var(--channel-dm-bg)"
-                              : lead.acquisitionType === "EMAIL"
-                              ? "rgba(245, 158, 11, 0.15)"
-                              : lead.acquisitionType === "WALK_IN"
-                              ? "rgba(168, 85, 247, 0.1)"
-                              : "rgba(59, 130, 246, 0.1)",
-                          color:
-                            lead.acquisitionType === "DM"
-                              ? "var(--channel-dm-tx)"
-                              : lead.acquisitionType === "EMAIL"
-                              ? "#f59e0b"
-                              : lead.acquisitionType === "WALK_IN"
-                              ? "rgb(192, 132, 252)"
-                              : "rgb(96, 165, 250)",
-                        }}
-                      >
-                        {lead.acquisitionType === "DM"
-                          ? "Instagram DM"
-                          : lead.acquisitionType === "EMAIL"
-                          ? "E-Mail Akquise"
-                          : lead.acquisitionType === "WALK_IN"
-                          ? "Walk-In"
-                          : "Cold Call"}
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                        ⭐ 2-Wochen-Fokus
                       </span>
-                      {lead.isFocus && (
-                        <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                          ⭐ 2-Wochen-Fokus
-                        </span>
-                      )}
                     </div>
-                  </div>
+                  )}
 
                   {/* NFC Demo URL */}
                   {lead.nfcDemoUrl && (
