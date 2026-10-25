@@ -30,10 +30,10 @@ import {
 import { StatusBadge, PriorityDot, STATUS_STYLES } from "@/components/ui/status-badge";
 import { LeadPriorityBadge } from "@/components/leads/lead-priority-badge";
 import { LeadDetailModal, LeadFormModal } from "@/components/leads/lazy-modals";
-import { STATUS_LABELS, INDUSTRIES } from "@/lib/constants";
+import { STATUS_LABELS, INDUSTRIES, PRIORITY_LABELS } from "@/lib/constants";
 import { getMapsUrl } from "@/lib/maps-url";
 import { formatDate, timeAgo } from "@/lib/utils";
-import type { LeadStatus } from "@prisma/client";
+import type { LeadStatus, Priority } from "@prisma/client";
 
 export function LeadsTable({
   initialData,
@@ -50,6 +50,7 @@ export function LeadsTable({
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [priorityFilter, setPriorityFilter] = useState<Priority | "">("");
   const [acquisitionFilter, setAcquisitionFilter] = useState<string>("");
   const [isFocusFilter, setIsFocusFilter] = useState(false);
   const [archiveFilter, setArchiveFilter] = useState(false);
@@ -95,6 +96,7 @@ export function LeadsTable({
       const params = new URLSearchParams();
       if (debouncedSearch.trim()) params.set("search", debouncedSearch.trim());
       if (statusFilter) params.set("status", statusFilter);
+      if (priorityFilter) params.set("priority", priorityFilter);
       if (acquisitionFilter) params.set("acquisitionType", acquisitionFilter);
       if (isFocusFilter) params.set("isFocus", "true");
       if (archiveFilter) params.set("archived", "true");
@@ -129,7 +131,7 @@ export function LeadsTable({
     } finally {
       setLoading(false);
     }
-  }, [debouncedSearch, statusFilter, acquisitionFilter, isFocusFilter, archiveFilter, sourceFilter, industryFilters, updatedDateFilter, customDate, page]);
+  }, [debouncedSearch, statusFilter, priorityFilter, acquisitionFilter, isFocusFilter, archiveFilter, sourceFilter, industryFilters, updatedDateFilter, customDate, page]);
 
   async function handleToggleFocus(leadId: string, currentVal: boolean, currentStatus?: string) {
     if (currentStatus === "NOT_RELEVANT" && !currentVal) {
@@ -736,6 +738,22 @@ export function LeadsTable({
                   {key === "NOT_RELEVANT" ? `${label} (📦 Archiv)` : label}
                 </option>
               ))}
+            </select>
+
+            {/* Priority Filter */}
+            <select
+              value={priorityFilter}
+              onChange={(e) => {
+                setPriorityFilter(e.target.value as Priority | "");
+                setPage(1);
+              }}
+              className="rounded-xl px-2.5 py-1.5 text-xs sm:text-sm font-medium border outline-none cursor-pointer"
+              style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-2)" }}
+            >
+              <option value="">Alle Prioritäten</option>
+              <option value="HIGH">🔴 Hoch (High)</option>
+              <option value="MEDIUM">🟡 Mittel (Medium)</option>
+              <option value="LOW">⚪ Niedrig (Low)</option>
             </select>
 
           {/* Multi-Select Industry Filter */}
