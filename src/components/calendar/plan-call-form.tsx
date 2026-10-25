@@ -37,8 +37,13 @@ export function PlanCallForm({ leadId, leadName, editing, defaultStartsAt, onSav
   const [query, setQuery] = useState("");
   const [leads, setLeads] = useState<LeadOption[]>([]);
   const [selectedLeadId, setSelectedLeadId] = useState(editing?.leadId || leadId || "");
-  const [startsAt, setStartsAt] = useState(
-    toDatetimeLocalValue(editing ? new Date(editing.startsAt) : defaultStartsAt || defaultPlanTime()),
+  const initialDate = editing ? new Date(editing.startsAt) : defaultStartsAt || defaultPlanTime();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const [datePart, setDatePart] = useState(
+    `${initialDate.getFullYear()}-${pad(initialDate.getMonth() + 1)}-${pad(initialDate.getDate())}`
+  );
+  const [timePart, setTimePart] = useState(
+    `${pad(initialDate.getHours())}:${pad(initialDate.getMinutes())}`
   );
   const [type, setType] = useState<PlannedCallType>(editing?.type || "COLD_CALL");
   const [reminderMinutes, setReminderMinutes] = useState(editing?.reminderMinutes ?? DEFAULT_REMINDER_MINUTES);
@@ -72,9 +77,13 @@ export function PlanCallForm({ leadId, leadName, editing, defaultStartsAt, onSav
       setError("Bitte einen Lead wählen.");
       return;
     }
-    const when = new Date(startsAt);
-    if (Number.isNaN(when.getTime())) {
+    if (!datePart || !timePart) {
       setError("Datum und Uhrzeit sind erforderlich.");
+      return;
+    }
+    const when = new Date(`${datePart}T${timePart}`);
+    if (Number.isNaN(when.getTime())) {
+      setError("Datum und Uhrzeit sind ungültig.");
       return;
     }
     setSaving(true);
@@ -148,15 +157,27 @@ export function PlanCallForm({ leadId, leadName, editing, defaultStartsAt, onSav
         </div>
       )}
 
-      <div className="grid gap-2 sm:grid-cols-3">
-        <label className="block text-xs font-semibold" style={{ color: "var(--text-2)" }} htmlFor="plan-when">
-          Datum und Uhrzeit
+      <div className="grid gap-2 sm:grid-cols-4">
+        <label className="block text-xs font-semibold" style={{ color: "var(--text-2)" }} htmlFor="plan-date">
+          Datum
           <input
-            id="plan-when"
-            type="datetime-local"
+            id="plan-date"
+            type="date"
             required
-            value={startsAt}
-            onChange={(event) => setStartsAt(event.target.value)}
+            value={datePart}
+            onChange={(event) => setDatePart(event.target.value)}
+            className="mt-1 w-full rounded-md border px-3 py-2 text-sm outline-none"
+            style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
+          />
+        </label>
+        <label className="block text-xs font-semibold" style={{ color: "var(--text-2)" }} htmlFor="plan-time">
+          Uhrzeit
+          <input
+            id="plan-time"
+            type="time"
+            required
+            value={timePart}
+            onChange={(event) => setTimePart(event.target.value)}
             className="mt-1 w-full rounded-md border px-3 py-2 text-sm outline-none"
             style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
           />
