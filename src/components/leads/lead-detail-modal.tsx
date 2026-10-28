@@ -129,6 +129,9 @@ export function LeadDetailModal({
   const [loading, setLoading] = useState(false);
   const [notesText, setNotesText] = useState("");
   const [savingNotes, setSavingNotes] = useState(false);
+  const [notesSaveStatus, setNotesSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const notesDebounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const lastSavedNotesRef = useRef<string>("");
   const [checkingMenu, setCheckingMenu] = useState(false);
   const [customOutreachScript, setCustomOutreachScript] = useState<string | null>(null);
   const [preloadedOutreachText, setPreloadedOutreachText] = useState<string | null>(null);
@@ -270,6 +273,8 @@ export function LeadDetailModal({
         if (data.lead) {
           setLead(data.lead);
           setNotesText(data.lead.notes || "");
+          lastSavedNotesRef.current = data.lead.notes || "";
+          setNotesSaveStatus("idle");
           const script = extractCustomOutreachScript(data.lead.notes);
           setCustomOutreachScript(script);
 
@@ -394,26 +399,66 @@ export function LeadDetailModal({
     }
   }
 
-  async function handleSaveNotes() {
+  const saveNotesContent = useCallback(async (contentToSave: string, force = false) => {
     if (!lead) return;
+    if (!force && contentToSave === lastSavedNotesRef.current) return;
+
     setSavingNotes(true);
+    setNotesSaveStatus("saving");
     try {
       const res = await fetch(`/api/leads/${lead.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ notes: notesText }),
+        body: JSON.stringify({ notes: contentToSave }),
       });
       if (res.ok) {
-        setLead({ ...lead, notes: notesText });
-        const updatedScript = extractCustomOutreachScript(notesText);
+        lastSavedNotesRef.current = contentToSave;
+        setLead((prev: any) => (prev ? { ...prev, notes: contentToSave } : prev));
+        const updatedScript = extractCustomOutreachScript(contentToSave);
         setCustomOutreachScript(updatedScript);
+        setNotesSaveStatus("saved");
         onUpdate();
+        setTimeout(() => {
+          setNotesSaveStatus((curr) => (curr === "saved" ? "idle" : curr));
+        }, 2500);
+      } else {
+        setNotesSaveStatus("idle");
       }
     } catch (err) {
       console.error(err);
+      setNotesSaveStatus("idle");
     } finally {
       setSavingNotes(false);
     }
+  }, [lead, onUpdate]);
+
+  const handleNotesChange = (val: string) => {
+    setNotesText(val);
+    if (val !== lastSavedNotesRef.current) {
+      setNotesSaveStatus("saving");
+      if (notesDebounceTimerRef.current) {
+        clearTimeout(notesDebounceTimerRef.current);
+      }
+      notesDebounceTimerRef.current = setTimeout(() => {
+        saveNotesContent(val);
+      }, 1000);
+    }
+  };
+
+  const handleNotesBlur = () => {
+    if (notesDebounceTimerRef.current) {
+      clearTimeout(notesDebounceTimerRef.current);
+    }
+    if (notesText !== lastSavedNotesRef.current) {
+      saveNotesContent(notesText);
+    }
+  };
+
+  async function handleSaveNotes() {
+    if (notesDebounceTimerRef.current) {
+      clearTimeout(notesDebounceTimerRef.current);
+    }
+    await saveNotesContent(notesText, true);
   }
 
   async function handleSaveLeadDetails() {
@@ -482,6 +527,14 @@ export function LeadDetailModal({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [pitchFullscreen, onClose, isEditing, notesText, editCompanyName, editPhone, editEmail, customOutreachScript, lead]);
+
+  useEffect(() => {
+    return () => {
+      if (notesDebounceTimerRef.current) {
+        clearTimeout(notesDebounceTimerRef.current);
+      }
+    };
+  }, []);
 
   async function handleCheckMenu() {
     if (!lead) return;
@@ -1147,6 +1200,23 @@ export function LeadDetailModal({
                         Notizen & Besonderheiten
                       </label>
                       <div className="flex items-center gap-2">
+                        {/* Auto-Save Status Indicator */}
+                        <div className="text-xs flex items-center gap-1.5 font-medium mr-1">
+                          {notesSaveStatus === "saving" ? (
+                            <span className="flex items-center gap-1.5 text-amber-400 animate-pulse">
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              <span>Speichert…</span>
+                            </span>
+                          ) : notesSaveStatus === "saved" ? (
+                            <span className="flex items-center gap-1 text-emerald-400 font-semibold animate-fade-in">
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              <span>Gespeichert</span>
+                            </span>
+                          ) : (
+                            <span className="text-zinc-500 text-xs">Auto-Save aktiv</span>
+                          )}
+                        </div>
+
                         <button
                           type="button"
                           onClick={() => {
@@ -1161,12 +1231,14 @@ export function LeadDetailModal({
                           <span>Zum Outreach</span>
                         </button>
                         <button
+                          type="button"
                           onClick={handleSaveNotes}
                           disabled={savingNotes}
-                          className="text-xs font-semibold px-3 py-1.5 rounded transition-colors hover:bg-[var(--surface-3)]"
-                          style={{ background: "var(--surface-2)", color: "var(--accent)" }}
+                          className="text-xs font-semibold px-2.5 py-1.5 rounded transition-colors hover:bg-[var(--surface-3)] border"
+                          style={{ borderColor: "var(--border)", background: "var(--surface-2)", color: "var(--text-2)" }}
+                          title="Sofort manuell speichern (⌘S)"
                         >
-                          {savingNotes ? "Speichert…" : "Notiz Speichern"}
+                          {savingNotes ? "Speichert…" : "Sofort speichern"}
                         </button>
                       </div>
                     </div>
@@ -1275,12 +1347,13 @@ export function LeadDetailModal({
                     )}
 
                     <textarea
-                      rows={customOutreachScript ? 8 : 14}
-                      className="w-full rounded-md p-4 text-xs border outline-none resize-none leading-relaxed"
+                      rows={customOutreachScript ? 10 : 18}
+                      className="w-full rounded-xl p-4 text-sm sm:text-base leading-relaxed border outline-none resize-y transition-all shadow-inner focus:border-[var(--accent)]"
                       style={{ background: "var(--surface-2)", borderColor: "var(--border)", color: "var(--text)" }}
                       value={notesText}
-                      onChange={(e) => setNotesText(e.target.value)}
-                      placeholder="Notizen zum Lead..."
+                      onChange={(e) => handleNotesChange(e.target.value)}
+                      onBlur={handleNotesBlur}
+                      placeholder="Notizen zum Lead (speichert automatisch beim Tippen)..."
                     />
                   </div>
 

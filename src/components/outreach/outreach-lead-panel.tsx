@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { AlertTriangle, Check, Copy, Phone, Sparkles, AtSign, Flame, CheckCircle2, BookmarkCheck, Loader2 } from "lucide-react";
 import { CHAR_COLORS, charState, speakingSeconds } from "@/lib/score-visuals";
 import { normalizeInstagramHandle } from "@/lib/utils";
@@ -53,6 +53,9 @@ export function OutreachLeadPanel({
   );
   const [busy, setBusy] = useState(false);
   const [savingScript, setSavingScript] = useState(false);
+  const [editorSaveStatus, setEditorSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const editorDebounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const lastSavedEditorTextRef = useRef<string>(initialScriptText || "");
   const [error, setError] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [receipt, setReceipt] = useState<string | null>(null);
@@ -69,10 +72,19 @@ export function OutreachLeadPanel({
         },
       ]);
       setEdited({ 0: initialScriptText });
+      lastSavedEditorTextRef.current = initialScriptText;
       setSelected(0);
       setPanelMode("variants");
     }
   }, [initialScriptText]);
+
+  useEffect(() => {
+    return () => {
+      if (editorDebounceTimerRef.current) {
+        clearTimeout(editorDebounceTimerRef.current);
+      }
+    };
+  }, []);
 
   const handle = normalizeInstagramHandle(instagram);
   const charLimit = channel === "PHONE" ? 300 : 400;
@@ -123,9 +135,13 @@ export function OutreachLeadPanel({
     }
   }
 
-  async function handleSaveEditorScript() {
-    if (!text.trim() || savingScript) return;
+  async function handleSaveEditorScript(overrideText?: string, isAutoSave = false) {
+    const textToSave = (overrideText ?? text).trim();
+    if (!textToSave || savingScript) return;
+    if (isAutoSave && textToSave === lastSavedEditorTextRef.current) return;
+
     setSavingScript(true);
+    setEditorSaveStatus("saving");
     setError(null);
     try {
       const res = await fetch("/api/outreach/select-script", {
@@ -133,21 +149,30 @@ export function OutreachLeadPanel({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           leadId,
-          scriptText: text.trim(),
+          scriptText: textToSave,
           channel: channel === "PHONE" ? "PHONE" : "INSTAGRAM_DM",
           tone,
         }),
       });
       const data = await res.json();
       if (res.ok && data.ok) {
-        setScriptNotice("Skript in Notizen & Timeline gespeichert!");
-        onScriptSaved?.(text.trim(), data.notes);
+        lastSavedEditorTextRef.current = textToSave;
+        setEditorSaveStatus("saved");
+        if (!isAutoSave) {
+          setScriptNotice("Skript in Notizen & Timeline gespeichert!");
+        }
+        onScriptSaved?.(textToSave, data.notes);
         onSent?.();
+        setTimeout(() => {
+          setEditorSaveStatus((curr) => (curr === "saved" ? "idle" : curr));
+        }, 2500);
       } else {
+        setEditorSaveStatus("idle");
         setError(data.error || "Fehler beim Speichern des Skripts.");
       }
     } catch (err: any) {
       console.error(err);
+      setEditorSaveStatus("idle");
       setError("Netzwerkfehler beim Speichern des Skripts.");
     } finally {
       setSavingScript(false);
@@ -234,10 +259,10 @@ export function OutreachLeadPanel({
         />
       </div>
 
-      <div className={panelMode === "variants" ? "flex-1 min-h-0 overflow-y-auto space-y-3" : "hidden"}>
+      <div className={panelMode === "variants" ? "flex-1 min-h-0 flex flex-col space-y-3 h-full overflow-y-auto" : "hidden"}>
         {scriptNotice && (
           <div
-            className="flex items-center justify-between gap-2 rounded-xl p-3 text-xs font-semibold animate-fade-in"
+            className="flex items-center justify-between gap-2 rounded-xl p-3 text-xs font-semibold animate-fade-in shrink-0"
             style={{
               background: "rgba(16, 185, 129, 0.12)",
               color: "#10b981",
@@ -257,7 +282,7 @@ export function OutreachLeadPanel({
             </button>
           </div>
         )}
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
         <div className="inline-flex rounded-xl border p-1" style={{ borderColor: "var(--border)" }}>
           {(["INSTAGRAM_DM", "PHONE"] as Channel[]).map((key) => (
             <button
@@ -295,7 +320,7 @@ export function OutreachLeadPanel({
 
       {error && (
         <div
-          className="flex items-start gap-2 rounded-md p-3 text-xs font-medium"
+          className="flex items-start gap-2 rounded-md p-3 text-xs font-medium shrink-0"
           style={{ background: "var(--status-lost-bg)", color: "var(--status-lost-tx)", border: "1px solid rgba(224,104,104,0.3)" }}
         >
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -319,13 +344,13 @@ export function OutreachLeadPanel({
           </button>
         </div>
       ) : (
-        <>
-          <div className="flex gap-1.5">
+        <div className="flex-1 min-h-0 flex flex-col space-y-2">
+          <div className="flex items-center gap-1.5 shrink-0">
             {variants.map((variant) => (
               <button
                 key={variant.index}
                 onClick={() => setSelected(variant.index)}
-                className="rounded-lg border px-3 py-1.5 text-[11px] font-bold"
+                className="rounded-lg border px-3 py-1.5 text-xs font-bold transition-all"
                 style={{
                   background: selected === variant.index ? "var(--surface-3)" : "var(--surface-2)",
                   color: selected === variant.index ? "var(--text)" : "var(--text-2)",
@@ -335,7 +360,7 @@ export function OutreachLeadPanel({
                 {String.fromCharCode(65 + variant.index)}
               </button>
             ))}
-            <button onClick={() => void generate()} className="ml-auto text-[11px] underline" style={{ color: "var(--text-3)" }}>
+            <button onClick={() => void generate()} className="ml-auto text-xs font-medium underline hover:text-[var(--text)] transition-colors" style={{ color: "var(--text-3)" }}>
               Neu schreiben
             </button>
           </div>
@@ -345,22 +370,41 @@ export function OutreachLeadPanel({
               const val = event.target.value;
               setEdited((prev) => ({ ...prev, [selected]: val }));
               onLiveScriptEdit?.(val);
+
+              if (val.trim() !== lastSavedEditorTextRef.current) {
+                setEditorSaveStatus("saving");
+                if (editorDebounceTimerRef.current) {
+                  clearTimeout(editorDebounceTimerRef.current);
+                }
+                editorDebounceTimerRef.current = setTimeout(() => {
+                  handleSaveEditorScript(val, true);
+                }, 1000);
+              }
             }}
-            className="w-full rounded-lg p-4 text-sm leading-6 outline-none"
-            style={{ minHeight: 160, background: "var(--surface-2)", color: "var(--text)", border: "1px solid var(--border)" }}
+            onBlur={() => {
+              if (editorDebounceTimerRef.current) {
+                clearTimeout(editorDebounceTimerRef.current);
+              }
+              if (text.trim() !== lastSavedEditorTextRef.current) {
+                handleSaveEditorScript(text, true);
+              }
+            }}
+            className="w-full flex-1 min-h-[300px] sm:min-h-[380px] lg:min-h-[440px] rounded-xl p-5 text-base sm:text-lg leading-relaxed outline-none transition-all shadow-inner border focus:border-orange-500/60 font-sans resize-y"
+            style={{ background: "var(--surface-2)", color: "var(--text)", border: "1px solid var(--border)" }}
+            placeholder="Skript bearbeiten..."
           />
-        </>
+        </div>
       )}
 
       {receipt ? (
         <div
-          className="flex items-center gap-2 rounded-lg px-4 py-3 text-xs font-semibold"
+          className="flex items-center gap-2 rounded-lg px-4 py-3 text-xs font-semibold shrink-0"
           style={{ background: "var(--status-warm-bg)", color: "var(--status-warm-tx)" }}
         >
           <Check className="h-4 w-4" /> {receipt}
         </div>
       ) : confirmOpen ? (
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg px-4 py-3"
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg px-4 py-3 shrink-0"
              style={{ background: "var(--confirm-bar-bg)" }}>
           <span className="text-xs font-semibold" style={{ color: "var(--confirm-bar-tx)" }}>
             ✓ Kopiert. Tatsächlich gesendet?
@@ -377,16 +421,33 @@ export function OutreachLeadPanel({
           </span>
         </div>
       ) : variants.length > 0 ? (
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-          <span className="font-mono text-[11px]" style={{ color: CHAR_COLORS[charState(text.length, charLimit)] }}>
-            {channel === "PHONE" ? `~${speakingSeconds(text.length)} Sek.` : `${text.length}/${charLimit} Zeichen`}
-          </span>
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-1 shrink-0">
+          <div className="flex items-center gap-3">
+            <span className="font-mono text-xs font-semibold" style={{ color: CHAR_COLORS[charState(text.length, charLimit)] }}>
+              {channel === "PHONE" ? `~${speakingSeconds(text.length)} Sek.` : `${text.length}/${charLimit} Zeichen`}
+            </span>
+            <div className="text-xs flex items-center gap-1.5 font-medium">
+              {editorSaveStatus === "saving" ? (
+                <span className="flex items-center gap-1.5 text-amber-400 animate-pulse">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Auto-Save…</span>
+                </span>
+              ) : editorSaveStatus === "saved" ? (
+                <span className="flex items-center gap-1 text-emerald-400 font-semibold animate-fade-in">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>Im Lead gesichert</span>
+                </span>
+              ) : (
+                <span className="text-zinc-500 text-xs">Auto-Save aktiv</span>
+              )}
+            </div>
+          </div>
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => void handleSaveEditorScript()}
               disabled={savingScript || !text.trim()}
-              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold border transition-all active:scale-95 disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-bold border transition-all active:scale-95 disabled:opacity-50"
               style={{
                 background: "var(--surface)",
                 borderColor: "rgba(249, 115, 22, 0.4)",
@@ -395,9 +456,9 @@ export function OutreachLeadPanel({
               title="Dieses bearbeitete Skript in den Lead-Notizen & Pitch-Karte speichern"
             >
               {savingScript ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <BookmarkCheck className="h-3.5 w-3.5" />}
-              <span>{savingScript ? "Speichert…" : "Skript speichern & Notiz anlegen"}</span>
+              <span>{savingScript ? "Speichert…" : "Sofort sichern"}</span>
             </button>
-            <button onClick={() => void copyAndOpen()} className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold"
+            <button onClick={() => void copyAndOpen()} className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold shadow-sm"
                     style={{ background: "var(--accent)", color: "var(--bg)" }}>
               <Copy className="h-3.5 w-3.5" />
               {channel === "PHONE" ? "Text kopieren" : "Kopieren & Instagram öffnen"}
