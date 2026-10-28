@@ -1523,6 +1523,7 @@ export function LeadsTable({
           </div>
         )}
         </div>
+        </div>
 
         {/* Right Side: Docked Apple 3-Pane Split View Detail Pane */}
         {isSplitActive && (
@@ -1561,7 +1562,6 @@ export function LeadsTable({
           onToggleExpand={() => setIsDetailExpanded(false)}
         />
       )}
-      </div>
     </div>
   );
 }
